@@ -1,115 +1,116 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
 
-// D-day 목표를 보여주고 관리하는 뷰입니다.
 struct GoalListView: View {
-    // 💡 SwiftData에서 저장된 모든 Goal 모델을 자동으로 불러옵니다.
-    @Query(sort: \Goal.targetDate, order: .forward) private var goals: [Goal]
+    // 쿼리는 init에서 설정하므로 여기선 타입만 선언
+    @Query private var goals: [Goal]
     
-    // 새 목표 추가 화면을 띄울지 결정하는 상태 변수
     @State private var showingAddGoalSheet = false
-    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
+    // ✨ 생성자: 내 ID에 해당하는 데이터만 필터링하도록 설정
+    init(userId: String) {
+        // ownerID가 현재 userId와 같은 것만 가져오고, 날짜순으로 정렬
+        _goals = Query(filter: #Predicate<Goal> { goal in
+            goal.ownerID == userId
+        }, sort: \.targetDate)
+    }
+    
     var body: some View {
-        // NavigationStack을 사용하여 상단에 제목과 버튼을 배치합니다.
         NavigationStack {
-            
-            // 목표가 없을 때 보여줄 화면
-            if goals.isEmpty {
-                ContentUnavailableView {
-                    Label("D-day 목표 없음", systemImage: "target")
-                } description: {
-                    Text("새 목표를 추가하여 임용고시 D-day를 설정하세요.")
-                } actions: {
-                    Button("목표 추가") {
-                        showingAddGoalSheet = true
+            VStack {
+                if goals.isEmpty {
+                    ContentUnavailableView {
+                        Label("목표가 없습니다", systemImage: "target")
+                    } description: {
+                        Text("우측 상단 + 버튼을 눌러\n시험 목표를 추가해보세요.")
+                    }
+                } else {
+                    List {
+                        ForEach(goals) { goal in
+                            GoalRow(goal: goal)
+                        }
+                        .onDelete(perform: deleteGoals)
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("나의 D-day")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddGoalSheet = true }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(brandColor)
                     }
                 }
-            } else {
-                // 목표가 있을 때 목록을 보여줍니다.
-                List {
-                    ForEach(goals) { goal in
-                        // D-day 카운터와 목표 제목을 표시하는 셀
-                        GoalRow(goal: goal)
-                    }
-                    .onDelete(perform: deleteGoals)
-                }
-                .listStyle(.plain) // 목록 스타일을 깔끔하게 변경
             }
-        }
-        // 상단 네비게이션 바 설정
-        .navigationTitle("나의 D-day 목표")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton() // 목록 편집 버튼
+            .sheet(isPresented: $showingAddGoalSheet) {
+                AddGoalView()
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // 새 목표 추가 버튼
-                Button(action: {
-                    showingAddGoalSheet = true
-                }) {
-                    Label("Add Item", systemImage: "plus")
-                        .foregroundColor(brandColor)
-                }
-            }
-        }
-        // 새 목표 추가 시 띄울 모달 화면
-        .sheet(isPresented: $showingAddGoalSheet) {
-            AddGoalView() // ✨ 방금 만든 화면 연결
         }
     }
     
-    // 목표 삭제 함수
+    // 데이터 삭제 함수
+    @Environment(\.modelContext) private var modelContext
     private func deleteGoals(offsets: IndexSet) {
-        // 이 함수는 P2-2 단계에서 SwiftData 코드를 추가하여 완성합니다.
-        // 현재는 삭제 로직이 비어있습니다.
+        for index in offsets {
+            modelContext.delete(goals[index])
+        }
     }
 }
 
-
-// 목표 목록의 각 행을 보여주는 보조 뷰 (GoalListView 안에 추가해도 됨)
+// 목표 카드 디자인 (이전과 동일)
 struct GoalRow: View {
-    @Bindable var goal: Goal
+    let goal: Goal
+    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
-    // 목표 날짜까지 남은 일수를 계산하는 함수
-    private var daysRemaining: Int {
+    var dDay: String {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let target = calendar.startOfDay(for: goal.targetDate)
         
-        // 날짜 간의 차이를 일수로 계산
-        if let days = calendar.dateComponents([.day], from: today, to: target).day {
-            // 당일 포함을 위해 1일 추가
-            return days
+        let components = calendar.dateComponents([.day], from: today, to: target)
+        
+        if let days = components.day {
+            if days == 0 { return "D-Day" }
+            else if days > 0 { return "D-\(days)" }
+            else { return "D+\(-days)" }
         }
-        return 0
+        return "Error"
     }
     
     var body: some View {
         HStack {
-            // D-day 뱃지
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(goal.title)
-                    .font(.headline)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
                 Text(goal.targetDate, style: .date)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.white.opacity(0.8))
             }
             
             Spacer()
             
-            // D-day 카운터
-            Text("D\(daysRemaining <= 0 ? "-Day" : "-\(daysRemaining)")")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(daysRemaining <= 0 ? .red : .blue)
+            Text(dDay)
+                .font(.title)
+                .fontWeight(.black)
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.2))
+                .cornerRadius(10)
         }
+        .padding()
+        .background(
+            LinearGradient(gradient: Gradient(colors: [brandColor, brandColor.opacity(0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+        .cornerRadius(15)
+        .shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 5)
+        .padding(.vertical, 5)
+        .listRowSeparator(.hidden) // 리스트 구분선 숨기기
     }
-}
-
-#Preview {
-    GoalListView()
-        // Preview를 위해 MainTabView의 EnvironmentObject를 제공합니다.
-        .environmentObject(AuthManager())
 }

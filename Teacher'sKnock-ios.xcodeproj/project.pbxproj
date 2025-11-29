@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		540ED2D62EDA9E9400CCC7A9 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 540ED2D52EDA9E9400CCC7A9 /* FirebaseAnalytics */; };
 		540ED2D82EDA9E9400CCC7A9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 540ED2D72EDA9E9400CCC7A9 /* FirebaseAuth */; };
+		543440922EDB139300E736A0 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 543440912EDB139300E736A0 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,16 +31,25 @@
 			files = (
 				540ED2D62EDA9E9400CCC7A9 /* FirebaseAnalytics in Frameworks */,
 				540ED2D82EDA9E9400CCC7A9 /* FirebaseAuth in Frameworks */,
+				543440922EDB139300E736A0 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		543440902EDB139300E736A0 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		54A1D35B2EDA82FF008BD532 = {
 			isa = PBXGroup;
 			children = (
 				54A1D3662EDA82FF008BD532 /* Teacher'sKnock-ios */,
+				543440902EDB139300E736A0 /* Frameworks */,
 				54A1D3652EDA82FF008BD532 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -74,6 +84,7 @@
 			packageProductDependencies = (
 				540ED2D52EDA9E9400CCC7A9 /* FirebaseAnalytics */,
 				540ED2D72EDA9E9400CCC7A9 /* FirebaseAuth */,
+				543440912EDB139300E736A0 /* FirebaseFirestore */,
 			);
 			productName = "Teacher'sKnock-ios";
 			productReference = 54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */;
@@ -362,6 +373,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 540ED2D42EDA9E9400CCC7A9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAuth;
+		};
+		543440912EDB139300E736A0 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 540ED2D42EDA9E9400CCC7A9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

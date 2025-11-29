@@ -1,28 +1,25 @@
 import SwiftUI
 import FirebaseAuth
-import Combine // @Published를 위해 필요
+import Combine
 
-// 앱의 인증 상태를 실시간으로 관리하고 모든 뷰에 공유하는 클래스
 class AuthManager: ObservableObject {
     
     @Published var isLoggedIn: Bool = false
-    private var handler: AuthStateDidChangeListenerHandle?
     
     init() {
-        setupListener()
+        // 앱이 처음 켜질 때만 딱 한 번 확인합니다.
+        checkLoginStatus()
     }
     
-    private func setupListener() {
-        // Firebase Auth의 상태가 바뀔 때마다 이 클로저가 실행됩니다.
-        handler = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.isLoggedIn = (user != nil)
-            print("AuthManager 상태 업데이트: isLoggedIn = \(self?.isLoggedIn ?? false)")
+    private func checkLoginStatus() {
+        // 이미 로그인된 유저가 있고 + 이메일 인증까지 완료된 경우에만 통과
+        if let user = Auth.auth().currentUser, user.isEmailVerified {
+            isLoggedIn = true
+        } else {
+            isLoggedIn = false
         }
     }
     
-    deinit {
-        if let handler = handler {
-            Auth.auth().removeStateDidChangeListener(handler)
-        }
-    }
+    // 🚨 중요: 실시간 감시자(addStateDidChangeListener)를 제거했습니다.
+    // 이제 회원가입 도중에 임시 계정이 생겨도 메인 화면으로 넘어가지 않습니다.
 }
