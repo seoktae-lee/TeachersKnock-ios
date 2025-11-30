@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth // ✨ 인증 정보 필요
 
 struct AddScheduleView: View {
     @Environment(\.modelContext) private var modelContext
@@ -49,14 +50,22 @@ struct AddScheduleView: View {
     }
     
     private func addSchedule() {
+        // ✨ 현재 로그인한 유저 ID 가져오기
+        guard let user = Auth.auth().currentUser else { return }
+        
         let newItem = ScheduleItem(
             title: title,
             details: details,
             startDate: scheduleDate,
             isCompleted: false,
-            hasReminder: hasReminder
+            hasReminder: hasReminder,
+            ownerID: user.uid // ✨ 저장 시 ID 포함
         )
         modelContext.insert(newItem)
         dismiss()
     }
+}
+
+#Preview {
+    AddScheduleView()
 }

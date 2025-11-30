@@ -22,13 +22,12 @@ struct MainTabView: View {
                     Text("홈")
                 }
             
-            // 탭 2: 플래너 (일정 관리)
-            PlannerView()
+            // 탭 2: 플래너 -> ID 전달하며 생성
+            PlannerView(userId: currentUserId) // ✨ 이 부분을 수정하세요!
                 .tabItem {
                     Image(systemName: "calendar")
                     Text("플래너")
                 }
-            
             // 탭 3: 타이머 (공부 시간 측정)
             TimerView()
                 .tabItem {

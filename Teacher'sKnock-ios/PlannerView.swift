@@ -1,14 +1,23 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
 
 struct PlannerView: View {
-    @Query(sort: \ScheduleItem.startDate) private var allItems: [ScheduleItem]
+    // 쿼리는 init에서 설정
+    @Query private var allItems: [ScheduleItem]
     @Environment(\.modelContext) private var modelContext
     
     @State private var selectedDate = Date()
     @State private var showingAddSheet = false
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    
+    // ✨ 생성자: 내 ID에 해당하는 일정만 가져오기
+    init(userId: String) {
+        _allItems = Query(filter: #Predicate<ScheduleItem> { item in
+            item.ownerID == userId
+        }, sort: \.startDate)
+    }
     
     var filteredItems: [ScheduleItem] {
         let calendar = Calendar.current
@@ -71,7 +80,6 @@ struct PlannerView: View {
     }
 }
 
-// 리스트 디자인
 struct ScheduleRow: View {
     @Bindable var item: ScheduleItem
     
@@ -93,6 +101,8 @@ struct ScheduleRow: View {
                 if !item.details.isEmpty {
                     Text(item.details).font(.caption).foregroundColor(.gray)
                 }
+                
+                Text(item.startDate, style: .time).font(.caption2).foregroundColor(.blue)
             }
             Spacer()
         }
