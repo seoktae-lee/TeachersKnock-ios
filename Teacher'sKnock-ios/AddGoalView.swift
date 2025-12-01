@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import FirebaseAuth // ✨ 인증 정보 사용을 위해 추가
+import FirebaseAuth
 
 struct AddGoalView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,6 +8,8 @@ struct AddGoalView: View {
     
     @State private var title = ""
     @State private var targetDate = Date()
+    // ✨ 캐릭터 육성 선택 변수
+    @State private var useCharacter = true
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
@@ -15,13 +17,27 @@ struct AddGoalView: View {
         NavigationStack {
             Form {
                 Section(header: Text("목표 이름")) {
-                    TextField("예: 2027학년도 초등 임용", text: $title)
+                    TextField("예: 2026학년도 초등 임용", text: $title)
                 }
                 
                 Section(header: Text("디데이 날짜")) {
                     DatePicker("날짜 선택", selection: $targetDate, displayedComponents: .date)
                         .datePickerStyle(.graphical)
                         .accentColor(brandColor)
+                }
+                
+                // ✨ 캐릭터 육성 옵션 섹션
+                Section {
+                    Toggle(isOn: $useCharacter) {
+                        VStack(alignment: .leading) {
+                            Text("티노 캐릭터 함께 키우기")
+                                .font(.headline)
+                            Text("목표 기간에 맞춰 캐릭터가 성장합니다.")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .tint(brandColor)
                 }
             }
             .navigationTitle("새 목표 추가")
@@ -33,28 +49,24 @@ struct AddGoalView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("저장") {
-                        addGoal()
-                    }
-                    .foregroundColor(brandColor)
-                    .disabled(title.isEmpty)
+                    Button("저장") { addGoal() }
+                        .foregroundColor(brandColor)
+                        .disabled(title.isEmpty)
                 }
             }
         }
     }
     
-    // ✨ 목표 저장 함수 (수정됨)
     private func addGoal() {
-        // 1. 현재 로그인한 사용자 정보 가져오기
-        guard let user = Auth.auth().currentUser else {
-            print("오류: 로그인된 사용자가 없습니다.")
-            return
-        }
+        guard let user = Auth.auth().currentUser else { return }
         
-        // 2. 사용자 ID(uid)를 포함하여 Goal 생성
-        let newGoal = Goal(title: title, targetDate: targetDate, ownerID: user.uid)
+        let newGoal = Goal(
+            title: title,
+            targetDate: targetDate,
+            ownerID: user.uid,
+            hasCharacter: useCharacter // 선택값 저장
+        )
         
-        // 3. 저장
         modelContext.insert(newGoal)
         dismiss()
     }
