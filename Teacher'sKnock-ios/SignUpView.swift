@@ -143,7 +143,7 @@ struct SignUpView: View {
                                 
                                 // 최종 가입 버튼
                                 Button(action: finalizeSignup) {
-                                    Text("합격의 문 두드리기")
+                                    Text("Teacher's Knock 시작하기")
                                         .frame(maxWidth: .infinity).padding()
                                         .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)
