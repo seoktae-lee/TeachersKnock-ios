@@ -9,16 +9,15 @@ struct SignUpView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var selectedUniversity = "서울교육대학교"
+    // ✨ 닉네임 추가
+    @State private var nickname = ""
     
-    // 약관 동의 상태
     @State private var isAgreed = false
     
-    // 인증 프로세스 상태
     @State private var isEmailVerified = false
     @State private var isVerificationSent = false
     @State private var timer: Timer?
     
-    // 알림창 상태
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
@@ -50,17 +49,28 @@ struct SignUpView: View {
                 ScrollView {
                     VStack(spacing: 25) {
                         
-                        // --- 1. 이메일 입력 및 인증 섹션 ---
+                        // --- 1. 이메일 & 닉네임 입력 섹션 ---
                         VStack(alignment: .leading, spacing: 5) {
+                            
+                            // ✨ 닉네임 입력 필드 추가
+                            Text("닉네임")
+                                .font(.caption).foregroundColor(.gray).padding(.leading, 5)
+                            
+                            TextField("앱에서 사용할 이름 (예: 열공이)", text: $nickname)
+                                .padding()
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
+                                .autocapitalization(.none)
+                                .disabled(isVerificationSent) // 메일 보내면 수정 불가
+                                .padding(.bottom, 10)
+                            
                             Text("이메일 주소")
                                 .font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             
                             HStack {
-                                // ✨ 수정됨: verbatim을 사용하여 링크 감지 차단 + 회색 고정
                                 ZStack(alignment: .leading) {
                                     if email.isEmpty {
-                                        Text(verbatim: "예: teacher@example.com") // verbatim: 있는 그대로 출력
-                                            .foregroundColor(Color.gray.opacity(0.6)) // 연한 회색 강제 적용
+                                        Text(verbatim: "예: teacher@example.com")
+                                            .foregroundColor(Color.gray.opacity(0.6))
                                     }
                                     TextField("", text: $email)
                                         .autocapitalization(.none)
@@ -77,7 +87,8 @@ struct SignUpView: View {
                                         .background(isEmailVerified ? Color.green : brandColor)
                                         .cornerRadius(8)
                                 }
-                                .disabled(isEmailVerified || email.isEmpty)
+                                // ✨ 닉네임도 입력해야 인증 버튼 활성화
+                                .disabled(isEmailVerified || email.isEmpty || nickname.isEmpty)
                             }
                             
                             if isVerificationSent && !isEmailVerified {
@@ -90,7 +101,7 @@ struct SignUpView: View {
                         }
                         .padding(.horizontal, 25)
                         
-                        // --- 2. 추가 정보 입력 (인증 후 표시) ---
+                        // --- 2. 비밀번호 & 대학 입력 (인증 후 표시) ---
                         if isEmailVerified {
                             VStack(spacing: 20) {
                                 Divider().padding(.vertical, 10)
@@ -113,37 +124,27 @@ struct SignUpView: View {
                                 }
                                 .padding(.horizontal, 25)
                                 
-                                // 약관 동의 체크박스
                                 HStack(alignment: .top) {
                                     Button(action: { isAgreed.toggle() }) {
                                         Image(systemName: isAgreed ? "checkmark.square.fill" : "square")
                                             .foregroundColor(isAgreed ? brandColor : .gray)
                                             .font(.title3)
                                     }
-                                    
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("아래 약관에 동의합니다.")
-                                            .font(.subheadline)
-                                            .foregroundColor(.black)
-                                        
+                                        Text("아래 약관에 동의합니다.").font(.subheadline).foregroundColor(.black)
                                         HStack(spacing: 0) {
-                                            Link("이용약관", destination: URL(string: "https://www.google.com")!)
-                                                .foregroundColor(brandColor)
-                                            Text(" 및 ")
-                                                .foregroundColor(.gray)
-                                            Link("개인정보 처리방침", destination: URL(string: "https://www.google.com")!)
-                                                .foregroundColor(brandColor)
+                                            Link("이용약관", destination: URL(string: "https://www.google.com")!).foregroundColor(brandColor)
+                                            Text(" 및 ").foregroundColor(.gray)
+                                            Link("개인정보 처리방침", destination: URL(string: "https://www.google.com")!).foregroundColor(brandColor)
                                         }
                                         .font(.caption)
                                     }
                                     Spacer()
                                 }
-                                .padding(.horizontal, 30)
-                                .padding(.top, 10)
+                                .padding(.horizontal, 30).padding(.top, 10)
                                 
-                                // 최종 가입 버튼
                                 Button(action: finalizeSignup) {
-                                    Text("Teacher's Knock 시작하기")
+                                    Text("합격의 문 두드리기")
                                         .frame(maxWidth: .infinity).padding()
                                         .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)
@@ -159,19 +160,13 @@ struct SignUpView: View {
             }
         }
         .alert(alertTitle, isPresented: $showAlert) {
-            Button("확인") {
-                if isSuccess { dismiss() }
-            }
-        } message: {
-            Text(alertMessage)
-        }
-        .onDisappear {
-            timer?.invalidate()
-        }
+            Button("확인") { if isSuccess { dismiss() } }
+        } message: { Text(alertMessage) }
+        .onDisappear { timer?.invalidate() }
     }
     
-    // ... (로직 함수는 기존과 동일)
-    func sendVerificationEmail() {
+    // ... (이하 로직 함수는 동일하나 saveUserData만 수정됨)
+    func sendVerificationEmail() { /* 기존 코드 */
         let tempPassword = UUID().uuidString
         Auth.auth().createUser(withEmail: email, password: tempPassword) { result, error in
             if let error = error {
@@ -191,7 +186,7 @@ struct SignUpView: View {
         }
     }
     
-    func startVerificationTimer() {
+    func startVerificationTimer() { /* 기존 코드 */
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Auth.auth().currentUser?.reload(completion: { error in
                 if error == nil {
@@ -204,7 +199,7 @@ struct SignUpView: View {
         }
     }
     
-    func finalizeSignup() {
+    func finalizeSignup() { /* 기존 코드 */
         guard password.count >= 6 else {
             alertTitle="알림"; alertMessage="비밀번호는 6자리 이상이어야 합니다."; showAlert=true; return
         }
@@ -226,9 +221,16 @@ struct SignUpView: View {
         }
     }
     
+    // ✨ 수정됨: 닉네임 저장 추가
     func saveUserData(uid: String) {
         let db = Firestore.firestore()
-        let userData: [String: Any] = ["uid": uid, "email": email, "university": selectedUniversity, "joinDate": Timestamp(date: Date())]
+        let userData: [String: Any] = [
+            "uid": uid,
+            "email": email,
+            "nickname": nickname, // ✨ 닉네임 저장
+            "university": selectedUniversity,
+            "joinDate": Timestamp(date: Date())
+        ]
         
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
@@ -241,18 +243,7 @@ struct SignUpView: View {
     }
     
     @ViewBuilder
-    func inputField(title: String, text: Binding<String>, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            TextField(title, text: text)
-                .padding()
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
-                .autocapitalization(.none)
-        }
-        .padding(.horizontal, 25)
-    }
-    
-    @ViewBuilder
-    func secureInputField(title: String, text: Binding<String>) -> some View {
+    func secureInputField(title: String, text: Binding<String>) -> some View { /* 기존 코드 */
         VStack(alignment: .leading, spacing: 5) {
             SecureField(title, text: text)
                 .padding()
