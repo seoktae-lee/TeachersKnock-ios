@@ -1,10 +1,3 @@
-//
-//  Teacher_sKnock_iosApp.swift
-//  Teacher'sKnock-ios
-//
-//  Created by 이석태 on 11/29/25.
-//
-
 import SwiftUI
 import SwiftData
 import Firebase
@@ -19,13 +12,12 @@ struct Teacher_sKnock_iosApp: App {
         FirebaseApp.configure()
     }
     
-    // ✨ 여기가 수정된 부분입니다! ✨
+    // SwiftData 설정 (모델 3개 등록 확인)
     var sharedModelContainer: ModelContainer = {
-        // Goal, ScheduleItem에 이어 StudyRecord를 추가합니다.
         let schema = Schema([
             Goal.self,
             ScheduleItem.self,
-            StudyRecord.self // 👈 이 줄이 추가되어야 합니다!
+            StudyRecord.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

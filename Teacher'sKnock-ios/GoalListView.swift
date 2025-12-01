@@ -4,13 +4,20 @@ import FirebaseAuth
 
 struct GoalListView: View {
     @Query private var goals: [Goal]
+    
     @State private var showingAddGoalSheet = false
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
-    @State private var todayQuote: Quote = Quote(text: "로딩 중...", author: "")
+    
+    // ✨ 초기값은 로딩 중으로 설정
+    @State private var todayQuote: Quote = Quote(text: "오늘의 명언을 불러오는 중...", author: "")
+    
     @EnvironmentObject var authManager: AuthManager
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
-    private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
+    
+    private var currentUserId: String {
+        Auth.auth().currentUser?.uid ?? ""
+    }
     
     init(userId: String) {
         _goals = Query(filter: #Predicate<Goal> { goal in
@@ -21,16 +28,28 @@ struct GoalListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                QuoteCard(quote: todayQuote).padding()
+                // 1. 명언 카드
+                QuoteCard(quote: todayQuote)
+                    .padding()
+                
+                // 2. 목표 리스트
                 if goals.isEmpty {
-                    ContentUnavailableView { Label("목표가 없습니다", systemImage: "target") } description: { Text("우측 상단 + 버튼을 눌러\n시험 목표를 추가해보세요.") }
+                    ContentUnavailableView {
+                        Label("목표가 없습니다", systemImage: "target")
+                    } description: {
+                        Text("우측 상단 + 버튼을 눌러\n시험 목표를 추가해보세요.")
+                    }
                 } else {
                     List {
                         ForEach(goals) { goal in
-                            Button(action: { selectedGoal = goal; showingCharacterDetail = true }) {
+                            Button(action: {
+                                selectedGoal = goal
+                                showingCharacterDetail = true
+                            }) {
                                 GoalRow(goal: goal, userId: currentUserId)
                             }
-                            .buttonStyle(.plain).listRowSeparator(.hidden)
+                            .buttonStyle(.plain)
+                            .listRowSeparator(.hidden)
                         }
                         .onDelete(perform: deleteGoals)
                     }
@@ -40,31 +59,60 @@ struct GoalListView: View {
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddGoalSheet = true }) { Image(systemName: "plus").foregroundColor(brandColor) }
+                    Button(action: { showingAddGoalSheet = true }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(brandColor)
+                    }
                 }
             }
-            .sheet(isPresented: $showingAddGoalSheet) { AddGoalView() }
+            .sheet(isPresented: $showingAddGoalSheet) {
+                AddGoalView()
+            }
             .sheet(item: $selectedGoal) { goal in
                 VStack(spacing: 30) {
-                    Text("나의 성장 기록").font(.title2).bold().padding(.top, 30)
+                    Text("나의 성장 기록")
+                        .font(.title2).bold().padding(.top, 30)
                     Text(goal.title).font(.headline).foregroundColor(.gray)
                     CharacterView(userId: currentUserId).padding()
                     Spacer()
                 }
                 .presentationDetents([.medium])
             }
+            // ✨ 화면이 나타날 때 서버에서 명언 가져오기
             .onAppear {
-                todayQuote = QuoteManager.getRandomQuote()
-                if let uid = Auth.auth().currentUser?.uid { authManager.fetchUserNickname(uid: uid) }
+                loadQuote()
             }
         }
     }
+    
+    // ✨ 명언 로딩 함수
+    func loadQuote() {
+        // 이미 로딩된 명언이 있다면 (로딩 중이 아니라면) 굳이 다시 안 불러옴 (선택 사항)
+        // 매번 바꾸고 싶다면 이 조건문 제거
+        if todayQuote.text != "오늘의 명언을 불러오는 중..." { return }
+        
+        QuoteManager.shared.fetchQuote { quote in
+            if let quote = quote {
+                withAnimation {
+                    self.todayQuote = quote
+                }
+            } else {
+                // 실패 시 기본 명언
+                self.todayQuote = Quote(text: "실패는 성공의 어머니이다.", author: "에디슨")
+            }
+        }
+    }
+    
     @Environment(\.modelContext) private var modelContext
-    private func deleteGoals(offsets: IndexSet) { for index in offsets { modelContext.delete(goals[index]) } }
+    private func deleteGoals(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(goals[index])
+        }
+    }
 }
 
-// ---------------------------------------------------------
-// ✨ 하위 뷰 1: 명언 카드 (칠판 디테일 추가됨 🖍️)
+// ... (하단 QuoteCard, GoalRow는 디자인 변경 없으므로 기존 코드 유지)
+// (이전에 작성해주신 칠판 디자인 코드를 그대로 쓰시면 됩니다!)
 struct QuoteCard: View {
     let quote: Quote
     @State private var displayedText: String = ""
@@ -93,23 +141,16 @@ struct QuoteCard: View {
                     .padding(.top, 5)
             }
             
-            // ✨ 칠판 하단 분필 & 지우개 표현
             HStack(spacing: 15) {
                 Spacer()
-                // 분필
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.white.opacity(0.9))
-                    .frame(width: 40, height: 8)
-                    .rotationEffect(.degrees(-5)) // 살짝 기울이기
-                
-                // 지우개
+                RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.9)).frame(width: 40, height: 8).rotationEffect(.degrees(-5))
                 VStack(spacing: 0) {
-                    Rectangle().fill(woodBrown).frame(width: 35, height: 8) // 손잡이
-                    Rectangle().fill(Color.gray).frame(width: 35, height: 12) // 스펀지
+                    Rectangle().fill(woodBrown).frame(width: 35, height: 8)
+                    Rectangle().fill(Color.gray).frame(width: 35, height: 12)
                 }
                 .cornerRadius(3)
             }
-            .padding(.top, 15) // 명언과 간격 띄우기
+            .padding(.top, 15)
         }
         .padding(20).background(chalkboardGreen)
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(woodBrown, lineWidth: 6))
@@ -129,7 +170,6 @@ struct QuoteCard: View {
     }
 }
 
-// ... (GoalRow는 기존과 동일)
 struct GoalRow: View {
     let goal: Goal
     let userId: String
