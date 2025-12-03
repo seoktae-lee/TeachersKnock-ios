@@ -8,24 +8,31 @@ struct StatisticsView: View {
     // 상세 화면 전달용 ID
     let userId: String
     
+    // ✨ [NEW] 통계 모드 상태 (오늘 vs 전체)
+    enum StatMode {
+        case today
+        case total
+    }
+    @State private var selectedMode: StatMode = .today // 기본값은 '오늘'
+    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
     init(userId: String) {
         self.userId = userId
-        // 내 데이터만, 최신순 정렬
         _records = Query(filter: #Predicate<StudyRecord> { record in
             record.ownerID == userId
         }, sort: \.date, order: .reverse)
     }
     
-    // 데이터 구조체
     struct SubjectData: Identifiable {
         let id = UUID()
         let subject: String
         let totalSeconds: Int
     }
     
-    // ✨ 오늘 공부한 시간만 필터링 (오늘 공부량 확인용)
+    // MARK: - 시간 계산 로직
+    
+    // 오늘 공부 시간 (고정값)
     var todaySeconds: Int {
         let calendar = Calendar.current
         return records
@@ -33,22 +40,40 @@ struct StatisticsView: View {
             .reduce(0) { $0 + $1.durationSeconds }
     }
     
-    // 전체 누적 시간
+    // 전체 누적 시간 (고정값)
     var totalSecondsAll: Int {
         records.reduce(0) { $0 + $1.durationSeconds }
     }
     
-    // 차트 데이터 (전체 기준)
-    var chartData: [SubjectData] {
+    // ✨ [핵심] 선택된 모드에 따라 차트/리스트에 보여줄 데이터가 바뀜
+    var displayData: [SubjectData] {
+        let calendar = Calendar.current
+        var targetRecords: [StudyRecord] = []
+        
+        switch selectedMode {
+        case .today:
+            // 오늘 데이터만 필터링
+            targetRecords = records.filter { calendar.isDateInToday($0.date) }
+        case .total:
+            // 전체 데이터 사용
+            targetRecords = records
+        }
+        
+        // 과목별 합계 계산
         var dict: [String: Int] = [:]
-        for record in records {
+        for record in targetRecords {
             dict[record.areaName, default: 0] += record.durationSeconds
         }
+        
         return dict.map { SubjectData(subject: $0.key, totalSeconds: $0.value) }
                    .sorted { $0.totalSeconds > $1.totalSeconds }
     }
     
-    // 시간 포맷팅 함수 (분 단위까지만 표시)
+    // 현재 보여주는 총 시간 (차트 % 계산용)
+    var currentTotalSeconds: Int {
+        displayData.reduce(0) { $0 + $1.totalSeconds }
+    }
+    
     func formatTime(seconds: Int) -> String {
         let h = seconds / 3600
         let m = (seconds % 3600) / 60
@@ -60,51 +85,81 @@ struct StatisticsView: View {
             ScrollView {
                 VStack(spacing: 25) {
                     
-                    // 1. ✨ 시간 요약 카드 (오늘 vs 전체)
+                    // 1. ✨ 상단 탭 버튼 (오늘 vs 총 누적)
                     HStack(spacing: 15) {
-                        // 오늘 공부 시간 (강조)
-                        VStack(spacing: 5) {
-                            Text("오늘 공부")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(formatTime(seconds: todaySeconds))
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(brandColor)
+                        // [버튼 1] 오늘 공부
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedMode = .today
+                            }
+                        }) {
+                            VStack(spacing: 5) {
+                                Text("오늘 공부")
+                                    .font(.caption)
+                                    .foregroundColor(selectedMode == .today ? brandColor : .gray)
+                                    .fontWeight(selectedMode == .today ? .bold : .regular)
+                                
+                                Text(formatTime(seconds: todaySeconds))
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundColor(selectedMode == .today ? brandColor : .primary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            // ✨ 선택 시 음영 처리 및 테두리
+                            .background(selectedMode == .today ? brandColor.opacity(0.1) : Color.white)
+                            .cornerRadius(15)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(selectedMode == .today ? brandColor : Color.clear, lineWidth: 2)
+                            )
+                            .shadow(color: .gray.opacity(0.1), radius: 5)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
-                        .background(Color.white)
-                        .cornerRadius(15)
-                        .shadow(color: .gray.opacity(0.1), radius: 5)
+                        .buttonStyle(PlainButtonStyle()) // 버튼 깜빡임 효과 제거
                         
-                        // 전체 누적 시간
-                        VStack(spacing: 5) {
-                            Text("총 누적")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                            Text(formatTime(seconds: totalSecondsAll))
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
+                        // [버튼 2] 총 누적
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedMode = .total
+                            }
+                        }) {
+                            VStack(spacing: 5) {
+                                Text("총 누적")
+                                    .font(.caption)
+                                    .foregroundColor(selectedMode == .total ? brandColor : .gray)
+                                    .fontWeight(selectedMode == .total ? .bold : .regular)
+                                
+                                Text(formatTime(seconds: totalSecondsAll))
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundColor(selectedMode == .total ? brandColor : .primary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            // ✨ 선택 시 음영 처리 및 테두리
+                            .background(selectedMode == .total ? brandColor.opacity(0.1) : Color.white)
+                            .cornerRadius(15)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(selectedMode == .total ? brandColor : Color.clear, lineWidth: 2)
+                            )
+                            .shadow(color: .gray.opacity(0.1), radius: 5)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
-                        .background(Color.white)
-                        .cornerRadius(15)
-                        .shadow(color: .gray.opacity(0.1), radius: 5)
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal)
                     .padding(.top)
                     
-                    // 2. 과목별 파이 차트
-                    if !chartData.isEmpty {
+                    // 2. 과목별 파이 차트 (데이터 연동: displayData)
+                    if !displayData.isEmpty {
                         VStack(alignment: .leading) {
-                            Text("과목별 공부 비중 (전체)")
+                            // 제목도 선택된 모드에 따라 변경
+                            Text(selectedMode == .today ? "오늘 과목별 비중" : "전체 과목별 비중")
                                 .font(.headline)
                                 .padding(.leading)
                                 .padding(.top)
+                                .transition(.opacity) // 글자 바뀔 때 부드럽게
                             
-                            Chart(chartData) { item in
-                                let percentage = Double(item.totalSeconds) / Double(totalSecondsAll) * 100
+                            Chart(displayData) { item in
+                                let percentage = Double(item.totalSeconds) / Double(currentTotalSeconds) * 100
                                 
                                 SectorMark(
                                     angle: .value("시간", item.totalSeconds),
@@ -125,20 +180,21 @@ struct StatisticsView: View {
                             }
                             .frame(height: 250)
                             .padding()
+                            // 차트 데이터가 바뀔 때 애니메이션 효과
+                            .id(selectedMode)
                         }
                         .background(Color.white)
                         .cornerRadius(15)
                         .shadow(color: .gray.opacity(0.1), radius: 5)
                         .padding(.horizontal)
                         
-                        // 3. 상세 리스트
+                        // 3. 상세 리스트 (데이터 연동: displayData)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("과목별 상세 기록")
+                            Text(selectedMode == .today ? "오늘 상세 기록" : "전체 상세 기록")
                                 .font(.headline)
                                 .padding()
                             
-                            ForEach(chartData) { item in
-                                // 기존에 있는 SubjectDetailView로 연결 (이제 충돌 없음!)
+                            ForEach(displayData) { item in
                                 NavigationLink(destination: SubjectDetailView(subjectName: item.subject, userId: userId)) {
                                     HStack {
                                         Text(item.subject)
@@ -173,12 +229,19 @@ struct StatisticsView: View {
                             Image(systemName: "chart.pie.fill")
                                 .font(.system(size: 60))
                                 .foregroundColor(.gray.opacity(0.2))
-                            Text("아직 공부 기록이 없습니다.\n오늘의 첫 공부를 시작해보세요!")
-                                .multilineTextAlignment(.center)
-                                .foregroundColor(.gray)
-                                .padding(.bottom, 20)
+                            
+                            // 문구도 상황에 맞게 변경
+                            if selectedMode == .today {
+                                Text("오늘 공부 기록이 없습니다.\n지금 바로 시작해보세요!")
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.gray)
+                            } else {
+                                Text("아직 저장된 공부 기록이 없습니다.")
+                                    .foregroundColor(.gray)
+                            }
                         }
                         .frame(maxWidth: .infinity)
+                        .padding(.bottom, 30)
                         .background(Color.white)
                         .cornerRadius(15)
                         .shadow(color: .gray.opacity(0.1), radius: 5)
@@ -193,6 +256,6 @@ struct StatisticsView: View {
 }
 
 #Preview {
-    StatisticsView(userId: "preview_user")
+    StatisticsView(userId: "preview")
         .modelContainer(for: StudyRecord.self, inMemory: true)
 }
