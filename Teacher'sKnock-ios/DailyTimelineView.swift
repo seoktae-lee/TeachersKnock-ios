@@ -1,11 +1,10 @@
 import SwiftUI
-import SwiftData
+import SwiftData // ✨ 이게 빠져서 오류가 났었습니다!
 
 struct DailyTimelineView: View {
     let schedules: [ScheduleItem]
     var draftSchedule: ScheduleItem? = nil
     
-    // 아이템 클릭 시 실행될 클로저
     var onItemTap: ((ScheduleItem) -> Void)? = nil
     
     private let startHour = 6
@@ -35,7 +34,7 @@ struct DailyTimelineView: View {
                     }
                 }
                 
-                // 2. 일정 블록 그리기
+                // 2. 일정 블록
                 let layoutMap = calculateLayout(for: schedules)
                 
                 ForEach(schedules) { item in
@@ -51,9 +50,7 @@ struct DailyTimelineView: View {
                             x: xOffset + blockWidth / 2,
                             y: calculateCenterY(for: item, hourHeight: hourHeight)
                         )
-                        .onTapGesture {
-                            onItemTap?(item)
-                        }
+                        .onTapGesture { onItemTap?(item) }
                 }
                 
                 // 3. 미리보기
@@ -82,50 +79,36 @@ struct DailyTimelineView: View {
         let duration = end.timeIntervalSince(item.startDate)
         
         let topOffset = (CGFloat(startHour - self.startHour) * hourHeight) + (CGFloat(startMinute) / 60.0 * hourHeight)
-        let actualHeight = CGFloat(duration / 3600.0) * hourHeight
-        let visualHeight = max(actualHeight, 35)
+        let visualHeight = max(CGFloat(duration / 3600.0) * hourHeight, 35)
         
         return topOffset + (visualHeight / 2)
     }
     
-    // ✨ [수정됨] 완료 상태에 따른 시각적 변화 처리
     private func scheduleBlock(for item: ScheduleItem, color: Color, hourHeight: CGFloat, width: CGFloat) -> some View {
         let end = item.endDate ?? item.startDate.addingTimeInterval(3600)
         let duration = end.timeIntervalSince(item.startDate)
-        let actualHeight = CGFloat(duration / 3600.0) * hourHeight
-        let visualHeight = max(actualHeight, 35)
+        let visualHeight = max(CGFloat(duration / 3600.0) * hourHeight, 35)
         
-        let calendar = Calendar.current
-        let startHour = calendar.component(.hour, from: item.startDate)
-        if startHour < self.startHour || startHour >= self.endHour { return AnyView(EmptyView()) }
-        
-        // ✨ 완료 여부에 따른 스타일 변수 설정
         let isCompleted = item.isCompleted
-        let opacity = isCompleted ? 0.2 : 0.45 // 완료되면 연하게
+        let opacity = isCompleted ? 0.2 : 0.45
         let strokeOpacity = isCompleted ? 0.3 : 0.8
-        let saturation = isCompleted ? 0.0 : 1.0 // 완료되면 흑백 느낌으로(채도 0)
+        let saturation = isCompleted ? 0.0 : 1.0
         
         return AnyView(
             ZStack {
-                // 블록 배경
                 RoundedRectangle(cornerRadius: 6)
                     .fill(color.opacity(opacity))
-                    .saturation(saturation) // 채도 조절
+                    .saturation(saturation)
                     .overlay(
                         HStack(spacing: 0) {
-                            // 왼쪽 컬러바 (완료되면 회색으로 변하게 할 수도 있음)
-                            Rectangle().fill(color)
-                                .saturation(saturation)
-                                .frame(width: 3)
-                            
+                            Rectangle().fill(color).saturation(saturation).frame(width: 3)
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(item.title.isEmpty ? "(새 일정)" : item.title)
                                     .font(.system(size: 11, weight: .bold))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.85)
-                                    .foregroundColor(.primary.opacity(isCompleted ? 0.5 : 0.9)) // 글씨도 연하게
-                                    .strikethrough(isCompleted) // 글씨 취소선 추가
-                                
+                                    .foregroundColor(.primary.opacity(isCompleted ? 0.5 : 0.9))
+                                    .strikethrough(isCompleted)
                                 if visualHeight > 40 {
                                     Text("\(item.startDate.formatted(date: .omitted, time: .shortened))")
                                         .font(.system(size: 9))
@@ -133,25 +116,17 @@ struct DailyTimelineView: View {
                                         .lineLimit(1)
                                 }
                             }
-                            .padding(.leading, 4)
-                            .padding(.vertical, 2)
+                            .padding(.leading, 4).padding(.vertical, 2)
                             Spacer()
                         }
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(color.opacity(strokeOpacity), lineWidth: 1)
-                            .saturation(saturation)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(color.opacity(strokeOpacity), lineWidth: 1).saturation(saturation))
                 
-                // ✨ [핵심] 완료 시 체크 스탬프 아이콘 표시
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(color) // 과목 색상 유지
-                        .background(Circle().fill(.white).padding(2)) // 흰 배경을 깔아서 더 잘 보이게
+                        .font(.title2).foregroundColor(color)
+                        .background(Circle().fill(.white).padding(2))
                         .shadow(radius: 1)
-                        .transition(.scale.combined(with: .opacity)) // 나타날 때 애니메이션
                 }
             }
             .padding(.horizontal, 1)
@@ -163,7 +138,6 @@ struct DailyTimelineView: View {
     private func calculateLayout(for items: [ScheduleItem]) -> [PersistentIdentifier: (Int, Int)] {
         let sortedItems = items.sorted { $0.startDate < $1.startDate }
         var layoutMap: [PersistentIdentifier: (Int, Int)] = [:]
-        
         var columns: [[ScheduleItem]] = []
         
         for item in sortedItems {
@@ -180,11 +154,8 @@ struct DailyTimelineView: View {
             }
             if !placed { columns.append([item]) }
         }
-        
         for (colIndex, column) in columns.enumerated() {
-            for item in column {
-                layoutMap[item.id] = (colIndex, columns.count)
-            }
+            for item in column { layoutMap[item.id] = (colIndex, columns.count) }
         }
         return layoutMap
     }

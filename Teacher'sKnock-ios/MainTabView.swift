@@ -19,7 +19,7 @@ struct MainTabView: View {
                     Text("홈")
                 }
             
-            // 탭 2: 플래너
+            // 탭 2: 플래너 (✨ 수정됨: userId 전달 삭제)
             PlannerView()
                 .tabItem {
                     Image(systemName: "calendar")
@@ -33,7 +33,7 @@ struct MainTabView: View {
                     Text("타이머")
                 }
             
-            // ✨ [복구됨] 탭 4: 설정 (통계 -> 설정)
+            // 탭 4: 설정
             SettingsView()
                 .tabItem {
                     Image(systemName: "gearshape.fill")

@@ -4,37 +4,35 @@ import FirebaseFirestore
 import Combine
 
 class AuthManager: ObservableObject {
-    
     @Published var isLoggedIn: Bool = false
     @Published var userNickname: String = "나"
     
     var settingsManager: SettingsManager?
     private var handle: AuthStateDidChangeListenerHandle?
     
-    init() {
-        registerAuthStateListener()
-    }
+    init() { registerAuthStateListener() }
     
     func setup(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
-        print("AuthManager: SettingsManager 연결 완료.")
     }
     
     private func registerAuthStateListener() {
         handle = Auth.auth().addStateDidChangeListener { [weak self] auth, user in
             guard let self = self else { return }
             
-            // NOTE: 테스트를 위해 isEmailVerified 체크는 잠시 생략 가능
-            // let isUserVerified = user?.isEmailVerified ?? false
-            let isUserVerified = true // (개발 편의상 true로 둠, 실제 배포 시엔 user?.isEmailVerified ?? false 로 변경 권장)
-            
-            if let user = user, isUserVerified {
-                print("AuthManager: 로그인 감지")
-                self.isLoggedIn = true
-                self.fetchUserNickname(uid: user.uid)
-                self.settingsManager?.fetchSettings(uid: user.uid)
+            if let user = user {
+                // Firestore 확인 (회원가입 튕김 방지)
+                self.checkUserExistsInFirestore(uid: user.uid) { exists in
+                    if exists {
+                        self.isLoggedIn = true
+                        self.fetchUserNickname(uid: user.uid)
+                        self.settingsManager?.fetchSettings(uid: user.uid)
+                    } else {
+                        // 계정은 있는데 데이터가 없으면 아직 회원가입 중인 상태
+                        self.isLoggedIn = false
+                    }
+                }
             } else {
-                print("AuthManager: 로그아웃 상태")
                 self.isLoggedIn = false
                 self.userNickname = "나"
                 self.settingsManager?.reset()
@@ -43,44 +41,49 @@ class AuthManager: ObservableObject {
     }
     
     deinit {
-        if let handle = handle {
-            Auth.auth().removeStateDidChangeListener(handle)
+        if let handle = handle { Auth.auth().removeStateDidChangeListener(handle) }
+    }
+    
+    private func checkUserExistsInFirestore(uid: String, completion: @escaping (Bool) -> Void) {
+        Firestore.firestore().collection("users").document(uid).getDocument { doc, _ in
+            completion(doc?.exists ?? false)
         }
     }
     
     private func fetchUserNickname(uid: String) {
-        let db = Firestore.firestore()
-        db.collection("users").document(uid).getDocument { [weak self] document, error in
+        Firestore.firestore().collection("users").document(uid).getDocument { [weak self] doc, _ in
             guard let self = self else { return }
-            if let document = document, document.exists {
+            if let doc = doc, doc.exists {
                 DispatchQueue.main.async {
-                    self.userNickname = document.data()?["nickname"] as? String ?? "나"
+                    self.userNickname = doc.data()?["nickname"] as? String ?? "나"
                 }
             }
         }
     }
     
-    // ✨ [NEW] 회원탈퇴 기능
+    // ✨ [핵심] 계정 완전 삭제 함수
     func deleteAccount(completion: @escaping (Bool, Error?) -> Void) {
-        guard let user = Auth.auth().currentUser else { return }
+        guard let user = Auth.auth().currentUser else {
+            completion(false, NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "로그인 정보 없음"]))
+            return
+        }
         let uid = user.uid
         
-        // 1. Firestore 유저 데이터 삭제
-        let db = Firestore.firestore()
-        db.collection("users").document(uid).delete { error in
+        // 1. Firestore(서버 데이터) 삭제
+        Firestore.firestore().collection("users").document(uid).delete { error in
             if let error = error {
+                print("❌ Firestore 삭제 실패: \(error.localizedDescription)")
                 completion(false, error)
                 return
             }
             
-            // 2. Firebase Auth 계정 삭제
+            // 2. Firebase Auth(계정 자체) 삭제
             user.delete { error in
                 if let error = error {
-                    // 로그인한지 오래되면 재인증 필요할 수 있음
+                    print("❌ 계정 삭제 실패 (재로그인 필요 가능성): \(error.localizedDescription)")
                     completion(false, error)
                 } else {
-                    // 성공 시 리스너가 알아서 로그아웃 처리함
-                    print("AuthManager: 계정 삭제 완료")
+                    print("✅ 계정 삭제 성공 (Clean Delete)")
                     completion(true, nil)
                 }
             }

@@ -4,16 +4,13 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct SignUpView: View {
-    // 입력 상태 변수
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var selectedUniversity = "서울교육대학교"
-    // ✨ 닉네임 추가
     @State private var nickname = ""
     
     @State private var isAgreed = false
-    
     @State private var isEmailVerified = false
     @State private var isVerificationSent = false
     @State private var timer: Timer?
@@ -27,6 +24,8 @@ struct SignUpView: View {
     @EnvironmentObject var authManager: AuthManager
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    // ✨ [핵심] 재전송을 위해 고정된 임시 비밀번호 사용
+    private let tempAuthPassword = "TinoTempPassword123!"
     
     let universities = [
         "서울교육대학교", "경인교육대학교", "공주교육대학교", "광주교육대학교",
@@ -39,39 +38,26 @@ struct SignUpView: View {
             Color.white.ignoresSafeArea()
             
             VStack(spacing: 20) {
-                
                 Text("회원가입")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(brandColor)
-                    .padding(.top, 30)
+                    .font(.largeTitle).fontWeight(.bold).foregroundColor(brandColor).padding(.top, 30)
                 
                 ScrollView {
                     VStack(spacing: 25) {
-                        
-                        // --- 1. 이메일 & 닉네임 입력 섹션 ---
+                        // 1. 이메일 & 닉네임 입력
                         VStack(alignment: .leading, spacing: 5) {
-                            
-                            // ✨ 닉네임 입력 필드
-                            Text("닉네임")
-                                .font(.caption).foregroundColor(.gray).padding(.leading, 5)
-                            
+                            Text("닉네임").font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             TextField("앱에서 사용할 이름 (예: 합격이)", text: $nickname)
                                 .padding()
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                                 .autocapitalization(.none)
-                                .disabled(isVerificationSent) // 메일 보내면 수정 불가
+                                .disabled(isVerificationSent)
                                 .padding(.bottom, 10)
                             
-                            Text("이메일 주소")
-                                .font(.caption).foregroundColor(.gray).padding(.leading, 5)
+                            Text("이메일 주소").font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             
                             HStack {
                                 ZStack(alignment: .leading) {
-                                    if email.isEmpty {
-                                        Text(verbatim: "예: teacher@example.com")
-                                            .foregroundColor(Color.gray.opacity(0.6))
-                                    }
+                                    if email.isEmpty { Text("예: teacher@example.com").foregroundColor(.gray.opacity(0.6)) }
                                     TextField("", text: $email)
                                         .autocapitalization(.none)
                                         .keyboardType(.emailAddress)
@@ -80,60 +66,36 @@ struct SignUpView: View {
                                 .padding()
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                                 
-                                Button(action: sendVerificationEmail) {
+                                // ✨ 인증 버튼
+                                Button(action: handleVerificationRequest) {
                                     Text(isEmailVerified ? "완료" : (isVerificationSent ? "재전송" : "인증"))
                                         .font(.subheadline).fontWeight(.bold).foregroundColor(.white)
                                         .padding(.vertical, 13).padding(.horizontal, 15)
                                         .background(isEmailVerified ? Color.green : brandColor)
                                         .cornerRadius(8)
                                 }
-                                // ✨ 닉네임도 입력해야 인증 버튼 활성화
                                 .disabled(isEmailVerified || email.isEmpty || nickname.isEmpty)
                             }
                             
-                            // ✨ [수정된 부분] 스팸함 안내 디자인 적용
                             if isVerificationSent && !isEmailVerified {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("📩 인증 메일이 발송되었습니다.")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(brandColor)
-                                        .padding(.leading, 2)
+                                        .font(.subheadline).fontWeight(.semibold).foregroundColor(brandColor).padding(.leading, 2)
                                     
-                                    // 💡 스팸함 확인 안내 박스
                                     HStack(alignment: .top, spacing: 10) {
-                                        Image(systemName: "exclamationmark.bubble.fill")
-                                            .foregroundColor(.orange)
-                                            .font(.title3)
-                                            .padding(.top, 2)
-                                        
+                                        Image(systemName: "exclamationmark.bubble.fill").foregroundColor(.orange).font(.title3).padding(.top, 2)
                                         VStack(alignment: .leading, spacing: 3) {
-                                            Text("메일이 도착하지 않았나요?")
-                                                .font(.caption)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(.black.opacity(0.8))
-                                            
-                                            Text("구글(Gmail)의 경우 보안 정책으로 인해\n스팸함으로 분류될 수 있습니다. 꼭 확인해주세요!")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                                .lineSpacing(2)
-                                                .fixedSize(horizontal: false, vertical: true)
+                                            Text("메일이 도착하지 않았나요?").font(.caption).fontWeight(.bold).foregroundColor(.black.opacity(0.8))
+                                            Text("구글(Gmail)의 경우 스팸함으로 분류될 수 있습니다.\n스팸함을 꼭 확인해주세요!").font(.caption).foregroundColor(.gray).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
                                         }
                                     }
                                     .padding(12)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color.orange.opacity(0.08)) // 은은한 배경
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(Color.orange.opacity(0.2), lineWidth: 1) // 테두리
-                                    )
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.08)))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.2), lineWidth: 1))
                                 }
                                 .padding(.top, 10)
-                                .transition(.opacity.combined(with: .move(edge: .top))) // 부드러운 등장 애니메이션
-                                
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             } else if isEmailVerified {
                                 Text("✅ 본인 인증이 완료되었습니다. 비밀번호를 설정해주세요.")
                                     .font(.caption).foregroundColor(.green).padding(.leading, 5)
@@ -141,11 +103,10 @@ struct SignUpView: View {
                         }
                         .padding(.horizontal, 25)
                         
-                        // --- 2. 비밀번호 & 대학 입력 (인증 후 표시) ---
+                        // 2. 비밀번호 & 대학 입력 (인증 후)
                         if isEmailVerified {
                             VStack(spacing: 20) {
                                 Divider().padding(.vertical, 10)
-                                
                                 secureInputField(title: "비밀번호 설정 (6자리 이상)", text: $password)
                                 secureInputField(title: "비밀번호 확인", text: $confirmPassword)
                                 
@@ -167,8 +128,7 @@ struct SignUpView: View {
                                 HStack(alignment: .top) {
                                     Button(action: { isAgreed.toggle() }) {
                                         Image(systemName: isAgreed ? "checkmark.square.fill" : "square")
-                                            .foregroundColor(isAgreed ? brandColor : .gray)
-                                            .font(.title3)
+                                            .foregroundColor(isAgreed ? brandColor : .gray).font(.title3)
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("아래 약관에 동의합니다.").font(.subheadline).foregroundColor(.black)
@@ -184,7 +144,7 @@ struct SignUpView: View {
                                 .padding(.horizontal, 30).padding(.top, 10)
                                 
                                 Button(action: finalizeSignup) {
-                                    Text("Teacher's Knock와 시작하기")
+                                    Text("Teacher's Knock와 합격으로")
                                         .frame(maxWidth: .infinity).padding()
                                         .background(isAgreed ? brandColor : Color.gray)
                                         .foregroundColor(.white).font(.headline).cornerRadius(8)
@@ -205,31 +165,53 @@ struct SignUpView: View {
         .onDisappear { timer?.invalidate() }
     }
     
-    // ... 로직 함수들 (기존과 동일)
-    func sendVerificationEmail() {
-        let tempPassword = UUID().uuidString
-        Auth.auth().createUser(withEmail: email, password: tempPassword) { result, error in
-            if let error = error {
-                alertTitle = "오류"; alertMessage = "인증 메일 전송 실패: \(error.localizedDescription)"; showAlert = true
-            } else {
-                guard let user = result?.user else { return }
-                user.sendEmailVerification { error in
-                    if let error = error {
-                        alertTitle = "오류"; alertMessage = "발송 실패: \(error.localizedDescription)"; showAlert = true
-                    } else {
-                        // ✨ 알림 메시지에도 스팸함 확인 문구 추가
-                        alertTitle = "알림"
-                        alertMessage = "인증 메일이 발송되었습니다.\n(메일이 안 보이면 스팸함을 꼭 확인해주세요!)"
-                        showAlert = true
-                        withAnimation { isVerificationSent = true }
-                        startVerificationTimer()
+    // ✨ [수정됨] 인증 요청 처리 로직 (재전송 지원)
+    func handleVerificationRequest() {
+        // 1. 신규 가입 시도
+        Auth.auth().createUser(withEmail: email, password: tempAuthPassword) { result, error in
+            if let error = error as NSError? {
+                // 2. 이미 계정이 있다면? (재전송 상황)
+                if error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
+                    print("이미 계정 있음 -> 재전송 시도")
+                    // 임시 비번으로 로그인 시도
+                    Auth.auth().signIn(withEmail: email, password: tempAuthPassword) { result, error in
+                        if let _ = error {
+                            // 로그인 실패 = 진짜 옛날에 가입했거나 비번이 다름
+                            alertTitle = "알림"
+                            alertMessage = "이미 가입된 이메일입니다.\n로그인 화면에서 로그인해주세요."
+                            showAlert = true
+                        } else {
+                            // 로그인 성공 = 방금 가입 시도한 본인임 -> 메일 재전송
+                            sendMail(user: result?.user)
+                        }
                     }
+                } else {
+                    // 그 외 진짜 에러
+                    alertTitle = "오류"; alertMessage = error.localizedDescription; showAlert = true
                 }
+            } else {
+                // 3. 최초 가입 성공 -> 메일 발송
+                sendMail(user: result?.user)
+            }
+        }
+    }
+    
+    // 메일 발송 헬퍼 함수
+    func sendMail(user: User?) {
+        guard let user = user else { return }
+        user.sendEmailVerification { error in
+            if let error = error {
+                alertTitle = "오류"; alertMessage = "메일 발송 실패: \(error.localizedDescription)"; showAlert = true
+            } else {
+                alertTitle = "알림"; alertMessage = "인증 메일이 발송되었습니다.\n(스팸함을 꼭 확인해주세요!)"; showAlert = true
+                withAnimation { isVerificationSent = true }
+                startVerificationTimer()
             }
         }
     }
     
     func startVerificationTimer() {
+        timer?.invalidate() // 기존 타이머 제거
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Auth.auth().currentUser?.reload(completion: { error in
                 if error == nil {
@@ -255,6 +237,7 @@ struct SignUpView: View {
         
         guard let user = Auth.auth().currentUser else { return }
         
+        // 최종 비밀번호로 변경
         user.updatePassword(to: password) { error in
             if let error = error {
                 alertTitle="오류"; alertMessage="비밀번호 설정 실패: \(error.localizedDescription)"; showAlert=true
@@ -278,7 +261,7 @@ struct SignUpView: View {
             if let error = error {
                 print("저장 실패: \(error.localizedDescription)")
             } else {
-                try? Auth.auth().signOut()
+                try? Auth.auth().signOut() // 자동 로그인 방지용 로그아웃
                 alertTitle = "가입 완료"; alertMessage = "회원가입이 완료되었습니다.\n로그인 화면에서 로그인해주세요."; isSuccess = true; showAlert = true
             }
         }
