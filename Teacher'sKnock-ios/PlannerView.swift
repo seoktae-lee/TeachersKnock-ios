@@ -3,33 +3,22 @@ import SwiftData
 import FirebaseAuth
 
 struct PlannerView: View {
-    // 쿼리는 init에서 설정
-    @Query private var allItems: [ScheduleItem]
     @Environment(\.modelContext) private var modelContext
-    
     @State private var selectedDate = Date()
     @State private var showingAddSheet = false
     
+    // 현재 로그인한 사용자 ID
+    private var currentUserId: String {
+        Auth.auth().currentUser?.uid ?? ""
+    }
+    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
-    
-    // ✨ 생성자: 내 ID에 해당하는 일정만 가져오기
-    init(userId: String) {
-        _allItems = Query(filter: #Predicate<ScheduleItem> { item in
-            item.ownerID == userId
-        }, sort: \.startDate)
-    }
-    
-    var filteredItems: [ScheduleItem] {
-        let calendar = Calendar.current
-        return allItems.filter { item in
-            calendar.isDate(item.startDate, inSameDayAs: selectedDate)
-        }
-    }
     
     var body: some View {
         NavigationStack {
             VStack {
-                // 1. 달력
+                // 1. 달력 (DatePicker)
+                // 날짜를 선택하면 자동으로 아래 상세 버튼의 날짜가 바뀜
                 DatePicker("날짜 선택", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .accentColor(brandColor)
@@ -39,24 +28,25 @@ struct PlannerView: View {
                     .shadow(color: .gray.opacity(0.1), radius: 5)
                     .padding()
                 
-                Divider()
+                Spacer()
                 
-                // 2. 할 일 목록
-                List {
-                    if filteredItems.isEmpty {
-                        ContentUnavailableView {
-                            Label("일정 없음", systemImage: "calendar.badge.exclamationmark")
-                        } description: {
-                            Text("이 날짜에 등록된 일정이 없습니다.")
-                        }
-                    } else {
-                        ForEach(filteredItems) { item in
-                            ScheduleRow(item: item)
-                        }
-                        .onDelete(perform: deleteItems)
+                // 2. 상세 보기 버튼 (가장 중요한 연결 고리!)
+                // 사용자가 달력에서 날짜를 찍고 이 버튼을 누르거나, 바로 아래에 요약 뷰를 보여줄 수도 있습니다.
+                NavigationLink(destination: DailyDetailView(date: selectedDate, userId: currentUserId)) {
+                    HStack {
+                        Image(systemName: "list.bullet.clipboard")
+                        Text("\(selectedDate.formatted(date: .abbreviated, time: .omitted)) 상세 계획 보기")
+                            .fontWeight(.bold)
                     }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(brandColor)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
                 }
-                .listStyle(.plain)
+                
+                Spacer()
             }
             .navigationTitle("스터디 플래너")
             .toolbar {
@@ -71,41 +61,5 @@ struct PlannerView: View {
                 AddScheduleView()
             }
         }
-    }
-    
-    private func deleteItems(offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(filteredItems[index])
-        }
-    }
-}
-
-struct ScheduleRow: View {
-    @Bindable var item: ScheduleItem
-    
-    var body: some View {
-        HStack {
-            Button(action: { item.isCompleted.toggle() }) {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(item.isCompleted ? .green : .gray)
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-            
-            VStack(alignment: .leading) {
-                Text(item.title)
-                    .font(.headline)
-                    .strikethrough(item.isCompleted)
-                    .foregroundColor(item.isCompleted ? .gray : .primary)
-                
-                if !item.details.isEmpty {
-                    Text(item.details).font(.caption).foregroundColor(.gray)
-                }
-                
-                Text(item.startDate, style: .time).font(.caption2).foregroundColor(.blue)
-            }
-            Spacer()
-        }
-        .padding(.vertical, 4)
     }
 }

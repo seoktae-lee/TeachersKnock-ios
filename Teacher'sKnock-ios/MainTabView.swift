@@ -2,7 +2,7 @@ import SwiftUI
 import FirebaseAuth
 
 struct MainTabView: View {
-    // 앱 전체의 인증 상태를 관리할 객체
+    // 앱 전체의 인증 상태를 관리하는 객체
     @EnvironmentObject var authManager: AuthManager
     
     // 브랜드 색상
@@ -16,18 +16,21 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             // 탭 1: 홈 (D-day 목표)
+            // GoalListView는 아직 수정하지 않았으므로 userId를 전달합니다.
             GoalListView(userId: currentUserId)
                 .tabItem {
                     Image(systemName: "house.fill")
                     Text("홈")
                 }
             
-            // 탭 2: 플래너 -> ID 전달하며 생성
-            PlannerView(userId: currentUserId) // ✨ 이 부분을 수정하세요!
+            // 탭 2: 플래너 (수정됨 ✨)
+            // 이제 PlannerView는 스스로 ID를 찾으므로 괄호 안을 비워야 합니다.
+            PlannerView()
                 .tabItem {
                     Image(systemName: "calendar")
                     Text("플래너")
                 }
+            
             // 탭 3: 타이머 (공부 시간 측정)
             TimerView()
                 .tabItem {
@@ -35,18 +38,13 @@ struct MainTabView: View {
                     Text("타이머")
                 }
             
-            // 탭 4: 설정 (회원탈퇴 기능이 포함된 SettingsView 연결)
-            SettingsView() // ✨ 기존 코드를 지우고 이 한 줄로 교체했습니다.
+            // 탭 4: 통계 (학습 분석)
+            StatisticsView(userId: currentUserId)
                 .tabItem {
-                    Image(systemName: "gearshape.fill")
-                    Text("설정")
+                    Image(systemName: "chart.pie.fill")
+                    Text("통계")
                 }
         }
-        .accentColor(brandColor) // 선택된 탭 아이콘 색상
+        .accentColor(brandColor) // 탭 선택 색상 적용
     }
-}
-
-#Preview {
-    MainTabView()
-        .environmentObject(AuthManager())
 }
