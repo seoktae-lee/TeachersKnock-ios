@@ -46,6 +46,8 @@
 		5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */; };
 		54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */; };
 		54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */; };
+		54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */; };
+		54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -86,6 +88,8 @@
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyDetailViewModel.swift; sourceTree = "<group>"; };
 		54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTimelineViewModel.swift; sourceTree = "<group>"; };
+		54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddScheduleViewModel.swift; sourceTree = "<group>"; };
+		54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchedulePreviewView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,6 +192,8 @@
 				5459AE5B2EE1A10E008EE0E4 /* PlannerViewModel.swift */,
 				54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */,
 				54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */,
+				54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */,
+				54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */,
 			);
 			path = Planner;
 			sourceTree = "<group>";
@@ -346,6 +352,8 @@
 				5459AE3D2EE19535008EE0E4 /* RootView.swift in Sources */,
 				5459AE3E2EE19535008EE0E4 /* ScheduleItem.swift in Sources */,
 				5459AE5C2EE1A10E008EE0E4 /* PlannerViewModel.swift in Sources */,
+				54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */,
+				54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */,
 				5459AE3F2EE19535008EE0E4 /* SettingsManager.swift in Sources */,
 				5459AE402EE19535008EE0E4 /* SettingsView.swift in Sources */,
 				5459AE412EE19535008EE0E4 /* SignUpView.swift in Sources */,
