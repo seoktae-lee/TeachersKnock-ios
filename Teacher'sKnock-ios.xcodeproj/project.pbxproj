@@ -45,6 +45,7 @@
 		5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */; };
 		5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */; };
 		54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */; };
+		54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +85,7 @@
 		5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalViewModel.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyDetailViewModel.swift; sourceTree = "<group>"; };
+		54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTimelineViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +187,7 @@
 				5459AE152EE19535008EE0E4 /* EditScheduleView.swift */,
 				5459AE5B2EE1A10E008EE0E4 /* PlannerViewModel.swift */,
 				54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */,
+				54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */,
 			);
 			path = Planner;
 			sourceTree = "<group>";
@@ -358,6 +361,7 @@
 				54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */,
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
 				5459AE4A2EE19535008EE0E4 /* TimerView.swift in Sources */,
+				54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
