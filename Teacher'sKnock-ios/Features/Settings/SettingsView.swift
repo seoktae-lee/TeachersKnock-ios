@@ -1,96 +1,98 @@
 import SwiftUI
-import FirebaseAuth // ✨ 필수!
-import SwiftData    // ✨ 필수!
+import FirebaseAuth
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var settingsManager: SettingsManager
-    @Environment(\.modelContext) private var modelContext
     
-    @State private var showDeleteAlert = false
-    @State private var errorMessage = ""
-    @State private var showErrorAlert = false
+    @State private var showingLogoutAlert = false
+    @State private var showingDeleteAccountAlert = false
     
-    let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
     
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    HStack(spacing: 15) {
-                        Image(systemName: "person.circle.fill")
-                            .resizable().frame(width: 50, height: 50).foregroundColor(.gray.opacity(0.5))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(authManager.userNickname).font(.headline)
-                            if let email = Auth.auth().currentUser?.email {
-                                Text(email).font(.caption).foregroundColor(.gray)
-                            }
-                        }
+                // 1. 학습 환경
+                Section(header: Text("학습 환경")) {
+                    // ✨ [수정됨] SubjectManagementView는 파라미터 없이 호출
+                    NavigationLink(destination: SubjectManagementView()) {
+                        Label("공부 과목 관리", systemImage: "books.vertical")
                     }
-                    .padding(.vertical, 8)
-                }
-                
-                Section(header: Text("학습 설정")) {
-                    NavigationLink(destination: SubjectSelectView()) {
-                        HStack { Image(systemName: "book.closed.fill").foregroundColor(.blue); Text("선호 과목 설정") }
-                    }
-                    NavigationLink(destination: Text("준비 중인 기능입니다.")) {
-                        HStack { Image(systemName: "target").foregroundColor(.red); Text("디데이/목표 관리") }
+                    
+                    HStack {
+                        Label("알림 설정", systemImage: "bell")
+                        Spacer()
+                        Text("시스템 설정 이용").font(.caption).foregroundColor(.gray)
                     }
                 }
                 
+                // 2. 앱 정보
                 Section(header: Text("앱 정보")) {
-                    HStack { Text("버전"); Spacer(); Text(appVersion).foregroundColor(.gray) }
-                    Link("이용약관", destination: URL(string: "https://www.google.com")!)
-                    Link("개인정보 처리방침", destination: URL(string: "https://www.google.com")!)
+                    HStack {
+                        Label("현재 버전", systemImage: "info.circle")
+                        Spacer()
+                        Text("Ver \(appVersion)").foregroundColor(.gray)
+                    }
+                    
+                    Link(destination: URL(string: "https://www.google.com")!) {
+                        Label("개인정보 처리방침", systemImage: "hand.raised")
+                            .foregroundColor(.primary)
+                    }
+                    
+                    Button(action: {
+                        UIPasteboard.general.string = "support@tnoapp.com"
+                    }) {
+                        Label("문의하기 (이메일 복사)", systemImage: "envelope")
+                            .foregroundColor(.primary)
+                    }
                 }
                 
-                Section {
-                    Button("로그아웃") { try? Auth.auth().signOut() }.foregroundColor(.primary)
-                    Button("회원탈퇴") { showDeleteAlert = true }.foregroundColor(.red)
+                // 3. 계정
+                Section(header: Text("계정")) {
+                    HStack {
+                        Label("로그인 계정", systemImage: "person.circle")
+                        Spacer()
+                        // ✨ [수정됨] AuthManager가 아니라 Firebase에서 직접 이메일 가져오기 (안전함)
+                        Text(Auth.auth().currentUser?.email ?? "이메일 없음")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    // ✨ [수정됨] 로그아웃 버튼 (문법 오류 해결)
+                    Button("로그아웃") {
+                        showingLogoutAlert = true
+                    }
+                    .foregroundColor(.red)
+                    .alert("로그아웃", isPresented: $showingLogoutAlert) {
+                        Button("취소", role: .cancel) {}
+                        Button("로그아웃", role: .destructive) {
+                            // AuthManager에 signOut이 없어도 직접 호출 가능
+                            authManager.signOut()
+                        }
+                    } message: {
+                        Text("정말 로그아웃 하시겠습니까?")
+                    }
+                    
+                    // ✨ [수정됨] 회원 탈퇴 버튼
+                    Button("회원 탈퇴") {
+                        showingDeleteAccountAlert = true
+                    }
+                    .foregroundColor(.red)
+                    .alert("회원 탈퇴", isPresented: $showingDeleteAccountAlert) {
+                        Button("취소", role: .cancel) {}
+                        Button("탈퇴하기", role: .destructive) {
+                            authManager.deleteAccount()
+                        }
+                    } message: {
+                        Text("모든 데이터가 삭제되며 되돌릴 수 없습니다.")
+                    }
                 }
             }
             .navigationTitle("설정")
-            .alert("정말 탈퇴하시겠습니까?", isPresented: $showDeleteAlert) {
-                Button("취소", role: .cancel) { }
-                Button("탈퇴하기", role: .destructive) { performDeleteAccount() }
-            } message: {
-                Text("탈퇴 시 모든 학습 기록과 설정이 영구 삭제되며, 복구할 수 없습니다.")
-            }
-            .alert("오류", isPresented: $showErrorAlert) {
-                Button("확인", role: .cancel) { }
-            } message: {
-                Text(errorMessage)
-            }
-        }
-    }
-    
-    private func performDeleteAccount() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        
-        do {
-            let scheduleDescriptor = FetchDescriptor<ScheduleItem>(predicate: #Predicate { $0.ownerID == uid })
-            let schedules = try modelContext.fetch(scheduleDescriptor)
-            for item in schedules { modelContext.delete(item) }
-            
-            let recordDescriptor = FetchDescriptor<StudyRecord>(predicate: #Predicate { $0.ownerID == uid })
-            let records = try modelContext.fetch(recordDescriptor)
-            for record in records { modelContext.delete(record) }
-            
-            let goalDescriptor = FetchDescriptor<Goal>(predicate: #Predicate { $0.ownerID == uid })
-            let goals = try modelContext.fetch(goalDescriptor)
-            for goal in goals { modelContext.delete(goal) }
-            
-            print("SettingsView: 로컬 데이터 삭제 완료")
-        } catch {
-            print("SettingsView: 삭제 실패 - \(error)")
-        }
-        
-        authManager.deleteAccount { success, error in
-            if !success {
-                errorMessage = error?.localizedDescription ?? "알 수 없는 오류"
-                showErrorAlert = true
-            }
+            .listStyle(.insetGrouped)
         }
     }
 }

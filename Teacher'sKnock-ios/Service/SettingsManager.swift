@@ -2,72 +2,111 @@ import Foundation
 import SwiftUI
 import Combine
 import FirebaseFirestore
+import FirebaseAuth
 
 class SettingsManager: ObservableObject {
     
-    // UI에 보여줄 선호 과목 리스트 (기본값은 빈 배열)
-    @Published var favoriteSubjects: [SubjectName] = []
+    // ✨ [핵심 변경] SubjectName(Enum) -> StudySubject(Struct)로 변경
+    @Published var favoriteSubjects: [StudySubject] = []
     
     private let db = Firestore.firestore()
     private let settingsCollectionName = "settings"
     private let favoriteSubjectsDocument = "favorite_subjects"
     
-    init() {}
-    
-    // ✨ [보안] 로그아웃 시 메모리만 비우는 함수 (서버 데이터는 안전함)
-    func reset() {
-        print("SettingsManager: 메모리 초기화 (다른 계정 데이터 혼용 방지)")
-        self.favoriteSubjects = SubjectName.defaultSubjects
+    init() {
+        loadSubjects()
     }
     
-    // ✨ [복구] 로그인 시 서버에서 내 설정 불러오기
-    func fetchSettings(uid: String) {
-        print("SettingsManager: 서버에서 설정 불러오는 중... (UID: \(uid))")
+    // ✨ 과목 추가 함수
+    func addSubject(_ name: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty { return }
         
+        // 중복 체크
+        if !favoriteSubjects.contains(where: { $0.name == trimmedName }) {
+            let newSubject = StudySubject(name: trimmedName)
+            favoriteSubjects.append(newSubject)
+            
+            if let uid = Auth.auth().currentUser?.uid {
+                saveFavoriteSubjects(uid: uid, favoriteSubjects)
+            } else {
+                saveToLocal()
+            }
+        }
+    }
+    
+    // ✨ 과목 삭제 함수
+    func removeSubject(at offsets: IndexSet) {
+        favoriteSubjects.remove(atOffsets: offsets)
+        
+        if let uid = Auth.auth().currentUser?.uid {
+            saveFavoriteSubjects(uid: uid, favoriteSubjects)
+        } else {
+            saveToLocal()
+        }
+    }
+    
+    func reset() {
+        self.favoriteSubjects = defaultSubjects()
+    }
+    
+    // 서버에서 불러오기
+    func fetchSettings(uid: String) {
         let docRef = db.collection("users").document(uid).collection(settingsCollectionName).document(favoriteSubjectsDocument)
         
         docRef.getDocument { [weak self] document, error in
             guard let self = self else { return }
             
             if let document = document, document.exists, let data = document.data() {
-                // 1. 서버에 저장된 데이터가 있으면 가져와서 적용 (복구 성공!)
                 if let subjectStrings = data["subjects"] as? [String] {
-                    let loadedSubjects = subjectStrings.compactMap { SubjectName(rawValue: $0) }
+                    // 문자열 -> StudySubject 변환
+                    let loadedSubjects = subjectStrings.map { StudySubject(name: $0) }
                     DispatchQueue.main.async {
                         self.favoriteSubjects = loadedSubjects
-                        print("SettingsManager: 설정 복구 완료 (\(loadedSubjects.count)개 과목)")
                     }
                 }
             } else {
-                // 2. 저장된 게 없으면(첫 사용자) 기본값 적용
-                print("SettingsManager: 저장된 설정 없음 -> 기본값 적용")
                 DispatchQueue.main.async {
-                    self.favoriteSubjects = SubjectName.defaultSubjects
-                    // 기본값을 서버에도 한번 저장해주는 것이 좋음
+                    self.favoriteSubjects = self.defaultSubjects()
                     self.saveFavoriteSubjects(uid: uid, self.favoriteSubjects)
                 }
             }
         }
     }
     
-    // ✨ [저장] 변경 즉시 서버에 영구 저장
-    func saveFavoriteSubjects(uid: String, _ subjects: [SubjectName]) {
-        // UI 먼저 업데이트 (반응 속도 향상)
+    // 서버 저장
+    func saveFavoriteSubjects(uid: String, _ subjects: [StudySubject]) {
         self.favoriteSubjects = subjects
+        let subjectStrings = subjects.map { $0.name }
         
-        let subjectStrings = subjects.map { $0.rawValue }
         let dataToSave: [String: Any] = [
             "subjects": subjectStrings,
             "lastUpdated": Timestamp(date: Date())
         ]
         
-        // 사용자별(UID) 경로에 저장 -> 계정간 데이터 분리 확실함
-        db.collection("users").document(uid).collection(settingsCollectionName).document(favoriteSubjectsDocument).setData(dataToSave) { error in
-            if let error = error {
-                print("SettingsManager: 서버 저장 실패 - \(error.localizedDescription)")
-            } else {
-                print("SettingsManager: 서버 저장 성공 (영구 보관)")
-            }
+        db.collection("users").document(uid).collection(settingsCollectionName).document(favoriteSubjectsDocument).setData(dataToSave)
+    }
+    
+    // 로컬 저장 (비로그인용)
+    private func saveToLocal() {
+        let strings = favoriteSubjects.map { $0.name }
+        UserDefaults.standard.set(strings, forKey: "localFavoriteSubjects")
+    }
+    
+    private func loadSubjects() {
+        if let strings = UserDefaults.standard.stringArray(forKey: "localFavoriteSubjects") {
+            self.favoriteSubjects = strings.map { StudySubject(name: $0) }
+        } else {
+            self.favoriteSubjects = defaultSubjects()
         }
+    }
+    
+    // 기본값 생성기
+    private func defaultSubjects() -> [StudySubject] {
+        return [
+            StudySubject(name: "교육학"),
+            StudySubject(name: "전공"),
+            StudySubject(name: "한국사")
+        ]
     }
 }

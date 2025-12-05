@@ -7,12 +7,12 @@ import Combine
 class TimerViewModel: ObservableObject {
     
     // MARK: - 설정 상수
-    private let minimumStudyTime: Int = 5 // 테스트용 5초 (필요시 1초로 변경)
+    private let minimumStudyTime: Int = 5 // 테스트용 5초 (실사용 시 1초 등으로 변경 가능)
     
     // MARK: - 화면과 공유하는 데이터
     @Published var isRunning: Bool = false
     @Published var displayTime: Int = 0
-    @Published var selectedSubject: String = "교육학"
+    @Published var selectedSubject: String = "교육학" // 과목명은 String으로 관리
     @Published var selectedPurpose: StudyPurpose = .lectureWatching
     
     // MARK: - 내부 변수
@@ -99,20 +99,20 @@ class TimerViewModel: ObservableObject {
     
     // MARK: - 유틸리티
     
-    // ✨ [수정됨] 무조건 00:00:00 형식으로 표시
     func formatTime(seconds: Int) -> String {
         let h = seconds / 3600
         let m = (seconds % 3600) / 60
         let s = seconds % 60
-        
-        // 시간이 0이어도 "00:00:00"으로 표시
         return String(format: "%02d:%02d:%02d", h, m, s)
     }
     
-    func setupInitialSubject(favorites: [SubjectName]) {
+    // ✨ [수정됨] 파라미터 타입을 [StudySubject]로 변경하여 에러 해결!
+    func setupInitialSubject(favorites: [StudySubject]) {
+        // 즐겨찾기 목록이 비어있지 않고, 현재 선택된 과목이 목록에 없으면
+        // 즐겨찾기 첫 번째 과목으로 자동 선택
         if let first = favorites.first,
-           !favorites.contains(where: { $0.localizedName == selectedSubject }) {
-            selectedSubject = first.localizedName
+           !favorites.contains(where: { $0.name == selectedSubject }) {
+            selectedSubject = first.name
         }
     }
 }

@@ -44,6 +44,8 @@
 		5459AE5C2EE1A10E008EE0E4 /* PlannerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5B2EE1A10E008EE0E4 /* PlannerViewModel.swift */; };
 		5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */; };
 		5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */; };
+		546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */; };
+		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
 		54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */; };
 		54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */; };
 		54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */; };
@@ -88,6 +90,8 @@
 		5459AE5B2EE1A10E008EE0E4 /* PlannerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerViewModel.swift; sourceTree = "<group>"; };
 		5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerViewModel.swift; sourceTree = "<group>"; };
 		5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalViewModel.swift; sourceTree = "<group>"; };
+		546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectManagementView.swift; sourceTree = "<group>"; };
+		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyDetailViewModel.swift; sourceTree = "<group>"; };
 		54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTimelineViewModel.swift; sourceTree = "<group>"; };
@@ -160,6 +164,7 @@
 				5459AE202EE19535008EE0E4 /* ScheduleItem.swift */,
 				5459AE272EE19535008EE0E4 /* StudyRecord.swift */,
 				5459AE172EE19535008EE0E4 /* Goal.swift */,
+				546F5CD22EE331BF009105C7 /* StudySubject.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -243,6 +248,7 @@
 			children = (
 				5459AE222EE19535008EE0E4 /* SettingsView.swift */,
 				5459AE2A2EE19535008EE0E4 /* SubjectSelectView.swift */,
+				546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -360,6 +366,7 @@
 				5459AE3C2EE19535008EE0E4 /* QuoteManager.swift in Sources */,
 				5459AE3D2EE19535008EE0E4 /* RootView.swift in Sources */,
 				5459AE3E2EE19535008EE0E4 /* ScheduleItem.swift in Sources */,
+				546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */,
 				5459AE5C2EE1A10E008EE0E4 /* PlannerViewModel.swift in Sources */,
 				54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */,
 				54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */,
@@ -381,6 +388,7 @@
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
 				54F81CDA2EE1D13B002226B4 /* ReportListView.swift in Sources */,
 				5459AE4A2EE19535008EE0E4 /* TimerView.swift in Sources */,
+				546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */,
 				54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -4,10 +4,10 @@ import FirebaseAuth
 struct SubjectSelectView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     
-    // 모든 과목 (자율선택 제외)
+    // 기본 제공되는 모든 과목 (자율선택 제외)
     let allSubjects = SubjectName.allCases.filter { $0 != .selfStudy }
     
-    // ✨ 현재 로그인한 내 ID (이게 있어야 내 사물함에 저장함)
+    // 현재 로그인한 내 ID
     private var currentUserId: String? {
         Auth.auth().currentUser?.uid
     }
@@ -17,14 +17,18 @@ struct SubjectSelectView: View {
             Section(header: Text("자주 공부하는 과목을 최대 8개 선택해주세요."),
                     footer: Text("\(settingsManager.favoriteSubjects.count) / 8 선택됨")) {
                 
-                ForEach(allSubjects) { subject in
+                ForEach(allSubjects) { subjectName in
+                    // ✨ [핵심] Enum -> Struct 변환 (비교를 위해)
+                    let studySubject = StudySubject(name: subjectName.localizedName)
+                    let isSelected = settingsManager.favoriteSubjects.contains(where: { $0.name == studySubject.name })
+                    
                     HStack {
-                        Text(subject.localizedName)
+                        Text(subjectName.localizedName)
                             .foregroundColor(.primary)
                         Spacer()
                         
-                        // 내가 선택한 목록에 있으면 체크 표시
-                        if settingsManager.favoriteSubjects.contains(subject) {
+                        // 선택 여부에 따라 체크 표시
+                        if isSelected {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.blue)
                                 .font(.title3)
@@ -36,7 +40,7 @@ struct SubjectSelectView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        toggleSubject(subject)
+                        toggleSubject(studySubject)
                     }
                 }
             }
@@ -45,14 +49,15 @@ struct SubjectSelectView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
     
-    func toggleSubject(_ subject: SubjectName) {
-        // 로그인이 안 되어 있으면 저장 불가
+    // ✨ [수정됨] StudySubject를 인자로 받음
+    func toggleSubject(_ subject: StudySubject) {
         guard let uid = currentUserId else { return }
         
         var newFavorites = settingsManager.favoriteSubjects
         
-        if let index = newFavorites.firstIndex(of: subject) {
-            // 이미 있으면 해제
+        // 이미 있는지 확인 (이름으로 비교)
+        if let index = newFavorites.firstIndex(where: { $0.name == subject.name }) {
+            // 있으면 제거
             newFavorites.remove(at: index)
         } else {
             // 없으면 추가 (8개 제한)
@@ -61,7 +66,7 @@ struct SubjectSelectView: View {
             }
         }
         
-        // ✨ 변경된 리스트를 서버에 즉시 저장! (앱 꺼도 유지됨)
+        // 변경된 리스트 저장
         settingsManager.saveFavoriteSubjects(uid: uid, newFavorites)
     }
 }
