@@ -10,10 +10,11 @@ struct GoalListView: View {
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     
-    // 리포트 화면 이동을 위한 상태 변수
+    // 리포트 화면 이동 상태
     @State private var showingReportList = false
     
-    @State private var todayQuote: Quote = Quote(text: "오늘의 명언을 불러오는 중...", author: "")
+    // ✨ [수정됨] Quote 초기화 시 'id: nil' 추가 (컴파일 에러 해결)
+    @State private var todayQuote: Quote = Quote(id: nil, text: "오늘의 명언을 불러오는 중...", author: "")
     
     @EnvironmentObject var authManager: AuthManager
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
@@ -30,10 +31,12 @@ struct GoalListView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 1. 명언 카드
-                QuoteCard(quote: todayQuote)
-                    .padding()
+            VStack(spacing: 15) {
+                
+                // 1. 작아진 명언 배너
+                CompactQuoteView(quote: todayQuote)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
                 
                 // 2. 목표 리스트
                 if goals.isEmpty {
@@ -53,6 +56,7 @@ struct GoalListView: View {
                             }
                             .buttonStyle(.plain)
                             .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         }
                         .onDelete(perform: deleteGoals)
                     }
@@ -61,10 +65,10 @@ struct GoalListView: View {
             }
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
-                // ✨ [수정됨] 좌측 상단: 리포트 버튼 (문서 아이콘)
+                // 좌측 상단: 리포트 버튼
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showingReportList = true }) {
-                        Image(systemName: "doc.text.image") // 👈 여기서 아이콘 변경됨!
+                        Image(systemName: "doc.text.image")
                             .font(.title3)
                             .foregroundColor(brandColor)
                     }
@@ -78,7 +82,6 @@ struct GoalListView: View {
                     }
                 }
             }
-            // 리포트 화면 연결
             .navigationDestination(isPresented: $showingReportList) {
                 ReportListView()
             }
@@ -96,21 +99,38 @@ struct GoalListView: View {
                 .presentationDetents([.medium])
             }
             .onAppear {
-                loadQuote()
+                checkAndLoadDailyQuote()
             }
         }
     }
     
-    func loadQuote() {
-        if todayQuote.text != "오늘의 명언을 불러오는 중..." { return }
+    // 하루 1회 명언 로직
+    func checkAndLoadDailyQuote() {
+        let defaults = UserDefaults.standard
+        let todayKey = Date().formatted(date: .numeric, time: .omitted)
         
-        QuoteManager.shared.fetchQuote { quote in
-            if let quote = quote {
-                withAnimation {
-                    self.todayQuote = quote
+        if let savedDate = defaults.string(forKey: "savedQuoteDate"),
+           savedDate == todayKey,
+           let savedText = defaults.string(forKey: "savedQuoteText"),
+           let savedAuthor = defaults.string(forKey: "savedQuoteAuthor") {
+            
+            // 저장된 명언 불러오기 (id: nil 추가)
+            self.todayQuote = Quote(id: nil, text: savedText, author: savedAuthor)
+            
+        } else {
+            // 새 명언 가져오기
+            QuoteManager.shared.fetchQuote { quote in
+                if let quote = quote {
+                    withAnimation {
+                        self.todayQuote = quote
+                    }
+                    defaults.set(todayKey, forKey: "savedQuoteDate")
+                    defaults.set(quote.text, forKey: "savedQuoteText")
+                    defaults.set(quote.author, forKey: "savedQuoteAuthor")
+                } else {
+                    // 실패 시 기본 명언 (id: nil 추가)
+                    self.todayQuote = Quote(id: nil, text: "실패는 성공의 어머니이다.", author: "에디슨")
                 }
-            } else {
-                self.todayQuote = Quote(text: "실패는 성공의 어머니이다.", author: "에디슨")
             }
         }
     }
@@ -123,65 +143,45 @@ struct GoalListView: View {
     }
 }
 
-// MARK: - Subviews (기존 코드 유지)
-
-struct QuoteCard: View {
+// 명언 뷰 디자인
+struct CompactQuoteView: View {
     let quote: Quote
-    @State private var displayedText: String = ""
-    @State private var typingTimer: Timer?
-    private let chalkboardGreen = Color(red: 0.15, green: 0.35, blue: 0.2)
-    private let woodBrown = Color(red: 0.55, green: 0.35, blue: 0.15)
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack {
-                Image(systemName: "quote.opening").font(.title2).foregroundColor(.white.opacity(0.6))
-                Spacer()
-            }
-            Text(displayedText)
-                .font(.custom("ChalkboardSE-Bold", size: 20))
-                .foregroundColor(.white)
-                .lineSpacing(6)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(minHeight: 60, alignment: .topLeading)
-                .animation(.none, value: displayedText)
-            HStack {
-                Spacer()
-                Text("- \(quote.author) -")
-                    .font(.custom("ChalkboardSE-Light", size: 14))
-                    .foregroundColor(.white.opacity(0.8))
-                    .padding(.top, 5)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "quote.opening")
+                .font(.caption)
+                .foregroundColor(.gray.opacity(0.5))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(quote.text)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary.opacity(0.8))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                if !quote.author.isEmpty {
+                    Text("- \(quote.author)")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
             }
             
-            HStack(spacing: 15) {
-                Spacer()
-                RoundedRectangle(cornerRadius: 2).fill(Color.white.opacity(0.9)).frame(width: 40, height: 8).rotationEffect(.degrees(-5))
-                VStack(spacing: 0) {
-                    Rectangle().fill(woodBrown).frame(width: 35, height: 8)
-                    Rectangle().fill(Color.gray).frame(width: 35, height: 12)
-                }
-                .cornerRadius(3)
-            }
-            .padding(.top, 15)
+            Spacer()
         }
-        .padding(20).background(chalkboardGreen)
-        .overlay(RoundedRectangle(cornerRadius: 15).stroke(woodBrown, lineWidth: 6))
-        .cornerRadius(15).shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 5)
-        .onAppear { if displayedText.isEmpty { startTypewriter() } }
-        .onChange(of: quote.text) { _, _ in startTypewriter() }
-    }
-    
-    func startTypewriter() {
-        typingTimer?.invalidate()
-        displayedText = ""
-        var charIndex = 0
-        let chars = Array(quote.text)
-        typingTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
-            if charIndex < chars.count { displayedText.append(chars[charIndex]); charIndex += 1 } else { timer.invalidate() }
-        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+        )
     }
 }
 
+// GoalRow (기존 유지)
 struct GoalRow: View {
     let goal: Goal
     let userId: String

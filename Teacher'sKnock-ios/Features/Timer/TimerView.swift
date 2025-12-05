@@ -6,7 +6,7 @@ struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
     
-    // ✨ ViewModel 연결 (이제 로직은 얘가 담당)
+    // ✨ ViewModel 연결 (StateObject로 수명 관리)
     @StateObject private var viewModel = TimerViewModel()
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
@@ -74,19 +74,21 @@ struct TimerView: View {
                 
                 Spacer()
                 
-                // 2. 타이머 시간 표시
+                // 2. ✨ 타이머 시간 표시 (가장 중요한 부분!)
+                // ViewModel의 displayTime이 @Published로 되어있어서 자동 갱신됩니다.
                 Text(viewModel.formatTime(seconds: viewModel.displayTime))
                     .font(.system(size: 90, weight: .medium, design: .monospaced))
                     .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                     .lineLimit(1).minimumScaleFactor(0.5)
                     .padding(.horizontal)
+                    .contentTransition(.numericText()) // 숫자 바뀔 때 부드럽게 (iOS 16+)
                 
                 Spacer()
                 
                 // 3. 컨트롤 버튼
                 HStack(spacing: 40) {
                     if viewModel.isRunning {
-                        // 일시정지 버튼
+                        // 일시정지(사실상 정지) 버튼
                         Button(action: { viewModel.stopTimer() }) {
                             VStack {
                                 Image(systemName: "pause.circle.fill").resizable().frame(width: 80, height: 80)
@@ -95,7 +97,7 @@ struct TimerView: View {
                         }
                         .foregroundColor(.orange)
                     } else {
-                        // 시작/계속 버튼
+                        // 시작 버튼
                         Button(action: { viewModel.startTimer() }) {
                             VStack {
                                 Image(systemName: "play.circle.fill").resizable().frame(width: 80, height: 80)
@@ -105,14 +107,14 @@ struct TimerView: View {
                         .foregroundColor(brandColor)
                     }
                     
-                    // 완료 버튼 (시간이 조금이라도 있을 때만 표시)
+                    // 완료 및 저장 버튼 (시간이 조금이라도 있을 때만 표시)
                     if !viewModel.isRunning && viewModel.displayTime > 0 {
                         Button(action: {
                             viewModel.saveRecord(context: modelContext, ownerID: currentUserId)
                         }) {
                             VStack {
                                 Image(systemName: "checkmark.circle.fill").resizable().frame(width: 80, height: 80)
-                                Text("완료 및 저장").font(.caption).padding(.top, 5)
+                                Text("저장하기").font(.caption).padding(.top, 5)
                             }
                         }
                         .foregroundColor(.green)
@@ -127,8 +129,9 @@ struct TimerView: View {
             .navigationTitle("집중 타이머")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    // 통계 버튼 (리포트 뷰가 아닌 기존 StatisticsView로 연결됨 - 유지)
                     NavigationLink(destination: StatisticsView(userId: currentUserId)) {
-                        Image(systemName: "chart.pie.fill")
+                        Image(systemName: "chart.bar.xaxis") // 아이콘 변경 (리포트랑 구분)
                             .font(.title3)
                             .foregroundColor(brandColor)
                     }
@@ -138,7 +141,7 @@ struct TimerView: View {
             .onAppear {
                 viewModel.setupInitialSubject(favorites: settingsManager.favoriteSubjects)
             }
-            // 화면 나갈 때 타이머 자동 정지
+            // 화면 나갈 때 타이머 자동 정지 (선택 사항)
             .onDisappear {
                 if viewModel.isRunning { viewModel.stopTimer() }
             }
@@ -146,7 +149,7 @@ struct TimerView: View {
     }
 }
 
-// RecentRecordsView는 기존 로직과 동일하므로 아래에 그대로 둡니다.
+// RecentRecordsView는 변경 사항 없으므로 그대로 둡니다.
 struct RecentRecordsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]
@@ -161,21 +164,25 @@ struct RecentRecordsView: View {
         VStack(alignment: .leading) {
             Text("최근 학습 기록").font(.headline).padding(.horizontal).padding(.bottom, 5)
             List {
-                ForEach(records.prefix(10)) { record in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(record.areaName).font(.subheadline).bold()
-                            Text(record.studyPurpose).font(.caption2).foregroundColor(.gray).padding(.horizontal, 6).padding(.vertical, 2).background(Color.gray.opacity(0.1)).cornerRadius(4)
-                        }
-                        Spacer()
-                        if record.durationSeconds >= 3600 {
-                            Text("\(record.durationSeconds / 3600)시간 \((record.durationSeconds % 3600) / 60)분").font(.caption).foregroundColor(.gray)
-                        } else {
-                            Text("\(record.durationSeconds / 60)분 \(record.durationSeconds % 60)초").font(.caption).foregroundColor(.gray)
+                if records.isEmpty {
+                    Text("아직 기록이 없습니다.").foregroundColor(.gray)
+                } else {
+                    ForEach(records.prefix(10)) { record in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(record.areaName).font(.subheadline).bold()
+                                Text(record.studyPurpose).font(.caption2).foregroundColor(.gray).padding(.horizontal, 6).padding(.vertical, 2).background(Color.gray.opacity(0.1)).cornerRadius(4)
+                            }
+                            Spacer()
+                            if record.durationSeconds >= 3600 {
+                                Text("\(record.durationSeconds / 3600)시간 \((record.durationSeconds % 3600) / 60)분").font(.caption).foregroundColor(.gray)
+                            } else {
+                                Text("\(record.durationSeconds / 60)분 \(record.durationSeconds % 60)초").font(.caption).foregroundColor(.gray)
+                            }
                         }
                     }
+                    .onDelete(perform: deleteRecords)
                 }
-                .onDelete(perform: deleteRecords)
             }
             .listStyle(.plain).frame(height: 200)
         }

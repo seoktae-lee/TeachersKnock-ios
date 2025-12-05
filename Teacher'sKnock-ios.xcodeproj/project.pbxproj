@@ -192,13 +192,13 @@
 			children = (
 				5459AE1D2EE19535008EE0E4 /* PlannerView.swift */,
 				5459AE132EE19535008EE0E4 /* DailyDetailView.swift */,
+				54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */,
 				5459AE142EE19535008EE0E4 /* DailyTimelineView.swift */,
+				54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */,
 				5459AE0E2EE19535008EE0E4 /* AddScheduleView.swift */,
+				54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */,
 				5459AE152EE19535008EE0E4 /* EditScheduleView.swift */,
 				5459AE5B2EE1A10E008EE0E4 /* PlannerViewModel.swift */,
-				54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */,
-				54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */,
-				54F81CD52EE1B383002226B4 /* AddScheduleViewModel.swift */,
 				54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */,
 			);
 			path = Planner;
@@ -208,9 +208,9 @@
 			isa = PBXGroup;
 			children = (
 				5459AE2C2EE19535008EE0E4 /* TimerView.swift */,
+				5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */,
 				5459AE252EE19535008EE0E4 /* StatisticsView.swift */,
 				5459AE282EE19535008EE0E4 /* SubjectDetailView.swift */,
-				5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */,
 			);
 			path = Timer;
 			sourceTree = "<group>";
@@ -219,9 +219,9 @@
 			isa = PBXGroup;
 			children = (
 				5459AE182EE19535008EE0E4 /* GoalListView.swift */,
+				5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */,
 				5459AE0D2EE19535008EE0E4 /* AddGoalView.swift */,
 				5459AE122EE19535008EE0E4 /* CharacterView.swift */,
-				5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */,
 				54F81CD92EE1D13B002226B4 /* ReportListView.swift */,
 				54F81CDB2EE1D47B002226B4 /* WeeklyReportDetailView.swift */,
 				54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */,
