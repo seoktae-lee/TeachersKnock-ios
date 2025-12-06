@@ -10,11 +10,7 @@ struct GoalListView: View {
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     
-    // 리포트 화면 이동 상태
-    @State private var showingReportList = false
-    @State private var showingNoticeList = false
-    
-    // 명언 상태 (기본값)
+    // 명언 상태
     @State private var todayQuote: Quote = Quote(id: nil, text: "오늘의 명언을 불러오는 중...", author: "")
     
     @Environment(\.scenePhase) var scenePhase
@@ -35,7 +31,6 @@ struct GoalListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 15) {
-                
                 // 1. 명언 배너
                 CompactQuoteView(quote: todayQuote)
                     .padding(.horizontal)
@@ -68,13 +63,17 @@ struct GoalListView: View {
             }
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
+                // ✨ [수정됨] Button 대신 NavigationLink 직접 사용 (가장 안전한 방식)
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 15) {
-                        Button(action: { showingReportList = true }) {
+                        // 1. 리포트 바로가기
+                        NavigationLink(destination: ReportListView(userId: currentUserId)) {
                             Image(systemName: "doc.text.image")
                                 .font(.title3).foregroundColor(brandColor)
                         }
-                        Button(action: { showingNoticeList = true }) {
+                        
+                        // 2. 공지 바로가기
+                        NavigationLink(destination: NoticeListView()) {
                             Image(systemName: "megaphone.fill")
                                 .font(.title3).foregroundColor(.orange)
                         }
@@ -86,12 +85,6 @@ struct GoalListView: View {
                         Image(systemName: "plus").foregroundColor(brandColor)
                     }
                 }
-            }
-            .navigationDestination(isPresented: $showingReportList) {
-                ReportListView()
-            }
-            .navigationDestination(isPresented: $showingNoticeList) {
-                NoticeListView()
             }
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
@@ -105,18 +98,13 @@ struct GoalListView: View {
                 }
                 .presentationDetents([.medium])
             }
-            .onAppear {
-                checkAndLoadDailyQuote()
-            }
+            .onAppear { checkAndLoadDailyQuote() }
             .onChange(of: scenePhase) { newPhase in
-                if newPhase == .active {
-                    checkAndLoadDailyQuote()
-                }
+                if newPhase == .active { checkAndLoadDailyQuote() }
             }
         }
     }
     
-    // 하루 2회(오전/오후) 명언 로직
     func checkAndLoadDailyQuote() {
         let defaults = UserDefaults.standard
         let todayKey = Date().formatted(date: .numeric, time: .omitted)
@@ -136,19 +124,14 @@ struct GoalListView: View {
         } else {
             QuoteManager.shared.fetchQuote { quote1 in
                 let q1 = quote1 ?? Quote(id: nil, text: "오늘 하루도 파이팅!", author: "티노")
-                
                 QuoteManager.shared.fetchQuote { quote2 in
                     let q2 = quote2 ?? Quote(id: nil, text: "끝까지 포기하지 마세요!", author: "티노")
-                    
                     defaults.set(todayKey, forKey: "quoteDate")
                     defaults.set(q1.text, forKey: "quoteAM_text")
                     defaults.set(q1.author, forKey: "quoteAM_author")
                     defaults.set(q2.text, forKey: "quotePM_text")
                     defaults.set(q2.author, forKey: "quotePM_author")
-                    
-                    withAnimation {
-                        self.todayQuote = isAfternoon ? q2 : q1
-                    }
+                    withAnimation { self.todayQuote = isAfternoon ? q2 : q1 }
                 }
             }
         }
@@ -160,57 +143,36 @@ struct GoalListView: View {
     }
 }
 
-// ✨ [필수] 아래 두 구조체가 파일 안에 꼭 있어야 합니다!
+// 하위 뷰들은 기존과 동일합니다. (CompactQuoteView, GoalRow)
+// 아래 코드는 기존 파일에 있는 것을 그대로 두시면 됩니다. (생략하지 않고 넣어드립니다)
 
-// 명언 뷰 디자인
 struct CompactQuoteView: View {
     let quote: Quote
-    
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "quote.opening")
-                .font(.caption)
-                .foregroundColor(.gray.opacity(0.5))
-            
+            Image(systemName: "quote.opening").font(.caption).foregroundColor(.gray.opacity(0.5))
             VStack(alignment: .leading, spacing: 4) {
-                Text(quote.text)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary.opacity(0.8))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                if !quote.author.isEmpty {
-                    Text("- \(quote.author)")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
+                Text(quote.text).font(.subheadline).fontWeight(.medium).foregroundColor(.primary.opacity(0.8)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                if !quote.author.isEmpty { Text("- \(quote.author)").font(.caption2).foregroundColor(.gray) }
             }
             Spacer()
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.1), lineWidth: 1))
+        .padding(.vertical, 12).padding(.horizontal, 16).background(Color(.systemGray6).opacity(0.5)).cornerRadius(12).overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.1), lineWidth: 1))
     }
 }
 
-// 목표 리스트 행 디자인
 struct GoalRow: View {
     let goal: Goal
     let userId: String
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     @Query private var records: [StudyRecord]
     @Query private var scheduleItems: [ScheduleItem]
-    
     init(goal: Goal, userId: String) {
         self.goal = goal
         self.userId = userId
         _records = Query(filter: #Predicate<StudyRecord> { record in record.ownerID == userId })
         _scheduleItems = Query(filter: #Predicate<ScheduleItem> { item in item.ownerID == userId })
     }
-    
     var currentEmoji: String {
         let calendar = Calendar.current
         let timerDays = records.map { calendar.startOfDay(for: $0.date) }
@@ -218,7 +180,6 @@ struct GoalRow: View {
         let uniqueDays = Set(timerDays + plannerDays).count
         return CharacterLevel.getLevel(currentDays: uniqueDays, totalGoalDays: goal.totalDays).emoji
     }
-    
     var dDay: String {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -229,24 +190,18 @@ struct GoalRow: View {
         }
         return "Error"
     }
-    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(goal.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
-                    if goal.hasCharacter {
-                        Text(currentEmoji).font(.title3).padding(6).background(Color.white.opacity(0.2)).clipShape(Circle())
-                    }
+                    if goal.hasCharacter { Text(currentEmoji).font(.title3).padding(6).background(Color.white.opacity(0.2)).clipShape(Circle()) }
                 }
                 Text(goal.targetDate, style: .date).font(.caption).foregroundColor(.white.opacity(0.8))
             }
             Spacer()
             Text(dDay).font(.title).fontWeight(.black).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 6).background(Color.white.opacity(0.2)).cornerRadius(10)
         }
-        .padding()
-        .background(LinearGradient(gradient: Gradient(colors: [brandColor, brandColor.opacity(0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing))
-        .cornerRadius(15).shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 5)
-        .padding(.vertical, 5).listRowSeparator(.hidden)
+        .padding().background(LinearGradient(gradient: Gradient(colors: [brandColor, brandColor.opacity(0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing)).cornerRadius(15).shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 5).padding(.vertical, 5).listRowSeparator(.hidden)
     }
 }

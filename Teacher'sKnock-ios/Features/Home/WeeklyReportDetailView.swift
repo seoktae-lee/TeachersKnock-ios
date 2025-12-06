@@ -1,17 +1,18 @@
 import SwiftUI
 import SwiftData
 import Charts
-import FirebaseAuth // ✨ [추가] 유저 ID 확인을 위해 필요
+import FirebaseAuth
 
 struct WeeklyReportDetailView: View {
     let title: String
     let startDate: Date
     let endDate: Date
+    let userId: String
     
     @Query private var allRecords: [StudyRecord]
     @Query private var allSchedules: [ScheduleItem]
     
-    // 차트용 데이터 구조
+    // 차트용 데이터 구조체
     struct ChartData: Identifiable {
         let id = UUID()
         let label: String
@@ -24,13 +25,24 @@ struct WeeklyReportDetailView: View {
         Auth.auth().currentUser?.uid ?? ""
     }
     
+    init(title: String, startDate: Date, endDate: Date, userId: String) {
+        self.title = title
+        self.startDate = startDate
+        self.endDate = endDate
+        self.userId = userId
+        
+        // 내 데이터만 필터링
+        _allRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId })
+        _allSchedules = Query(filter: #Predicate<ScheduleItem> { $0.ownerID == userId })
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
-                // 1. 요약 카드 (총 시간 + MVP)
+                // 1. 요약 카드
                 summaryCard
                 
-                // 2. 요일별 공부량 막대 그래프
+                // 2. 요일별 막대 그래프
                 VStack(alignment: .leading, spacing: 15) {
                     Text("📊 요일별 학습 흐름")
                         .font(.headline)
@@ -59,7 +71,7 @@ struct WeeklyReportDetailView: View {
                 
                 Divider()
                 
-                // 3. ✨ [수정됨] 플래너 vs 수행 비교 (클릭 시 상세 이동)
+                // 3. 일별 상세 기록
                 VStack(alignment: .leading, spacing: 15) {
                     HStack {
                         Text("📅 일별 상세 기록")
@@ -81,7 +93,7 @@ struct WeeklyReportDetailView: View {
                                     records: getRecords(for: date)
                                 )
                             }
-                            .buttonStyle(.plain) // 버튼 디자인 제거 (리스트 스타일 유지)
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
@@ -89,7 +101,7 @@ struct WeeklyReportDetailView: View {
                 
                 Divider()
                 
-                // 4. 주간 과목 비중 (원형 차트)
+                // 4. 과목 비중 (원형 차트)
                 if !pieData.isEmpty {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("🧩 과목별 비중")
@@ -106,7 +118,6 @@ struct WeeklyReportDetailView: View {
                         }
                         .frame(height: 220)
                         
-                        // 범례
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
                             ForEach(pieData) { item in
                                 HStack(spacing: 4) {
@@ -127,41 +138,29 @@ struct WeeklyReportDetailView: View {
         .background(Color(.systemGray6))
     }
     
-    // MARK: - Components (이전과 동일)
+    // MARK: - Components
     
     private var summaryCard: some View {
         HStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("총 학습 시간")
-                    .font(.caption).foregroundColor(.gray)
-                Text(formatTimeShort(totalSeconds))
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.blue)
+                Text("총 학습 시간").font(.caption).foregroundColor(.gray)
+                Text(formatTimeShort(totalSeconds)).font(.system(size: 24, weight: .bold)).foregroundColor(.blue)
             }
             Divider()
             VStack(alignment: .leading, spacing: 4) {
-                Text("🔥 이번 주 MVP")
-                    .font(.caption).foregroundColor(.gray)
+                Text("🔥 이번 주 MVP").font(.caption).foregroundColor(.gray)
                 if let best = pieData.first {
-                    Text(best.label)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(best.color)
+                    Text(best.label).font(.system(size: 20, weight: .bold)).foregroundColor(best.color)
                 } else {
-                    Text("-")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.gray)
+                    Text("-").font(.system(size: 20, weight: .bold)).foregroundColor(.gray)
                 }
             }
             Spacer()
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .padding(.horizontal)
+        .padding().background(Color.white).cornerRadius(16).shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2).padding(.horizontal)
     }
     
-    // MARK: - Helpers (이전과 동일)
+    // MARK: - Helpers
     
     private var filteredRecords: [StudyRecord] {
         let end = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
@@ -228,7 +227,7 @@ struct WeeklyReportDetailView: View {
     }
 }
 
-// ✨ 요일별 수행도 리스트 행 (화살표 추가)
+// ✨ [중요] 이 구조체가 파일 안에 꼭 있어야 합니다!
 struct DailyPerformanceRow: View {
     let date: Date
     let schedules: [ScheduleItem]
@@ -239,70 +238,46 @@ struct DailyPerformanceRow: View {
     
     var body: some View {
         HStack {
-            // 날짜 (월 12.04)
             VStack {
-                Text(date.formatted(.dateTime.weekday(.abbreviated)))
-                    .font(.caption2).bold().foregroundColor(.gray)
-                Text(date.formatted(.dateTime.day()))
-                    .font(.caption).bold()
-            }
-            .frame(width: 40)
+                Text(date.formatted(.dateTime.weekday(.abbreviated))).font(.caption2).bold().foregroundColor(.gray)
+                Text(date.formatted(.dateTime.day())).font(.caption).bold()
+            }.frame(width: 40)
             
             Divider().frame(height: 30)
             
-            // 플래너 달성률
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(schedules.isEmpty ? .gray : (completedCount == schedules.count ? .green : .orange))
-                    Text(schedules.isEmpty ? "일정 없음" : "\(completedCount)/\(schedules.count) 완료")
-                        .font(.caption).bold()
+                    Image(systemName: "checkmark.circle.fill").font(.caption).foregroundColor(schedules.isEmpty ? .gray : (completedCount == schedules.count ? .green : .orange))
+                    Text(schedules.isEmpty ? "일정 없음" : "\(completedCount)/\(schedules.count) 완료").font(.caption).bold()
                 }
-                
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.gray.opacity(0.1))
                         if !schedules.isEmpty {
-                            Capsule()
-                                .fill(completedCount == schedules.count ? Color.green : Color.orange)
-                                .frame(width: geo.size.width * CGFloat(completedCount) / CGFloat(schedules.count))
+                            Capsule().fill(completedCount == schedules.count ? Color.green : Color.orange).frame(width: geo.size.width * CGFloat(completedCount) / CGFloat(schedules.count))
                         }
                     }
-                }
-                .frame(height: 6)
+                }.frame(height: 6)
             }
             
             Spacer()
             
-            // 실제 공부 시간
             if totalStudyTime > 0 {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("학습 시간")
-                        .font(.caption2).foregroundColor(.gray)
-                    Text(formatTime(totalStudyTime))
-                        .font(.caption).bold().foregroundColor(.blue)
+                    Text("학습 시간").font(.caption2).foregroundColor(.gray)
+                    Text(formatTime(totalStudyTime)).font(.caption).bold().foregroundColor(.blue)
                 }
             } else {
-                Text("-")
-                    .font(.caption).foregroundColor(.gray.opacity(0.5))
+                Text("-").font(.caption).foregroundColor(.gray.opacity(0.5))
             }
             
-            // ✨ 이동 가능하다는 힌트 (Chevron)
-            Image(systemName: "chevron.right")
-                .font(.caption2)
-                .foregroundColor(.gray.opacity(0.5))
-                .padding(.leading, 5)
+            Image(systemName: "chevron.right").font(.caption2).foregroundColor(.gray.opacity(0.5)).padding(.leading, 5)
         }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
+        .padding().background(Color.white).cornerRadius(12).shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
     }
     
     private func formatTime(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
+        let h = seconds / 3600; let m = (seconds % 3600) / 60
         return h > 0 ? "\(h)h \(m)m" : "\(m)m"
     }
 }

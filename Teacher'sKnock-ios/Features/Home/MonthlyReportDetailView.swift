@@ -6,10 +6,21 @@ struct MonthlyReportDetailView: View {
     let title: String
     let startDate: Date
     let endDate: Date
+    let userId: String
     
+    // 내 데이터만 가져오도록 필터링
     @Query private var allRecords: [StudyRecord]
     
-    // 차트용 데이터
+    init(title: String, startDate: Date, endDate: Date, userId: String) {
+        self.title = title
+        self.startDate = startDate
+        self.endDate = endDate
+        self.userId = userId
+        
+        _allRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId })
+    }
+    
+    // 차트용 데이터 구조체
     struct ChartData: Identifiable {
         let id = UUID()
         let subject: String
@@ -20,32 +31,31 @@ struct MonthlyReportDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                // 1. 헤더 (총 시간)
+                // 1. 헤더
                 headerSection
                 
                 Divider()
                 
-                // 2. ✨ 학습 습관 캘린더 (잔디 심기)
+                // 2. 학습 습관 캘린더 (잔디 심기)
                 VStack(alignment: .leading, spacing: 10) {
                     Text("📅 월간 학습 습관")
                         .font(.headline)
                         .padding(.horizontal)
                     
-                    // 캘린더 히트맵 뷰
+                    // ✨ [중요] 아래에 정의된 StudyHeatmapView를 여기서 사용
                     StudyHeatmapView(startDate: startDate, endDate: endDate, records: filteredRecords)
                         .padding(.horizontal)
                 }
                 
                 Divider()
                 
-                // 3. 과목별 분석 (원형 + 랭킹)
+                // 3. 과목별 분석
                 if !pieData.isEmpty {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("📊 과목별 학습 분석")
                             .font(.headline)
                             .padding(.horizontal)
                         
-                        // (1) 원형 그래프 (비중 확인)
                         Chart(pieData) { item in
                             SectorMark(
                                 angle: .value("시간", item.seconds),
@@ -58,11 +68,9 @@ struct MonthlyReportDetailView: View {
                         
                         Divider().padding(.horizontal)
                         
-                        // (2) ✨ 랭킹 바 차트 (많이 한 것 vs 적게 한 것 비교)
                         VStack(spacing: 12) {
                             ForEach(Array(pieData.enumerated()), id: \.element.id) { index, item in
                                 HStack {
-                                    // 순위 뱃지
                                     Text("\(index + 1)")
                                         .font(.caption2).bold()
                                         .frame(width: 20, height: 20)
@@ -75,7 +83,6 @@ struct MonthlyReportDetailView: View {
                                         .frame(width: 80, alignment: .leading)
                                         .lineLimit(1)
                                     
-                                    // 막대 그래프
                                     GeometryReader { geo in
                                         ZStack(alignment: .leading) {
                                             Capsule().fill(Color.gray.opacity(0.1))
@@ -110,7 +117,6 @@ struct MonthlyReportDetailView: View {
     // MARK: - Helpers
     
     private var filteredRecords: [StudyRecord] {
-        // 선택된 월의 기록만 필터링
         let end = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
         return allRecords.filter { $0.date >= startDate && $0.date < end }
     }
@@ -125,7 +131,7 @@ struct MonthlyReportDetailView: View {
             dict[record.areaName, default: 0] += record.durationSeconds
         }
         return dict.map { ChartData(subject: $0.key, seconds: $0.value) }
-            .sorted { $0.seconds > $1.seconds } // 공부 많이 한 순서 정렬
+            .sorted { $0.seconds > $1.seconds }
     }
     
     private var maxSeconds: Int {
@@ -173,7 +179,7 @@ struct MonthlyReportDetailView: View {
     }
 }
 
-// ✨ 학습 습관 히트맵 (잔디 심기 뷰)
+// ✨ [필수] 이 구조체가 파일 안에 꼭 있어야 합니다!
 struct StudyHeatmapView: View {
     let startDate: Date
     let endDate: Date
