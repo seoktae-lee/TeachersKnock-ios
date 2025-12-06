@@ -8,9 +8,11 @@ class DailyDetailViewModel: ObservableObject {
     let userId: String
     let targetDate: Date
     
+    // 뷰에서 감시할 데이터들
     @Published var schedules: [ScheduleItem] = []
     @Published var records: [StudyRecord] = []
     
+    // 파이차트용 데이터 구조체
     struct ChartData: Identifiable {
         let id = UUID()
         let subject: String
@@ -26,11 +28,13 @@ class DailyDetailViewModel: ObservableObject {
         self.targetDate = targetDate
     }
     
+    // 뷰가 나타날 때(onAppear) 컨텍스트 주입받고 데이터 로드
     func setContext(_ context: ModelContext) {
         self.modelContext = context
         fetchData()
     }
     
+    // 데이터 불러오기 (날짜 걸침 일정 포함)
     func fetchData() {
         guard let context = modelContext else { return }
         
@@ -61,6 +65,7 @@ class DailyDetailViewModel: ObservableObject {
         }
     }
     
+    // 파이차트 데이터 계산
     var pieData: [ChartData] {
         var dict: [String: Int] = [:]
         for record in records { dict[record.areaName, default: 0] += record.durationSeconds }
@@ -69,6 +74,7 @@ class DailyDetailViewModel: ObservableObject {
     
     var totalActualSeconds: Int { pieData.reduce(0) { $0 + $1.seconds } }
     
+    // 날짜 포맷팅
     var formattedDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy년 M월 d일 (EEEE)"
@@ -76,8 +82,9 @@ class DailyDetailViewModel: ObservableObject {
         return formatter.string(from: targetDate)
     }
     
-    // MARK: - 비즈니스 로직
+    // MARK: - 비즈니스 로직 (User Intents)
     
+    // 1. 내일로 미루기 (복제)
     func duplicateToTomorrow(_ item: ScheduleItem) {
         guard let context = modelContext else { return }
         
@@ -99,7 +106,7 @@ class DailyDetailViewModel: ObservableObject {
         context.insert(newItem)
         FirestoreSyncManager.shared.saveSchedule(newItem)
         
-        // 원본 상태 변경 (미뤄짐 처리)
+        // 원본 상태 변경
         item.isPostponed = true
         item.isCompleted = false
         
@@ -107,18 +114,51 @@ class DailyDetailViewModel: ObservableObject {
         fetchData()
     }
     
-    // ✨ [추가됨] 미루기 취소 (다시 오늘 할 일로 복구)
+    // 2. ✨ [수정됨] 미루기 취소 (내일 일정 삭제 로직 추가)
     func cancelPostpone(_ item: ScheduleItem) {
-        // 미뤄짐 상태 해제
-        item.isPostponed = false
-        // (선택 사항) 복구 시 완료 상태는 false로 두는 것이 일반적
-        // item.isCompleted = false
+        guard let context = modelContext else { return }
         
-        // *주의: 이미 내일로 복제된 일정은 자동으로 삭제되지 않습니다.
-        // (사용자가 내일 일정을 이미 수정했을 수도 있기 때문)
+        // 1. 상태 복구
+        item.isPostponed = false
+        
+        // 2. 내일로 복사되었던 일정 찾아서 삭제
+        deletePostponedCopy(of: item, in: context)
         
         saveContext()
         fetchData()
+    }
+    
+    // ✨ 내일 날짜에서 '같은 제목'을 가진 일정을 찾아 지우는 헬퍼 함수
+    private func deletePostponedCopy(of item: ScheduleItem, in context: ModelContext) {
+        let calendar = Calendar.current
+        // 내일 날짜 계산
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: item.startDate)!
+        let startOfTomorrow = calendar.startOfDay(for: tomorrow)
+        let endOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfTomorrow)!
+        
+        let targetTitle = item.title
+        let targetOwner = item.ownerID
+        
+        // 내일 날짜 범위 + 같은 제목 + 같은 사용자 + 미루지 않은 상태(복사본은 false니까)
+        let descriptor = FetchDescriptor<ScheduleItem>(
+            predicate: #Predicate { target in
+                target.title == targetTitle &&
+                target.ownerID == targetOwner &&
+                target.startDate >= startOfTomorrow &&
+                target.startDate < endOfTomorrow
+            }
+        )
+        
+        do {
+            let foundItems = try context.fetch(descriptor)
+            // 찾은 것 중 하나 삭제 (가장 유력한 후보)
+            if let copyToDelete = foundItems.first {
+                context.delete(copyToDelete)
+                print("🗑️ 미루기 취소: 내일 일정(\(copyToDelete.title))이 삭제되었습니다.")
+            }
+        } catch {
+            print("⚠️ 복제본 삭제 실패: \(error)")
+        }
     }
     
     func deleteSchedule(_ item: ScheduleItem) {
