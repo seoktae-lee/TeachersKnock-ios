@@ -7,7 +7,10 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var selectedUniversity = "서울교육대학교"
+    
+    // ✨ [수정됨] 초기값을 'University.allList'의 첫 번째로 설정 (하드코딩 방지)
+    @State private var selectedUniversity = University.allList.first?.name ?? "서울교육대학교"
+    
     @State private var nickname = ""
     
     @State private var isAgreed = false
@@ -24,14 +27,9 @@ struct SignUpView: View {
     @EnvironmentObject var authManager: AuthManager
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
-    // ✨ [핵심] 재전송을 위해 고정된 임시 비밀번호 사용
     private let tempAuthPassword = "TinoTempPassword123!"
     
-    let universities = [
-        "서울교육대학교", "경인교육대학교", "공주교육대학교", "광주교육대학교",
-        "대구교육대학교", "부산교육대학교", "전주교육대학교", "진주교육대학교",
-        "청주교육대학교", "춘천교육대학교", "제주대학교 교육대학", "한국교원대학교"
-    ]
+    // ⚠️ 기존 하드코딩 배열 삭제됨 (NoticeData.swift의 University.allList 사용)
 
     var body: some View {
         ZStack {
@@ -43,7 +41,7 @@ struct SignUpView: View {
                 
                 ScrollView {
                     VStack(spacing: 25) {
-                        // 1. 이메일 & 닉네임 입력
+                        // 1. 이메일 & 닉네임 입력 (기존 동일)
                         VStack(alignment: .leading, spacing: 5) {
                             Text("닉네임").font(.caption).foregroundColor(.gray).padding(.leading, 5)
                             TextField("앱에서 사용할 이름 (예: 합격이)", text: $nickname)
@@ -66,7 +64,6 @@ struct SignUpView: View {
                                 .padding()
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
                                 
-                                // ✨ 인증 버튼
                                 Button(action: handleVerificationRequest) {
                                     Text(isEmailVerified ? "완료" : (isVerificationSent ? "재전송" : "인증"))
                                         .font(.subheadline).fontWeight(.bold).foregroundColor(.white)
@@ -114,8 +111,12 @@ struct SignUpView: View {
                                     Text("소속 대학교").font(.caption).foregroundColor(.gray).padding(.leading, 5)
                                     HStack {
                                         Image(systemName: "building.columns").foregroundColor(.gray)
+                                        
+                                        // ✨ [수정됨] NoticeData의 University.allList 사용
                                         Picker("대학교 선택", selection: $selectedUniversity) {
-                                            ForEach(universities, id: \.self) { uni in Text(uni).tag(uni) }
+                                            ForEach(University.allList, id: \.name) { uni in
+                                                Text(uni.name).tag(uni.name)
+                                            }
                                         }
                                         .pickerStyle(.menu).accentColor(.black)
                                         Spacer()
@@ -165,38 +166,28 @@ struct SignUpView: View {
         .onDisappear { timer?.invalidate() }
     }
     
-    // ✨ [수정됨] 인증 요청 처리 로직 (재전송 지원)
+    // ... (이하 로직 함수들은 기존과 동일합니다. 그대로 두세요.) ...
+    
     func handleVerificationRequest() {
-        // 1. 신규 가입 시도
         Auth.auth().createUser(withEmail: email, password: tempAuthPassword) { result, error in
             if let error = error as NSError? {
-                // 2. 이미 계정이 있다면? (재전송 상황)
                 if error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
-                    print("이미 계정 있음 -> 재전송 시도")
-                    // 임시 비번으로 로그인 시도
                     Auth.auth().signIn(withEmail: email, password: tempAuthPassword) { result, error in
                         if let _ = error {
-                            // 로그인 실패 = 진짜 옛날에 가입했거나 비번이 다름
-                            alertTitle = "알림"
-                            alertMessage = "이미 가입된 이메일입니다.\n로그인 화면에서 로그인해주세요."
-                            showAlert = true
+                            alertTitle = "알림"; alertMessage = "이미 가입된 이메일입니다.\n로그인 화면에서 로그인해주세요."; showAlert = true
                         } else {
-                            // 로그인 성공 = 방금 가입 시도한 본인임 -> 메일 재전송
                             sendMail(user: result?.user)
                         }
                     }
                 } else {
-                    // 그 외 진짜 에러
                     alertTitle = "오류"; alertMessage = error.localizedDescription; showAlert = true
                 }
             } else {
-                // 3. 최초 가입 성공 -> 메일 발송
                 sendMail(user: result?.user)
             }
         }
     }
     
-    // 메일 발송 헬퍼 함수
     func sendMail(user: User?) {
         guard let user = user else { return }
         user.sendEmailVerification { error in
@@ -211,7 +202,7 @@ struct SignUpView: View {
     }
     
     func startVerificationTimer() {
-        timer?.invalidate() // 기존 타이머 제거
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Auth.auth().currentUser?.reload(completion: { error in
                 if error == nil {
@@ -237,7 +228,6 @@ struct SignUpView: View {
         
         guard let user = Auth.auth().currentUser else { return }
         
-        // 최종 비밀번호로 변경
         user.updatePassword(to: password) { error in
             if let error = error {
                 alertTitle="오류"; alertMessage="비밀번호 설정 실패: \(error.localizedDescription)"; showAlert=true
@@ -253,6 +243,7 @@ struct SignUpView: View {
             "uid": uid,
             "email": email,
             "nickname": nickname,
+            // ✨ 선택된 대학교 이름이 저장됨 (University.allList에 있는 정확한 이름)
             "university": selectedUniversity,
             "joinDate": Timestamp(date: Date())
         ]
@@ -261,7 +252,7 @@ struct SignUpView: View {
             if let error = error {
                 print("저장 실패: \(error.localizedDescription)")
             } else {
-                try? Auth.auth().signOut() // 자동 로그인 방지용 로그아웃
+                try? Auth.auth().signOut()
                 alertTitle = "가입 완료"; alertMessage = "회원가입이 완료되었습니다.\n로그인 화면에서 로그인해주세요."; isSuccess = true; showAlert = true
             }
         }

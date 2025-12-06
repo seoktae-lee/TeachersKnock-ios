@@ -2,23 +2,38 @@ import SwiftUI
 
 struct NoticeSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @EnvironmentObject var authManager: AuthManager // ✨ 추가
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
         Form {
-            // 1. 소속 대학교 선택 (NoticeData.swift에 정의된 allList 사용)
-            Section(header: Text("소속 대학교")) {
-                Picker("대학교 선택", selection: $settingsManager.myUniversity) {
-                    Text("선택 안 함").tag(nil as University?)
+            // 1. 소속 대학교 (AuthManager 정보 표시)
+            Section(header: Text("소속 대학교 (회원가입 정보)"),
+                    footer: Text("대학교 변경을 원하시면 재가입이 필요합니다.")) {
+                
+                HStack {
+                    Image(systemName: "graduationcap.fill")
+                        .foregroundColor(.indigo)
                     
-                    // ✨ [수정됨] 하드코딩 대신 University.allList 사용
-                    ForEach(University.allList, id: \.self) { univ in
-                        Text(univ.name).tag(univ as University?)
+                    // ✨ AuthManager에 저장된 이름 표시
+                    if let univName = authManager.userUniversityName {
+                        Text(univName)
+                            .foregroundColor(.primary)
+                            .fontWeight(.medium)
+                    } else {
+                        Text("대학교 정보 없음")
+                            .foregroundColor(.gray)
                     }
+                    
+                    Spacer()
+                    Image(systemName: "lock.fill")
+                        .font(.caption)
+                        .foregroundColor(.gray.opacity(0.6))
                 }
+                .padding(.vertical, 4)
             }
             
-            // 2. 응시 희망 교육청 선택
+            // 2. 응시 희망 교육청 (선택 가능)
             Section(header: Text("응시 희망 교육청")) {
                 Picker("교육청 선택", selection: $settingsManager.targetOffice) {
                     Text("선택 안 함").tag(nil as OfficeOfEducation?)
@@ -27,14 +42,17 @@ struct NoticeSettingsView: View {
                         Text(office.rawValue).tag(office as OfficeOfEducation?)
                     }
                 }
+                .pickerStyle(.navigationLink)
             }
             
-            Section(footer: Text("선택한 정보에 맞춰 공지사항 바로가기가 제공됩니다.")) {
+            Section {
                 Button("완료") {
                     dismiss()
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .navigationTitle("맞춤 정보 설정")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

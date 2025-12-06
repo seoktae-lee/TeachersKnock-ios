@@ -3,17 +3,34 @@ import SafariServices
 
 struct NoticeListView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @EnvironmentObject var authManager: AuthManager // ✨ AuthManager 직접 사용
+    
     @State private var showSettings = false
     @State private var selectedUrl: URL?
     
+    // ✨ 내 대학교 버튼 자동 생성 로직
+    var myUniversityLink: University? {
+        // AuthManager가 들고 있는 이름으로 전체 리스트에서 찾기
+        if let univName = authManager.userUniversityName {
+            return University.find(byName: univName)
+        }
+        return nil
+    }
+    
     var body: some View {
         List {
-            // 1. 소속 대학교
-            if let myUniv = settingsManager.myUniversity {
-                Section(header: Text("🏫 나의 대학교")) {
+            // 1. ✨ 내 대학교 (자동 매칭)
+            if let myUniv = myUniversityLink {
+                Section(header: Text("🏫 나의 대학교 (회원 정보)")) {
                     LinkButton(title: myUniv.name, icon: "graduationcap.fill", color: .indigo) {
                         openUrl(myUniv.urlString)
                     }
+                }
+            } else {
+                // (혹시라도 매칭 실패 시)
+                Section(header: Text("🏫 나의 대학교")) {
+                    Text("소속 대학교 정보를 불러올 수 없습니다.")
+                        .font(.caption).foregroundColor(.gray)
                 }
             }
             
@@ -26,7 +43,7 @@ struct NoticeListView: View {
                 }
             }
             
-            // 3. 목표 교육청
+            // 3. 목표 교육청 (이건 사용자가 바꿀 수 있게 기존 유지)
             if let office = settingsManager.targetOffice {
                 Section(header: Text("🎯 목표 교육청 (\(office.rawValue))")) {
                     LinkButton(title: "\(office.rawValue) 시험공고", icon: "building.columns.circle.fill", color: .orange) {
@@ -46,7 +63,7 @@ struct NoticeListView: View {
                 }
             }
             
-            Section(footer: Text("설정에서 언제든 정보를 변경할 수 있습니다.")) {
+            Section(footer: Text("소속 대학교는 회원가입 정보에 따릅니다.")) {
                 EmptyView()
             }
         }
@@ -64,9 +81,8 @@ struct NoticeListView: View {
             NavigationStack {
                 NoticeSettingsView()
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.medium])
         }
-        // ✨ SafariView 호출
         .fullScreenCover(item: $selectedUrl) { url in
             SafariView(url: url)
                 .ignoresSafeArea()
@@ -80,12 +96,9 @@ struct NoticeListView: View {
     }
 }
 
-// ✨ [중요] 이 코드가 있어야 URL 오류가 사라집니다!
-extension URL: Identifiable {
-    public var id: String { absoluteString }
-}
+// ... (LinkButton, URL extension 등 기존 하단 코드 유지) ...
+// (혹시 잘렸다면 아래 코드를 그대로 붙여넣으세요)
 
-// 리스트 버튼 디자인
 struct LinkButton: View {
     let title: String
     let icon: String
@@ -112,4 +125,8 @@ struct LinkButton: View {
             .padding(.vertical, 4)
         }
     }
+}
+
+extension URL: Identifiable {
+    public var id: String { absoluteString }
 }
