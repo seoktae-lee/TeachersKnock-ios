@@ -9,7 +9,10 @@ struct GoalListView: View {
     @State private var showingAddGoalSheet = false
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
+    
+    // 리포트 화면 이동 상태
     @State private var showingReportList = false
+    @State private var showingNoticeList = false
     
     // 명언 상태 (기본값)
     @State private var todayQuote: Quote = Quote(id: nil, text: "오늘의 명언을 불러오는 중...", author: "")
@@ -66,11 +69,18 @@ struct GoalListView: View {
             .navigationTitle("\(authManager.userNickname)님의 D-day")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showingReportList = true }) {
-                        Image(systemName: "doc.text.image")
-                            .font(.title3).foregroundColor(brandColor)
+                    HStack(spacing: 15) {
+                        Button(action: { showingReportList = true }) {
+                            Image(systemName: "doc.text.image")
+                                .font(.title3).foregroundColor(brandColor)
+                        }
+                        Button(action: { showingNoticeList = true }) {
+                            Image(systemName: "megaphone.fill")
+                                .font(.title3).foregroundColor(.orange)
+                        }
                     }
                 }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddGoalSheet = true }) {
                         Image(systemName: "plus").foregroundColor(brandColor)
@@ -79,6 +89,9 @@ struct GoalListView: View {
             }
             .navigationDestination(isPresented: $showingReportList) {
                 ReportListView()
+            }
+            .navigationDestination(isPresented: $showingNoticeList) {
+                NoticeListView()
             }
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
@@ -103,19 +116,14 @@ struct GoalListView: View {
         }
     }
     
-    // ✨ [수정됨] 오전/오후 2개 슬롯 명언 로직
+    // 하루 2회(오전/오후) 명언 로직
     func checkAndLoadDailyQuote() {
         let defaults = UserDefaults.standard
         let todayKey = Date().formatted(date: .numeric, time: .omitted)
         let currentHour = Calendar.current.component(.hour, from: Date())
-        
-        // 오후 2시(14시) 기준
         let isAfternoon = currentHour >= 14
         
-        // 1. 이미 오늘치 데이터가 저장되어 있는지 확인
         if let savedDate = defaults.string(forKey: "quoteDate"), savedDate == todayKey {
-            print("✅ 저장된 명언 사용 (오후: \(isAfternoon))")
-            
             if isAfternoon {
                 let text = defaults.string(forKey: "quotePM_text") ?? "오후도 힘내세요!"
                 let author = defaults.string(forKey: "quotePM_author") ?? "T-No"
@@ -125,31 +133,19 @@ struct GoalListView: View {
                 let author = defaults.string(forKey: "quoteAM_author") ?? "T-No"
                 self.todayQuote = Quote(id: nil, text: text, author: author)
             }
-            
         } else {
-            // 2. 새로운 명언 가져오기 (실패 시 기본값 사용)
-            print("🔄 서버에서 명언 2개(AM/PM) 가져오기 시도...")
-            
             QuoteManager.shared.fetchQuote { quote1 in
-                // 첫 번째 명언 (AM용)
                 let q1 = quote1 ?? Quote(id: nil, text: "오늘 하루도 파이팅!", author: "티노")
                 
                 QuoteManager.shared.fetchQuote { quote2 in
-                    // 두 번째 명언 (PM용)
                     let q2 = quote2 ?? Quote(id: nil, text: "끝까지 포기하지 마세요!", author: "티노")
                     
-                    // 저장
                     defaults.set(todayKey, forKey: "quoteDate")
-                    
-                    // AM 저장
                     defaults.set(q1.text, forKey: "quoteAM_text")
                     defaults.set(q1.author, forKey: "quoteAM_author")
-                    
-                    // PM 저장
                     defaults.set(q2.text, forKey: "quotePM_text")
                     defaults.set(q2.author, forKey: "quotePM_author")
                     
-                    // 화면 갱신
                     withAnimation {
                         self.todayQuote = isAfternoon ? q2 : q1
                     }
@@ -164,7 +160,9 @@ struct GoalListView: View {
     }
 }
 
-// 명언 뷰 (기존 디자인 유지)
+// ✨ [필수] 아래 두 구조체가 파일 안에 꼭 있어야 합니다!
+
+// 명언 뷰 디자인
 struct CompactQuoteView: View {
     let quote: Quote
     
@@ -198,7 +196,7 @@ struct CompactQuoteView: View {
     }
 }
 
-// GoalRow (기존 코드 유지)
+// 목표 리스트 행 디자인
 struct GoalRow: View {
     let goal: Goal
     let userId: String

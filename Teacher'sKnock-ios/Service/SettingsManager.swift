@@ -6,18 +6,42 @@ import FirebaseAuth
 
 class SettingsManager: ObservableObject {
     
-    // ✨ [핵심 변경] SubjectName(Enum) -> StudySubject(Struct)로 변경
+    // 1. 선호 과목 (StudySubject 구조체 사용)
     @Published var favoriteSubjects: [StudySubject] = []
+    
+    // 2. 맞춤 정보 (대학교, 교육청) - 변경 시 로컬에 자동 저장
+    @Published var myUniversity: University? {
+        didSet { saveNoticeSettings() }
+    }
+    @Published var targetOffice: OfficeOfEducation? {
+        didSet { saveNoticeSettings() }
+    }
     
     private let db = Firestore.firestore()
     private let settingsCollectionName = "settings"
     private let favoriteSubjectsDocument = "favorite_subjects"
     
     init() {
-        loadSubjects()
+        loadSettings()
     }
     
-    // ✨ 과목 추가 함수
+    // MARK: - 대학교 자동 설정 (로그인 연동용)
+    
+    // ✨ [추가됨] 이름 문자열로 대학교 정보를 찾아 자동 세팅하는 함수
+    func setUniversity(fromName name: String) {
+        // NoticeData.swift에 있는 전체 리스트에서 검색
+        if let foundUniv = University.find(byName: name) {
+            DispatchQueue.main.async {
+                self.myUniversity = foundUniv
+                print("SettingsManager: 대학교 자동 설정 완료 (\(name))")
+            }
+        } else {
+            print("SettingsManager: 해당 이름의 대학교 정보를 찾을 수 없음 (\(name))")
+        }
+    }
+    
+    // MARK: - 과목 관리 로직
+    
     func addSubject(_ name: String) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedName.isEmpty { return }
@@ -27,30 +51,91 @@ class SettingsManager: ObservableObject {
             let newSubject = StudySubject(name: trimmedName)
             favoriteSubjects.append(newSubject)
             
+            // 로그인 상태면 서버 동기화, 아니면 로컬 저장
             if let uid = Auth.auth().currentUser?.uid {
                 saveFavoriteSubjects(uid: uid, favoriteSubjects)
             } else {
-                saveToLocal()
+                saveSubjectsToLocal()
             }
         }
     }
     
-    // ✨ 과목 삭제 함수
     func removeSubject(at offsets: IndexSet) {
         favoriteSubjects.remove(atOffsets: offsets)
         
         if let uid = Auth.auth().currentUser?.uid {
             saveFavoriteSubjects(uid: uid, favoriteSubjects)
         } else {
-            saveToLocal()
+            saveSubjectsToLocal()
         }
     }
     
+    // 로그아웃 시 데이터 초기화
     func reset() {
         self.favoriteSubjects = defaultSubjects()
+        self.myUniversity = nil
+        self.targetOffice = nil
+        
+        UserDefaults.standard.removeObject(forKey: "localFavoriteSubjects")
+        UserDefaults.standard.removeObject(forKey: "myUniversity")
+        UserDefaults.standard.removeObject(forKey: "targetOffice")
     }
     
-    // 서버에서 불러오기
+    // MARK: - 데이터 로드 및 저장 (로컬)
+    
+    private func loadSettings() {
+        // 1. 과목 로드
+        if let strings = UserDefaults.standard.stringArray(forKey: "localFavoriteSubjects") {
+            self.favoriteSubjects = strings.map { StudySubject(name: $0) }
+        } else {
+            self.favoriteSubjects = defaultSubjects()
+        }
+        
+        // 2. 대학교 정보 로드
+        if let univData = UserDefaults.standard.data(forKey: "myUniversity"),
+           let univ = try? JSONDecoder().decode(University.self, from: univData) {
+            self.myUniversity = univ
+        }
+        
+        // 3. 교육청 정보 로드
+        if let officeRaw = UserDefaults.standard.string(forKey: "targetOffice"),
+           let office = OfficeOfEducation(rawValue: officeRaw) {
+            self.targetOffice = office
+        }
+    }
+    
+    // 맞춤 정보(대학교/교육청) 로컬 저장
+    private func saveNoticeSettings() {
+        if let univ = myUniversity, let encoded = try? JSONEncoder().encode(univ) {
+            UserDefaults.standard.set(encoded, forKey: "myUniversity")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "myUniversity")
+        }
+        
+        if let office = targetOffice {
+            UserDefaults.standard.set(office.rawValue, forKey: "targetOffice")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "targetOffice")
+        }
+    }
+    
+    // 과목 정보 로컬 저장
+    private func saveSubjectsToLocal() {
+        let strings = favoriteSubjects.map { $0.name }
+        UserDefaults.standard.set(strings, forKey: "localFavoriteSubjects")
+    }
+    
+    // 기본 과목
+    private func defaultSubjects() -> [StudySubject] {
+        return [
+            StudySubject(name: "교육학"),
+            StudySubject(name: "전공"),
+            StudySubject(name: "한국사")
+        ]
+    }
+    
+    // MARK: - 서버 동기화 (과목 데이터)
+    
     func fetchSettings(uid: String) {
         let docRef = db.collection("users").document(uid).collection(settingsCollectionName).document(favoriteSubjectsDocument)
         
@@ -59,10 +144,10 @@ class SettingsManager: ObservableObject {
             
             if let document = document, document.exists, let data = document.data() {
                 if let subjectStrings = data["subjects"] as? [String] {
-                    // 문자열 -> StudySubject 변환
                     let loadedSubjects = subjectStrings.map { StudySubject(name: $0) }
                     DispatchQueue.main.async {
                         self.favoriteSubjects = loadedSubjects
+                        self.saveSubjectsToLocal() // 로컬도 최신화
                     }
                 }
             } else {
@@ -74,39 +159,16 @@ class SettingsManager: ObservableObject {
         }
     }
     
-    // 서버 저장
     func saveFavoriteSubjects(uid: String, _ subjects: [StudySubject]) {
         self.favoriteSubjects = subjects
-        let subjectStrings = subjects.map { $0.name }
+        self.saveSubjectsToLocal()
         
+        let subjectStrings = subjects.map { $0.name }
         let dataToSave: [String: Any] = [
             "subjects": subjectStrings,
             "lastUpdated": Timestamp(date: Date())
         ]
         
         db.collection("users").document(uid).collection(settingsCollectionName).document(favoriteSubjectsDocument).setData(dataToSave)
-    }
-    
-    // 로컬 저장 (비로그인용)
-    private func saveToLocal() {
-        let strings = favoriteSubjects.map { $0.name }
-        UserDefaults.standard.set(strings, forKey: "localFavoriteSubjects")
-    }
-    
-    private func loadSubjects() {
-        if let strings = UserDefaults.standard.stringArray(forKey: "localFavoriteSubjects") {
-            self.favoriteSubjects = strings.map { StudySubject(name: $0) }
-        } else {
-            self.favoriteSubjects = defaultSubjects()
-        }
-    }
-    
-    // 기본값 생성기
-    private func defaultSubjects() -> [StudySubject] {
-        return [
-            StudySubject(name: "교육학"),
-            StudySubject(name: "전공"),
-            StudySubject(name: "한국사")
-        ]
     }
 }
