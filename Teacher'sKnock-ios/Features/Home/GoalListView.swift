@@ -10,13 +10,9 @@ struct GoalListView: View {
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     
-    // 명언 상태
     @State private var todayQuote: Quote = Quote(id: nil, text: "오늘의 명언을 불러오는 중...", author: "")
-    
     @Environment(\.scenePhase) var scenePhase
     @EnvironmentObject var authManager: AuthManager
-    
-    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
     private var currentUserId: String {
         Auth.auth().currentUser?.uid ?? ""
@@ -47,7 +43,6 @@ struct GoalListView: View {
                     List {
                         ForEach(goals) { goal in
                             Button(action: {
-                                // ✨ [핵심 수정] 캐릭터가 있는 목표만 상세화면(캐릭터 뷰) 열기
                                 if goal.hasCharacter {
                                     selectedGoal = goal
                                     showingCharacterDetail = true
@@ -68,13 +63,10 @@ struct GoalListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 15) {
-                        // 1. 리포트 바로가기
                         NavigationLink(destination: ReportListView(userId: currentUserId)) {
                             Image(systemName: "doc.text.image")
-                                .font(.title3).foregroundColor(brandColor)
+                                .font(.title3).foregroundColor(.blue)
                         }
-                        
-                        // 2. 공지 바로가기
                         NavigationLink(destination: NoticeListView()) {
                             Image(systemName: "megaphone.fill")
                                 .font(.title3).foregroundColor(.orange)
@@ -84,19 +76,27 @@ struct GoalListView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddGoalSheet = true }) {
-                        Image(systemName: "plus").foregroundColor(brandColor)
+                        Image(systemName: "plus").foregroundColor(.blue)
                     }
                 }
             }
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
             }
-            // 상세 화면 (캐릭터가 있을 때만 selectedGoal이 설정되어 열림)
+            // ✨ [수정됨] 상세 화면에 데이터 전달 (색상, 이름 포함)
             .sheet(item: $selectedGoal) { goal in
                 VStack(spacing: 30) {
                     Text("나의 성장 기록").font(.title2).bold().padding(.top, 30)
                     Text(goal.title).font(.headline).foregroundColor(.gray)
-                    CharacterView(userId: currentUserId).padding()
+                    
+                    CharacterView(
+                        userId: currentUserId,
+                        totalGoalDays: goal.totalDays,
+                        characterName: goal.characterName,
+                        themeColorName: goal.characterColor
+                    )
+                    .padding()
+                    
                     Spacer()
                 }
                 .presentationDetents([.medium])
@@ -108,6 +108,7 @@ struct GoalListView: View {
         }
     }
     
+    // ... (명언 로직은 기존과 동일)
     func checkAndLoadDailyQuote() {
         let defaults = UserDefaults.standard
         let todayKey = Date().formatted(date: .numeric, time: .omitted)
@@ -146,7 +147,7 @@ struct GoalListView: View {
     }
 }
 
-// 하위 뷰들은 기존과 동일합니다.
+// Subviews
 struct CompactQuoteView: View {
     let quote: Quote
     var body: some View {
@@ -162,18 +163,26 @@ struct CompactQuoteView: View {
     }
 }
 
+// ✨ [수정됨] 색상과 별명이 반영된 목표 카드
 struct GoalRow: View {
     let goal: Goal
     let userId: String
-    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    
     @Query private var records: [StudyRecord]
     @Query private var scheduleItems: [ScheduleItem]
+    
+    // 목표별 테마 색상 (Helper 사용)
+    var themeColor: Color {
+        GoalColorHelper.color(for: goal.characterColor)
+    }
+    
     init(goal: Goal, userId: String) {
         self.goal = goal
         self.userId = userId
         _records = Query(filter: #Predicate<StudyRecord> { record in record.ownerID == userId })
         _scheduleItems = Query(filter: #Predicate<ScheduleItem> { item in item.ownerID == userId })
     }
+    
     var currentEmoji: String {
         let calendar = Calendar.current
         let timerDays = records.map { calendar.startOfDay(for: $0.date) }
@@ -181,6 +190,7 @@ struct GoalRow: View {
         let uniqueDays = Set(timerDays + plannerDays).count
         return CharacterLevel.getLevel(currentDays: uniqueDays, totalGoalDays: goal.totalDays).emoji
     }
+    
     var dDay: String {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -191,18 +201,52 @@ struct GoalRow: View {
         }
         return "Error"
     }
+    
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(goal.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
-                    if goal.hasCharacter { Text(currentEmoji).font(.title3).padding(6).background(Color.white.opacity(0.2)).clipShape(Circle()) }
+                    
+                    if goal.hasCharacter {
+                        // ✨ 캐릭터 이모지 + 별명 표시
+                        HStack(spacing: 4) {
+                            Text(currentEmoji)
+                            Text(goal.characterName)
+                                .font(.caption2).fontWeight(.bold)
+                                .foregroundColor(themeColor) // 텍스트를 테마색으로
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                    }
                 }
-                Text(goal.targetDate, style: .date).font(.caption).foregroundColor(.white.opacity(0.8))
+                Text(goal.targetDate, style: .date).font(.caption).foregroundColor(.white.opacity(0.9))
             }
             Spacer()
-            Text(dDay).font(.title).fontWeight(.black).foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 6).background(Color.white.opacity(0.2)).cornerRadius(10)
+            
+            // D-Day 배지
+            Text(dDay)
+                .font(.title).fontWeight(.black)
+                .foregroundColor(themeColor) // 텍스트를 테마색으로
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.white)
+                .cornerRadius(10)
         }
-        .padding().background(LinearGradient(gradient: Gradient(colors: [brandColor, brandColor.opacity(0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing)).cornerRadius(15).shadow(color: .gray.opacity(0.3), radius: 5, x: 0, y: 5).padding(.vertical, 5).listRowSeparator(.hidden)
+        .padding()
+        // ✨ 배경 그라디언트에 테마 색상 적용
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [themeColor, themeColor.opacity(0.7)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(15)
+        .shadow(color: themeColor.opacity(0.3), radius: 5, x: 0, y: 5)
+        .padding(.vertical, 5)
+        .listRowSeparator(.hidden)
     }
 }

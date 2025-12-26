@@ -10,25 +10,33 @@ class GoalViewModel: ObservableObject {
     @Published var targetDate: Date = Date()
     @Published var useCharacter: Bool = true
     
+    // ✨ [NEW] 별명 & 색상 선택
+    @Published var characterName: String = ""
+    @Published var selectedColorName: String = "Blue" // 기본값 파랑
+    
+    // 제공할 색상 팔레트 (저장용 이름)
+    let availableColors: [String] = ["Blue", "Pink", "Purple", "Green", "Orange", "Mint"]
+    
     // 목표 저장 로직
     func addGoal(ownerID: String, context: ModelContext) {
-        // 유효성 검사 (제목이 비어있으면 저장 안 함)
         if title.isEmpty { return }
+        
+        // 별명 없으면 기본값
+        let finalName = characterName.isEmpty ? "티노" : characterName
         
         // 모델 생성
         let newGoal = Goal(
             title: title,
             targetDate: targetDate,
             ownerID: ownerID,
-            hasCharacter: useCharacter
+            hasCharacter: useCharacter,
+            characterName: finalName,      // ✨ 저장
+            characterColor: selectedColorName // ✨ 저장
         )
         
-        // 1. 로컬 저장 (SwiftData)
         context.insert(newGoal)
+        // FirestoreSyncManager.shared.saveGoal(newGoal)
         
-        // 2. 서버 저장? (아직 구현 안 했지만 자리는 만들어둠)
-        // FirestoreSyncManager.shared.saveGoal(newGoal) <- 나중에 추가 가능
-        
-        print("GoalVM: 목표 저장 완료 - \(title)")
+        print("GoalVM: 목표 저장 완료 - \(title) (\(finalName), \(selectedColorName))")
     }
 }
