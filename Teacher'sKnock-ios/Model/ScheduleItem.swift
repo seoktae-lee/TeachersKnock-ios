@@ -13,7 +13,7 @@ final class ScheduleItem {
     var ownerID: String
     var isPostponed: Bool
     
-    // ✨ [필수 추가] 과목 정보
+    // ✨ [재추가] 과목 정보 (임용고시 필수)
     var subject: String
 
     init(title: String, details: String = "", startDate: Date, endDate: Date? = nil, subject: String = "교육학", isCompleted: Bool = false, hasReminder: Bool = false, ownerID: String, isPostponed: Bool = false) {

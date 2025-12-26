@@ -23,11 +23,28 @@ struct SettingsView: View {
                         Label("공부 과목 관리", systemImage: "books.vertical")
                     }
                     
-                    HStack {
-                        Label("알림 설정", systemImage: "bell")
-                        Spacer()
-                        Text("시스템 설정 이용").font(.caption).foregroundColor(.gray)
+                    // ✨ 알림 설정 버튼 (앱 설정 화면으로 바로 이동)
+                    Button(action: {
+                        // 아이폰의 설정 > 내 앱 화면으로 이동하는 URL
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            if UIApplication.shared.canOpenURL(url) {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    }) {
+                        HStack {
+                            Label("알림 설정", systemImage: "bell")
+                            Spacer()
+                            Text("시스템 설정 이용")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            // 버튼임을 알리기 위한 화살표
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.gray.opacity(0.5))
+                        }
                     }
+                    .foregroundColor(.primary)
                 }
                 
                 // 2. 앱 정보
@@ -77,7 +94,6 @@ struct SettingsView: View {
                             Button("탈퇴하기", role: .destructive) {
                                 authManager.deleteAccount { success, error in
                                     if !success {
-                                        // ✨ 실패 시 에러 알림 띄우기
                                         errorMessage = "탈퇴에 실패했습니다.\n보안을 위해 로그아웃 후 다시 로그인해서 시도해주세요."
                                         if let err = error {
                                             print("Error details: \(err)")
@@ -93,7 +109,6 @@ struct SettingsView: View {
             }
             .navigationTitle("설정")
             .listStyle(.insetGrouped)
-            // ✨ 에러 알림창 추가
             .alert("알림", isPresented: $showingErrorAlert) {
                 Button("확인", role: .cancel) {}
             } message: {

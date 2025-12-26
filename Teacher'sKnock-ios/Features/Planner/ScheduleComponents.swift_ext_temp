@@ -1,0 +1,17 @@
+
+    // MARK: - Helper Methods
+    func postpone(_ hours: Int) {
+        item.startDate = item.startDate.addingTimeInterval(TimeInterval(hours * 3600))
+        if let end = item.endDate {
+            item.endDate = end.addingTimeInterval(TimeInterval(hours * 3600))
+        }
+        try? context.save()
+    }
+    
+    func postponeToTomorrow() {
+        item.startDate = item.startDate.addingTimeInterval(86400)
+        if let end = item.endDate {
+            item.endDate = end.addingTimeInterval(86400)
+        }
+        try? context.save()
+    }

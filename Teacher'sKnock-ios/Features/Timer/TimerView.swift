@@ -20,7 +20,7 @@ struct TimerView: View {
             VStack(spacing: 30) {
                 Spacer().frame(height: 30)
                 
-                // 1. 과목 및 목적 선택 영역
+                // 1. 과목 및 목적 선택 영역 (✨ 디자인 수정됨: 더 크고 시원하게)
                 HStack(spacing: 15) {
                     // 과목 선택
                     VStack(spacing: 8) {
@@ -38,12 +38,23 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
-                                    .font(.headline).lineLimit(1).minimumScaleFactor(0.5)
-                                Image(systemName: "chevron.down").font(.caption)
+                                    .font(.title3)        // ✨ 폰트 키움
+                                    .fontWeight(.bold)    // ✨ 두껍게
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.down")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
                             }
-                            .padding(.vertical, 10).padding(.horizontal, 15)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue.opacity(0.1)).cornerRadius(15)
+                            .padding(.vertical, 16)       // ✨ 높이(터치 영역) 확대
+                            .padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity)   // ✨ 가로 꽉 채우기
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(16)
                         }
                     }
                     
@@ -59,36 +70,46 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedPurpose.localizedName)
-                                    .font(.headline).lineLimit(1).minimumScaleFactor(0.5)
-                                Image(systemName: "chevron.down").font(.caption)
+                                    .font(.title3)        // ✨ 폰트 키움
+                                    .fontWeight(.bold)    // ✨ 두껍게
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.down")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
                             }
-                            .padding(.vertical, 10).padding(.horizontal, 15)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green.opacity(0.1)).cornerRadius(15)
+                            .padding(.vertical, 16)       // ✨ 높이(터치 영역) 확대
+                            .padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity)   // ✨ 가로 꽉 채우기
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(16)
                         }
                     }
                 }
-                .padding(.horizontal, 30)
+                .padding(.horizontal, 20) // ✨ 전체 좌우 여백 조정
                 .disabled(viewModel.isRunning) // 공부 중엔 변경 불가
                 .opacity(viewModel.isRunning ? 0.6 : 1.0)
                 
                 Spacer()
                 
-                // 2. ✨ 타이머 시간 표시 (가장 중요한 부분!)
-                // ViewModel의 displayTime이 @Published로 되어있어서 자동 갱신됩니다.
+                // 2. ✨ 타이머 시간 표시
                 Text(viewModel.formatTime(seconds: viewModel.displayTime))
                     .font(.system(size: 90, weight: .medium, design: .monospaced))
                     .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                     .lineLimit(1).minimumScaleFactor(0.5)
                     .padding(.horizontal)
-                    .contentTransition(.numericText()) // 숫자 바뀔 때 부드럽게 (iOS 16+)
+                    .contentTransition(.numericText()) // 숫자 바뀔 때 부드럽게
                 
                 Spacer()
                 
                 // 3. 컨트롤 버튼
                 HStack(spacing: 40) {
                     if viewModel.isRunning {
-                        // 일시정지(사실상 정지) 버튼
+                        // 일시정지 버튼
                         Button(action: { viewModel.stopTimer() }) {
                             VStack {
                                 Image(systemName: "pause.circle.fill").resizable().frame(width: 80, height: 80)
@@ -107,7 +128,7 @@ struct TimerView: View {
                         .foregroundColor(brandColor)
                     }
                     
-                    // 완료 및 저장 버튼 (시간이 조금이라도 있을 때만 표시)
+                    // 완료 및 저장 버튼
                     if !viewModel.isRunning && viewModel.displayTime > 0 {
                         Button(action: {
                             viewModel.saveRecord(context: modelContext, ownerID: currentUserId)
@@ -122,16 +143,16 @@ struct TimerView: View {
                 }
                 .padding(.bottom, 20)
                 
-                // 4. 최근 기록 리스트 (기존 코드 재사용)
+                // 4. 최근 기록 리스트
                 RecentRecordsView(userId: currentUserId)
                     .padding(.bottom, 10)
             }
             .navigationTitle("집중 타이머")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // 통계 버튼 (리포트 뷰가 아닌 기존 StatisticsView로 연결됨 - 유지)
+                    // 통계 버튼
                     NavigationLink(destination: StatisticsView(userId: currentUserId)) {
-                        Image(systemName: "chart.bar.xaxis") // 아이콘 변경 (리포트랑 구분)
+                        Image(systemName: "chart.bar.xaxis")
                             .font(.title3)
                             .foregroundColor(brandColor)
                     }
@@ -141,7 +162,7 @@ struct TimerView: View {
             .onAppear {
                 viewModel.setupInitialSubject(favorites: settingsManager.favoriteSubjects)
             }
-            // 화면 나갈 때 타이머 자동 정지 (선택 사항)
+            // 화면 나갈 때 타이머 자동 정지
             .onDisappear {
                 if viewModel.isRunning { viewModel.stopTimer() }
             }
@@ -149,7 +170,7 @@ struct TimerView: View {
     }
 }
 
-// RecentRecordsView는 변경 사항 없으므로 그대로 둡니다.
+// RecentRecordsView (기존과 동일)
 struct RecentRecordsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]
