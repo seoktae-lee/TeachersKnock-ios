@@ -5,18 +5,11 @@ import FirebaseAuth
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
-    
-    // 네비게이션 매니저 연결
     @EnvironmentObject var navManager: StudyNavigationManager
-    
-    // ViewModel 연결 (StateObject로 수명 관리)
     @StateObject private var viewModel = TimerViewModel()
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
-    
-    private var currentUserId: String {
-        Auth.auth().currentUser?.uid ?? ""
-    }
+    private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
     var body: some View {
         NavigationStack {
@@ -25,19 +18,33 @@ struct TimerView: View {
                 
                 // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
-                    // 과목 선택
+                    
+                    // 과목 선택 메뉴 (통합 버전)
                     VStack(spacing: 8) {
                         Text("과목").font(.caption).foregroundColor(.gray)
+                        
                         Menu {
+                            // (1) 현재 등록된 모든 과목 (13개 기본 + 사용자 추가)
                             ForEach(settingsManager.favoriteSubjects) { subject in
-                                Button(subject.localizedName) {
-                                    viewModel.selectedSubject = subject.localizedName
+                                Button(action: {
+                                    viewModel.selectedSubject = subject.name
+                                }) {
+                                    HStack {
+                                        Text(subject.name)
+                                        if viewModel.selectedSubject == subject.name {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
                                 }
                             }
+                            
                             Divider()
-                            NavigationLink(destination: SubjectSelectView()) {
-                                Label("과목 설정 편집", systemImage: "gearshape")
+                            
+                            // (2) 과목 추가/삭제 관리 화면으로 이동
+                            NavigationLink(destination: SubjectManagementView()) {
+                                Label("과목 추가/관리", systemImage: "plus.circle")
                             }
+                            
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
@@ -45,7 +52,8 @@ struct TimerView: View {
                                     .fontWeight(.bold)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.5)
-                                    .foregroundColor(.primary)
+                                    // 선택된 과목 색상 적용
+                                    .foregroundColor(SubjectName.color(for: viewModel.selectedSubject))
                                 
                                 Spacer()
                                 
@@ -56,8 +64,9 @@ struct TimerView: View {
                             .padding(.vertical, 16)
                             .padding(.horizontal, 20)
                             .frame(maxWidth: .infinity)
-                            .background(Color.blue.opacity(0.1))
+                            .background(Color.white)
                             .cornerRadius(16)
+                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
                         }
                     }
                     
@@ -65,61 +74,38 @@ struct TimerView: View {
                     VStack(spacing: 8) {
                         Text("공부 목적").font(.caption).foregroundColor(.gray)
                         
-                        // 연동된 일정이 있는 경우
                         if viewModel.linkedScheduleTitle != nil {
-                            Button(action: {
-                                // 클릭 시 연동 해제하고 다시 선택하고 싶다면 nil 처리 가능
-                                viewModel.linkedScheduleTitle = nil
-                            }) {
+                            Button(action: { viewModel.linkedScheduleTitle = nil }) {
                                 HStack {
-                                    // ✨ [수정 완료] 제목(customTitle) 대신 목적(selectedPurpose)을 표시합니다!
                                     Text(viewModel.selectedPurpose.localizedName)
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.5)
-                                        .foregroundColor(.white) // 강조 색상 유지
-                                    
+                                        .font(.title3).fontWeight(.bold)
+                                        .lineLimit(1).minimumScaleFactor(0.5)
+                                        .foregroundColor(.white)
                                     Spacer()
-                                    
-                                    // 연동 해제(X) 버튼 아이콘
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.white.opacity(0.8))
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.white.opacity(0.8))
                                 }
-                                .padding(.vertical, 16)
-                                .padding(.horizontal, 20)
+                                .padding(.vertical, 16).padding(.horizontal, 20)
                                 .frame(maxWidth: .infinity)
-                                .background(brandColor) // 연동 상태임을 강조 (파란 배경)
-                                .cornerRadius(16)
+                                .background(brandColor).cornerRadius(16)
                             }
                         } else {
-                            // 연동된 일정이 없는 경우 (기존 메뉴 로직)
                             Menu {
                                 ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
-                                    Button(purpose.localizedName) {
-                                        viewModel.selectedPurpose = purpose
-                                    }
+                                    Button(purpose.localizedName) { viewModel.selectedPurpose = purpose }
                                 }
                             } label: {
                                 HStack {
                                     Text(viewModel.selectedPurpose.localizedName)
-                                        .font(.title3)
-                                        .fontWeight(.bold)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.5)
+                                        .font(.title3).fontWeight(.bold)
+                                        .lineLimit(1).minimumScaleFactor(0.5)
                                         .foregroundColor(.primary)
-                                    
                                     Spacer()
-                                    
-                                    Image(systemName: "chevron.down")
-                                        .font(.body)
-                                        .foregroundColor(.gray)
+                                    Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
                                 }
-                                .padding(.vertical, 16)
-                                .padding(.horizontal, 20)
+                                .padding(.vertical, 16).padding(.horizontal, 20)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.green.opacity(0.1))
-                                .cornerRadius(16)
+                                .background(Color.white).cornerRadius(16)
+                                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
                             }
                         }
                     }
@@ -143,81 +129,66 @@ struct TimerView: View {
                 // 3. 컨트롤 버튼
                 HStack(spacing: 40) {
                     if viewModel.isRunning {
-                        // 일시정지 버튼
                         Button(action: { viewModel.stopTimer() }) {
                             VStack {
                                 Image(systemName: "pause.circle.fill").resizable().frame(width: 80, height: 80)
                                 Text("일시정지").font(.caption).padding(.top, 5)
                             }
-                        }
-                        .foregroundColor(.orange)
+                        }.foregroundColor(.orange)
                     } else {
-                        // 시작 버튼
                         Button(action: { viewModel.startTimer() }) {
                             VStack {
                                 Image(systemName: "play.circle.fill").resizable().frame(width: 80, height: 80)
                                 Text(viewModel.displayTime > 0 ? "계속하기" : "시작").font(.caption).padding(.top, 5)
                             }
-                        }
-                        .foregroundColor(brandColor)
+                        }.foregroundColor(brandColor)
                     }
                     
-                    // 완료 및 저장 버튼
                     if !viewModel.isRunning && viewModel.displayTime > 0 {
-                        Button(action: {
-                            viewModel.saveRecord(context: modelContext, ownerID: currentUserId)
-                        }) {
+                        Button(action: { viewModel.saveRecord(context: modelContext, ownerID: currentUserId) }) {
                             VStack {
                                 Image(systemName: "checkmark.circle.fill").resizable().frame(width: 80, height: 80)
                                 Text("저장하기").font(.caption).padding(.top, 5)
                             }
-                        }
-                        .foregroundColor(.green)
+                        }.foregroundColor(.green)
                     }
                 }
                 .padding(.bottom, 20)
                 
-                // 4. 최근 기록 리스트
-                RecentRecordsView(userId: currentUserId)
-                    .padding(.bottom, 10)
+                // 4. 최근 기록 리스트 (오류 해결됨 ✅)
+                RecentRecordsView(userId: currentUserId).padding(.bottom, 10)
             }
+            .background(Color(.systemGray6))
             .navigationTitle("집중 타이머")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // 통계 버튼
                     NavigationLink(destination: StatisticsView(userId: currentUserId)) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.title3)
-                            .foregroundColor(brandColor)
+                        Image(systemName: "chart.bar.xaxis").font(.title3).foregroundColor(brandColor)
                     }
                 }
             }
-            // 화면이 나타날 때 초기 과목 설정 및 데이터 연동 확인
             .onAppear {
-                viewModel.setupInitialSubject(favorites: settingsManager.favoriteSubjects)
-                
-                // 매니저에 대기 중인 일정이 있다면 적용
+                // 초기 과목 설정: 없으면 "교직논술"
+                if viewModel.selectedSubject.isEmpty || !settingsManager.favoriteSubjects.map({$0.name}).contains(viewModel.selectedSubject) {
+                    viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
+                }
                 if let schedule = navManager.targetSchedule {
                     viewModel.applySchedule(schedule)
-                    navManager.clearTarget() // 적용 후 초기화 (중복 적용 방지)
+                    navManager.clearTarget()
                 }
             }
-            // 탭이 전환되어 들어왔을 때도 감지 (onAppear 보완)
             .onChange(of: navManager.targetSchedule) { _, newValue in
                 if let schedule = newValue {
                     viewModel.applySchedule(schedule)
                     navManager.clearTarget()
                 }
             }
-            // 화면 나갈 때 타이머 자동 정지
-            .onDisappear {
-                if viewModel.isRunning { viewModel.stopTimer() }
-            }
+            .onDisappear { if viewModel.isRunning { viewModel.stopTimer() } }
         }
     }
 }
 
-// RecentRecordsView는 기존 코드 유지
+// ✨ [누락되었던 부분] 최근 기록 리스트 뷰 정의
 struct RecentRecordsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]

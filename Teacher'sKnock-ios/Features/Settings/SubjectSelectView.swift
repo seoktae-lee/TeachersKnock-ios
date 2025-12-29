@@ -4,29 +4,27 @@ import FirebaseAuth
 struct SubjectSelectView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     
-    // 기본 제공되는 모든 과목 (Enum 리스트)
-    let allSubjects = SubjectName.allCases.filter { $0 != .selfStudy }
+    // ✨ [수정 1] Enum의 'allCases' 대신, Struct에 정의한 'defaultList'를 사용
+    let allSubjects = SubjectName.defaultList
     
-    // 현재 로그인한 내 ID
     private var currentUserId: String? {
         Auth.auth().currentUser?.uid
     }
     
     var body: some View {
         List {
-            Section(header: Text("자주 공부하는 과목을 최대 8개 선택해주세요."),
-                    footer: Text("\(settingsManager.favoriteSubjects.count) / 8 선택됨")) {
+            Section(header: Text("공부할 과목을 선택해주세요."),
+                    footer: Text("선택된 과목은 홈 화면과 타이머, 통계에 표시됩니다.")) {
                 
-                ForEach(allSubjects) { subjectEnum in
-                    // ✨ [핵심 수정] Enum(SubjectName) -> Struct(StudySubject)로 변환
-                    // 이렇게 변환해야 SettingsManager의 데이터와 비교할 수 있습니다.
-                    let targetSubject = StudySubject(name: subjectEnum.localizedName)
+                // ✨ [수정 2] 문자열 배열이므로 id: \.self를 추가해야 함
+                ForEach(allSubjects, id: \.self) { subjectName in
                     
-                    // 이름이 같은게 있는지 확인 (contains 대신 contains(where:) 사용)
+                    // ✨ [수정 3] 문자열(subjectName)을 바로 사용하여 객체 생성
+                    let targetSubject = StudySubject(name: subjectName)
                     let isSelected = settingsManager.favoriteSubjects.contains(where: { $0.name == targetSubject.name })
                     
                     HStack {
-                        Text(subjectEnum.localizedName)
+                        Text(subjectName) // localizedName 필요 없이 바로 문자열 출력
                             .foregroundColor(.primary)
                         Spacer()
                         
@@ -48,11 +46,10 @@ struct SubjectSelectView: View {
                 }
             }
         }
-        .navigationTitle("선호 과목 설정")
+        .navigationTitle("과목 설정")
         .navigationBarTitleDisplayMode(.inline)
     }
     
-    // ✨ [수정됨] 파라미터를 StudySubject로 변경
     func toggleSubject(_ subject: StudySubject) {
         guard let uid = currentUserId else { return }
         
@@ -63,10 +60,8 @@ struct SubjectSelectView: View {
             // 있으면 제거
             newFavorites.remove(at: index)
         } else {
-            // 없으면 추가 (8개 제한)
-            if newFavorites.count < 8 {
-                newFavorites.append(subject)
-            }
+            // 없으면 추가
+            newFavorites.append(subject)
         }
         
         // 변경된 리스트 저장

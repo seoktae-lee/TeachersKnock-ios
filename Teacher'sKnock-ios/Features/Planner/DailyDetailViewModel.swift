@@ -17,9 +17,10 @@ class DailyDetailViewModel: ObservableObject {
         let id = UUID()
         let subject: String
         let seconds: Int
+        
+        // ✨ [수정 완료] allCases 대신 새로운 color(for:) 함수를 바로 호출합니다.
         var color: Color {
-            if let matched = SubjectName.allCases.first(where: { $0.rawValue == subject }) { return matched.color }
-            return .gray
+            return SubjectName.color(for: subject)
         }
     }
     
@@ -114,7 +115,7 @@ class DailyDetailViewModel: ObservableObject {
         fetchData()
     }
     
-    // 2. ✨ [수정됨] 미루기 취소 (내일 일정 삭제 로직 추가)
+    // 2. 미루기 취소 (내일 일정 삭제 로직 추가)
     func cancelPostpone(_ item: ScheduleItem) {
         guard let context = modelContext else { return }
         
@@ -128,7 +129,7 @@ class DailyDetailViewModel: ObservableObject {
         fetchData()
     }
     
-    // ✨ 내일 날짜에서 '같은 제목'을 가진 일정을 찾아 지우는 헬퍼 함수
+    // 내일 날짜에서 '같은 제목'을 가진 일정을 찾아 지우는 헬퍼 함수
     private func deletePostponedCopy(of item: ScheduleItem, in context: ModelContext) {
         let calendar = Calendar.current
         // 내일 날짜 계산
