@@ -56,6 +56,7 @@
 		546B334E2F004E9900741EE2 /* ScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546B334D2F004E9900741EE2 /* ScheduleManager.swift */; };
 		546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */; };
 		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
+		547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */; };
 		54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */; };
 		54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */; };
 		54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */; };
@@ -118,6 +119,7 @@
 		546B334D2F004E9900741EE2 /* ScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleManager.swift; sourceTree = "<group>"; };
 		546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectManagementView.swift; sourceTree = "<group>"; };
 		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
+		547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectColorManager.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalTimelineView.swift; sourceTree = "<group>"; };
 		54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySwipeView.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
 				5459AE162EE19535008EE0E4 /* FirestoreSyncManager.swift */,
 				5459AE1E2EE19535008EE0E4 /* QuoteManager.swift */,
 				54589FA32F015F8200B20684 /* StudyNavigationManager.swift */,
+				547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -401,6 +404,7 @@
 				5459AE2E2EE19535008EE0E4 /* AddScheduleView.swift in Sources */,
 				546B334C2F004ABB00741EE2 /* GoalManager.swift in Sources */,
 				5459AE2F2EE19535008EE0E4 /* AuthManager.swift in Sources */,
+				547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */,
 				5459AE302EE19535008EE0E4 /* CharacterLevel.swift in Sources */,
 				5459AE312EE19535008EE0E4 /* CharacterView.swift in Sources */,
 				54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */,
