@@ -13,8 +13,7 @@ class TimerViewModel: ObservableObject {
     @Published var isRunning: Bool = false
     @Published var displayTime: Int = 0
     @Published var selectedSubject: String = "교육학"
-    @Published var selectedPurpose: StudyPurpose = .lectureWatching // 기본값
-    @Published var linkedScheduleTitle: String? = nil // 플래너에서 넘어온 제목 (메모용)
+    @Published var selectedPurpose: StudyPurpose = .lectureWatching
     
     // MARK: - 내부 변수
     private var startTime: Date?
@@ -72,22 +71,19 @@ class TimerViewModel: ObservableObject {
             return
         }
         
-        // studyPurpose: 통계용 (Enum의 rawValue)
-        // memo: 상세용 (플래너 일정 제목)
         let newRecord = StudyRecord(
             durationSeconds: finalTime,
             areaName: selectedSubject,
             date: Date(),
             ownerID: ownerID,
-            studyPurpose: selectedPurpose.rawValue, // 현재 선택된 목적 저장
-            memo: linkedScheduleTitle // 플래너 제목 저장
+            studyPurpose: selectedPurpose.rawValue
         )
         
         context.insert(newRecord)
         
         do {
             try context.save()
-            print("✅ 저장 완료: \(finalTime)초 (목적: \(selectedPurpose.localizedName), 메모: \(linkedScheduleTitle ?? "없음"))")
+            print("✅ 저장 완료: \(finalTime)초")
         } catch {
             print("❌ 저장 실패: \(error)")
         }
@@ -99,31 +95,9 @@ class TimerViewModel: ObservableObject {
     private func resetTimer() {
         accumulatedTime = 0
         displayTime = 0
-        linkedScheduleTitle = nil
-        // 타이머 리셋 시 목적이나 과목을 초기화할지 여부는 선택 사항 (현재는 유지)
     }
     
-    // MARK: - 유틸리티 및 연동 로직
-    
-    // ✨ [수정된 부분] 공부 목적을 포함하여 일정을 적용합니다.
-    func applySchedule(_ item: ScheduleItem) {
-        // 1. 과목 연동
-        self.selectedSubject = item.subject
-        
-        // 2. 제목 연동 (메모)
-        self.linkedScheduleTitle = item.title
-        
-        // 3. 공부 목적 연동 (이 부분이 누락되어 있었습니다!)
-        // ScheduleItem에 저장된 문자열(rawValue)을 StudyPurpose 타입으로 변환하여 적용
-        if let purpose = StudyPurpose(rawValue: item.studyPurpose) {
-            self.selectedPurpose = purpose
-            print("🔄 타이머 목적 변경됨: \(purpose.localizedName)")
-        } else {
-            // 값이 없거나 매칭되지 않을 경우 기본값 사용
-            self.selectedPurpose = .lectureWatching
-            print("⚠️ 공부 목적 연동 실패 (기본값 적용)")
-        }
-    }
+    // MARK: - 유틸리티
     
     func formatTime(seconds: Int) -> String {
         let h = seconds / 3600
@@ -133,11 +107,9 @@ class TimerViewModel: ObservableObject {
     }
     
     func setupInitialSubject(favorites: [StudySubject]) {
-        if linkedScheduleTitle == nil {
-            if let first = favorites.first,
-               !favorites.contains(where: { $0.name == selectedSubject }) {
-                selectedSubject = first.name
-            }
+        if let first = favorites.first,
+           !favorites.contains(where: { $0.name == selectedSubject }) {
+            selectedSubject = first.name
         }
     }
 }

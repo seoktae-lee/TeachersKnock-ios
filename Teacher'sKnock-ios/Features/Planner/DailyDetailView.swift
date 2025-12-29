@@ -10,15 +10,26 @@ struct DailyDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) var modelContext
     
-    // 쿼리
+    // ✨ [수정] 네비게이션 매니저 연결
+    @EnvironmentObject var navManager: StudyNavigationManager
+    
+    // 데이터 쿼리
     @Query private var schedules: [ScheduleItem]
     @Query private var records: [StudyRecord]
+    @Query private var goals: [Goal]
     
     @State private var showingAddSheet = false
+    @State private var isShareSheetPresented = false
+    @State private var shareImage: UIImage?
     
-    // MARK: - 통계 계산
+    // ✨ [삭제됨] 기존 타이머 팝업용 변수는 더 이상 사용하지 않음
+    // @State private var scheduleToStudy: ScheduleItem?
+    
+    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    
+    // MARK: - Computed Properties
     var totalPlannedCount: Int { schedules.count }
-    var completedCount: Int { schedules.filter { $0.isCompleted }.count }
+    var completedCount: Int { schedules.filter { $0.isCompleted && !$0.isPostponed }.count }
     var achievementRate: Double {
         totalPlannedCount == 0 ? 0 : Double(completedCount) / Double(totalPlannedCount)
     }
@@ -33,6 +44,7 @@ struct DailyDetailView: View {
         return h > 0 ? "\(h)시간 \(m)분" : "\(m)분"
     }
     
+    // MARK: - Initializer
     init(date: Date, userId: String) {
         self.date = date
         self.userId = userId
@@ -47,6 +59,10 @@ struct DailyDetailView: View {
         _records = Query(filter: #Predicate<StudyRecord> {
             $0.ownerID == userId && $0.date >= start && $0.date < end
         })
+        
+        _goals = Query(filter: #Predicate<Goal> {
+            $0.ownerID == userId
+        })
     }
     
     var body: some View {
@@ -54,26 +70,23 @@ struct DailyDetailView: View {
             Color(.systemGray6).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 1. 커스텀 헤더 (날짜 및 네비게이션)
                 headerView
                 
                 ScrollView {
                     VStack(spacing: 20) {
-                        // 2. ✨ [NEW] 일일 요약 대시보드
                         summaryCard
                         
-                        // 3. ✨ [NEW] 타임라인 & 리스트 하이브리드
                         if schedules.isEmpty {
                             emptyStateView
                         } else {
                             timelineListView
                         }
                     }
-                    .padding(.bottom, 80) // 하단 플로팅 버튼 여백
+                    .padding(.bottom, 80)
                 }
             }
             
-            // 4. 플로팅 추가 버튼
+            // 플로팅 버튼 (일정 추가)
             VStack {
                 Spacer()
                 HStack {
@@ -83,9 +96,9 @@ struct DailyDetailView: View {
                             .font(.title2.bold())
                             .foregroundColor(.white)
                             .frame(width: 56, height: 56)
-                            .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                            .background(brandColor)
                             .clipShape(Circle())
-                            .shadow(color: .blue.opacity(0.3), radius: 5, x: 0, y: 3)
+                            .shadow(color: brandColor.opacity(0.3), radius: 5, x: 0, y: 3)
                     }
                     .padding()
                 }
@@ -94,14 +107,19 @@ struct DailyDetailView: View {
         .sheet(isPresented: $showingAddSheet) {
             AddScheduleView(selectedDate: date)
         }
+        .sheet(isPresented: $isShareSheetPresented) {
+            if let image = shareImage {
+                ShareSheet(items: [image])
+            }
+        }
+        // ✨ [삭제됨] .fullScreenCover(item: $scheduleToStudy) ... 부분 제거
     }
     
-    // MARK: - Components
+    // MARK: - Subviews
     
     var headerView: some View {
         HStack {
-            // 날짜 표시
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(date.formatted(date: .long, time: .omitted))
                     .font(.title2).fontWeight(.bold)
                     .foregroundColor(.primary)
@@ -111,52 +129,54 @@ struct DailyDetailView: View {
             }
             Spacer()
             
-            // 닫기 버튼 (옵션)
-            // DailySwipeView 내부에서 쓰일 땐 굳이 필요 없지만, 독립 실행 시 유용
+            VStack(alignment: .trailing, spacing: 4) {
+                Button(action: renderAndShare) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title3)
+                        .foregroundColor(brandColor)
+                        .padding(10)
+                        .background(brandColor.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                
+                if let primary = goals.first(where: { $0.isPrimaryGoal }) ?? goals.sorted(by: { $0.targetDate < $1.targetDate }).first {
+                    Text("'\(primary.characterName)' 공유 중")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
+                }
+            }
         }
         .padding()
         .background(Color.white)
         .overlay(Rectangle().frame(height: 1).foregroundColor(Color.gray.opacity(0.1)), alignment: .bottom)
     }
     
-    // ✨ 핵심: 요약 카드
     var summaryCard: some View {
         HStack(spacing: 15) {
-            // A. 공부 시간
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "clock.fill")
-                        .foregroundColor(.blue)
-                    Text("총 공부 시간")
-                        .font(.caption).foregroundColor(.gray)
+                    Image(systemName: "clock.fill").foregroundColor(brandColor)
+                    Text("총 공부 시간").font(.caption).foregroundColor(.gray)
                 }
                 Text(studyTimeFormatted)
-                    .font(.title2).fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .font(.title2).fontWeight(.bold).foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color.white)
-            .cornerRadius(16)
+            .background(Color.white).cornerRadius(16)
             .shadow(color: .black.opacity(0.03), radius: 5, y: 2)
             
-            // B. 달성률
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "chart.bar.fill")
-                        .foregroundColor(.green)
-                    Text("계획 달성률")
-                        .font(.caption).foregroundColor(.gray)
+                    Image(systemName: "chart.bar.fill").foregroundColor(.green)
+                    Text("계획 달성률").font(.caption).foregroundColor(.gray)
                 }
                 HStack(alignment: .bottom, spacing: 4) {
-                    Text("\(Int(achievementRate * 100))")
-                        .font(.title2).fontWeight(.bold)
-                    Text("%")
-                        .font(.caption).fontWeight(.bold).padding(.bottom, 4)
+                    Text("\(Int(achievementRate * 100))").font(.title2).fontWeight(.bold)
+                    Text("%").font(.caption).fontWeight(.bold).padding(.bottom, 4)
                 }
                 .foregroundColor(.primary)
                 
-                // 미니 프로그레스 바
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 2).fill(Color.gray.opacity(0.2))
@@ -168,38 +188,42 @@ struct DailyDetailView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color.white)
-            .cornerRadius(16)
+            .background(Color.white).cornerRadius(16)
             .shadow(color: .black.opacity(0.03), radius: 5, y: 2)
         }
         .padding(.horizontal)
         .padding(.top)
     }
     
-    // ✨ 핵심: 타임라인 리스트
     var timelineListView: some View {
         VStack(spacing: 0) {
             ForEach(Array(schedules.enumerated()), id: \.element.id) { index, item in
                 HStack(alignment: .top, spacing: 15) {
-                    // 1. 왼쪽 타임라인 줄기
                     VStack(spacing: 0) {
                         Text(item.startDate.formatted(.dateTime.hour().minute()))
                             .font(.caption2)
                             .foregroundColor(.gray)
                             .frame(width: 40, alignment: .trailing)
                         
-                        // 세로 줄
                         Rectangle()
                             .fill(Color.gray.opacity(0.2))
                             .frame(width: 2)
                             .frame(maxHeight: .infinity)
                             .padding(.top, 4)
-                            .padding(.leading, 38) // 텍스트 너비 + 여백 고려
+                            .padding(.leading, 38)
                     }
                     
-                    // 2. 일정 카드
-                    ScheduleRow(item: item, context: modelContext)
-                        .padding(.bottom, 15)
+                    ScheduleRow(
+                        item: item,
+                        context: modelContext,
+                        postponeAction: { postponeSchedule(item) },
+                        cancelPostponeAction: { cancelPostpone(item) },
+                        startStudyAction: {
+                            // ✨ [수정] 매니저를 통해 타이머 탭으로 이동 및 데이터 전달
+                            navManager.triggerStudy(for: item)
+                        }
+                    )
+                    .padding(.bottom, 15)
                 }
                 .padding(.horizontal)
             }
@@ -218,63 +242,259 @@ struct DailyDetailView: View {
         }
         .padding(.top, 50)
     }
+    
+    // MARK: - Logic Methods
+    
+    func postponeSchedule(_ item: ScheduleItem) {
+        item.isPostponed = true
+        let calendar = Calendar.current
+        if let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: item.startDate),
+           let tomorrowEnd = item.endDate.map({ calendar.date(byAdding: .day, value: 1, to: $0)! }) {
+            
+            let newItem = ScheduleItem(
+                title: item.title,
+                details: item.details,
+                startDate: tomorrowStart,
+                endDate: tomorrowEnd,
+                subject: item.subject,
+                isCompleted: false,
+                hasReminder: item.hasReminder,
+                ownerID: item.ownerID,
+                isPostponed: false
+            )
+            modelContext.insert(newItem)
+            ScheduleManager.shared.saveSchedule(newItem)
+            ScheduleManager.shared.saveSchedule(item)
+        }
+    }
+    
+    func cancelPostpone(_ item: ScheduleItem) {
+        item.isPostponed = false
+        ScheduleManager.shared.saveSchedule(item)
+    }
+    
+    @MainActor
+    func renderAndShare() {
+        var charEmoji = "🥚"
+        var dDayText = "D-Day"
+        var goalTitle = "목표를 설정해주세요"
+        var charColor = brandColor
+        
+        let targetGoal = goals.first(where: { $0.isPrimaryGoal })
+                      ?? goals.sorted { $0.targetDate < $1.targetDate }.first
+        
+        if let goal = targetGoal {
+            goalTitle = goal.title
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let target = calendar.startOfDay(for: goal.targetDate)
+            let diff = calendar.dateComponents([.day], from: today, to: target).day ?? 0
+            if diff == 0 { dDayText = "D-Day" }
+            else if diff > 0 { dDayText = "D-\(diff)" }
+            else { dDayText = "D+\(-diff)" }
+            
+            if goal.hasCharacter {
+                let totalStudyDays = calculateTotalStudyDays(for: userId)
+                let level = CharacterLevel.getLevel(currentDays: totalStudyDays, totalGoalDays: goal.totalDays)
+                charEmoji = level.emoji
+                charColor = GoalColorHelper.color(for: goal.characterColor)
+            } else {
+                charEmoji = "📝"
+            }
+        }
+        
+        let renderer = ImageRenderer(content: DailyShareView(
+            date: date,
+            studyTime: studyTimeFormatted,
+            characterEmoji: charEmoji,
+            dDay: dDayText,
+            goalTitle: goalTitle,
+            themeColor: charColor
+        ))
+        renderer.scale = UIScreen.main.scale
+        
+        if let image = renderer.uiImage {
+            self.shareImage = image
+            self.isShareSheetPresented = true
+        }
+    }
+    
+    func calculateTotalStudyDays(for uid: String) -> Int {
+        do {
+            let recordDescriptor = FetchDescriptor<StudyRecord>(predicate: #Predicate<StudyRecord> { $0.ownerID == uid })
+            let scheduleDescriptor = FetchDescriptor<ScheduleItem>(predicate: #Predicate<ScheduleItem> { $0.ownerID == uid && $0.isCompleted == true })
+            let allRecords = try modelContext.fetch(recordDescriptor)
+            let allSchedules = try modelContext.fetch(scheduleDescriptor)
+            
+            let calendar = Calendar.current
+            let rDays = allRecords.map { calendar.startOfDay(for: $0.date) }
+            let sDays = allSchedules.map { calendar.startOfDay(for: $0.startDate) }
+            return Set(rDays + sDays).count
+        } catch { return 0 }
+    }
 }
 
-// ✨ 일정 행 컴포넌트 (Swipe Action 및 디자인 개선)
+// MARK: - 공유용 뷰
+struct DailyShareView: View {
+    let date: Date
+    let studyTime: String
+    let characterEmoji: String
+    let dDay: String
+    let goalTitle: String
+    let themeColor: Color
+    
+    var body: some View {
+        VStack(spacing: 25) {
+            Text("Teacher's Knock")
+                .font(.caption)
+                .tracking(2)
+                .foregroundColor(.gray)
+                .padding(.top, 30)
+            
+            Text(date.formatted(date: .complete, time: .omitted))
+                .font(.headline)
+                .foregroundColor(.black)
+            
+            Spacer().frame(height: 10)
+            
+            ZStack {
+                Circle()
+                    .fill(themeColor.opacity(0.1))
+                    .frame(width: 140, height: 140)
+                
+                Text(characterEmoji)
+                    .font(.system(size: 70))
+            }
+            .overlay(
+                Text(goalTitle)
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(themeColor))
+                    .offset(y: 65),
+                alignment: .center
+            )
+            
+            Spacer().frame(height: 10)
+            
+            VStack(spacing: 8) {
+                Text("TODAY STUDY")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.gray)
+                
+                Text(studyTime)
+                    .font(.system(size: 36, weight: .black, design: .rounded))
+                    .foregroundColor(themeColor)
+            }
+            
+            Text(dDay)
+                .font(.title3)
+                .fontWeight(.heavy)
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(
+                    LinearGradient(
+                        colors: [themeColor, themeColor.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(Capsule())
+                .shadow(color: themeColor.opacity(0.4), radius: 8, x: 0, y: 4)
+            
+            Spacer()
+        }
+        .frame(width: 320, height: 500)
+        .background(Color.white)
+        .cornerRadius(24)
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.gray.opacity(0.1), lineWidth: 1))
+    }
+}
+
+// MARK: - ShareSheet
+struct ShareSheet: UIViewControllerRepresentable {
+    var items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - ScheduleRow
 struct ScheduleRow: View {
     let item: ScheduleItem
     let context: ModelContext
+    var postponeAction: () -> Void
+    var cancelPostponeAction: () -> Void
+    var startStudyAction: () -> Void
     
-    // 과목 색상 가져오기 (임시 로직, 실제론 SubjectName enum 활용 추천)
     var subjectColor: Color {
         SubjectName.color(for: item.subject)
     }
     
     var body: some View {
         HStack(spacing: 12) {
-            // 과목 컬러 바
             RoundedRectangle(cornerRadius: 2)
-                .fill(subjectColor)
+                .fill(item.isPostponed ? Color.gray : subjectColor)
                 .frame(width: 4)
                 .padding(.vertical, 8)
             
             VStack(alignment: .leading, spacing: 4) {
-                // 제목 & 체크박스
                 HStack {
-                    Text(item.title)
-                        .font(.headline)
-                        .strikethrough(item.isCompleted)
-                        .foregroundColor(item.isCompleted ? .gray : .primary)
+                    if item.isPostponed {
+                        HStack(spacing: 4) {
+                            Text(item.title).font(.headline).strikethrough().foregroundColor(.gray)
+                            Image(systemName: "arrowshape.turn.up.right.fill").font(.caption).foregroundColor(.orange)
+                            Text("내일로 미룸").font(.caption2).foregroundColor(.orange)
+                        }
+                    } else {
+                        Text(item.title)
+                            .font(.headline)
+                            .strikethrough(item.isCompleted)
+                            .foregroundColor(item.isCompleted ? .gray : .primary)
+                    }
                     
                     Spacer()
                     
-                    Button(action: toggleComplete) {
-                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundColor(item.isCompleted ? .green : .gray.opacity(0.4))
+                    // 재생 버튼 (타이머 시작)
+                    if !item.isPostponed && !item.isCompleted {
+                        Button(action: startStudyAction) {
+                            // ✨ [수정] 아이콘 변경 (play.circle.fill -> stopwatch)
+                            Image(systemName: "stopwatch")
+                                .font(.title2)
+                                .foregroundColor(subjectColor)
+                        }
+                        .padding(.trailing, 8)
+                    }
+                    
+                    if !item.isPostponed {
+                        Button(action: toggleComplete) {
+                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .font(.title3)
+                                .foregroundColor(item.isCompleted ? .green : .gray.opacity(0.4))
+                        }
                     }
                 }
                 
-                // 시간 범위 & 과목명
                 HStack(spacing: 8) {
-                    Label(
-                        "\(formatTime(item.startDate)) ~ \(formatTime(item.endDate ?? item.startDate))",
-                        systemImage: "clock"
-                    )
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                    Label("\(formatTime(item.startDate)) ~ \(formatTime(item.endDate ?? item.startDate))", systemImage: "clock")
+                        .font(.caption).foregroundColor(.gray)
                     
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    Text("•").font(.caption).foregroundColor(.gray)
                     
                     Text(item.subject)
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(subjectColor)
+                        .foregroundColor(item.isPostponed ? .gray : subjectColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(subjectColor.opacity(0.1))
+                        .background(item.isPostponed ? Color.gray.opacity(0.1) : subjectColor.opacity(0.1))
                         .cornerRadius(4)
                 }
             }
@@ -283,17 +503,24 @@ struct ScheduleRow: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.03), radius: 3, x: 0, y: 1)
-        // 스와이프 액션 (삭제/수정)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive, action: { context.delete(item) }) {
-                Label("삭제", systemImage: "trash")
+        .contextMenu {
+            if item.isPostponed {
+                Button { cancelPostponeAction() } label: { Label("미루기 취소", systemImage: "arrow.uturn.backward") }
+            } else {
+                Button { postponeAction() } label: { Label("내일로 미루기", systemImage: "arrow.right.circle") }
             }
+            Divider()
+            Button(role: .destructive) {
+                ScheduleManager.shared.deleteSchedule(itemId: item.id.uuidString, userId: item.ownerID)
+                withAnimation { context.delete(item) }
+            } label: { Label("삭제", systemImage: "trash") }
         }
     }
     
     func toggleComplete() {
         withAnimation {
             item.isCompleted.toggle()
+            ScheduleManager.shared.saveSchedule(item)
         }
     }
     

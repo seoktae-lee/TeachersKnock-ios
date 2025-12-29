@@ -4,8 +4,12 @@ import FirebaseAuth
 
 struct PlannerView: View {
     @Environment(\.modelContext) private var modelContext
+    
+    // 일정이 있는지 확인하기 위해 쿼리
+    @Query private var schedules: [ScheduleItem]
+    
     @State private var selectedDate = Date()
-    @State private var currentMonth = Date() // 달력에 표시되는 월
+    @State private var currentMonth = Date()
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
@@ -25,17 +29,16 @@ struct PlannerView: View {
                 )
                 .padding()
                 .background(Color.white)
-                .cornerRadius(24) // 모서리 조금 더 둥글게
+                .cornerRadius(24)
                 .shadow(color: .black.opacity(0.04), radius: 10, y: 5)
                 .padding(.horizontal)
                 .padding(.top, 15)
                 
-                // 2. ✨ [수정됨] 상세 플랜 보기 카드 (세련된 스타일)
+                // 2. 상세 플랜 보기 카드
                 NavigationLink(destination: DailySwipeView(initialDate: selectedDate, userId: currentUserId)) {
                     HStack {
-                        // 날짜 및 텍스트 정보
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(selectedDate.formatted(date: .long, time: .omitted)) // 예: 2025년 12월 26일
+                            Text(selectedDate.formatted(date: .long, time: .omitted))
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
                             
@@ -46,7 +49,6 @@ struct PlannerView: View {
                         
                         Spacer()
                         
-                        // 화살표 아이콘 (원형 배경)
                         Circle()
                             .fill(Color.white.opacity(0.2))
                             .frame(width: 40, height: 40)
@@ -58,7 +60,6 @@ struct PlannerView: View {
                     }
                     .padding(20)
                     .background(
-                        // 브랜드 컬러 그라디언트 배경
                         LinearGradient(
                             colors: [brandColor, brandColor.opacity(0.8)],
                             startPoint: .topLeading,
@@ -68,7 +69,6 @@ struct PlannerView: View {
                     .cornerRadius(20)
                     .shadow(color: brandColor.opacity(0.3), radius: 8, x: 0, y: 4)
                     .overlay(
-                        // 미세한 테두리 광택
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(Color.white.opacity(0.2), lineWidth: 1)
                     )
@@ -80,6 +80,7 @@ struct PlannerView: View {
             .background(Color(.systemGray6).ignoresSafeArea())
             .navigationTitle("스터디 플래너")
             .toolbar {
+                // ✨ 임시 버튼은 삭제되었습니다. (우측 상단 플러스 버튼만 유지)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: AddScheduleView(selectedDate: selectedDate)) {
                         Image(systemName: "plus")
@@ -91,6 +92,51 @@ struct PlannerView: View {
                             .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
                     }
                 }
+            }
+            .onAppear {
+                // 앱 재설치 시 서버에서 내 일정 복구
+                if schedules.isEmpty {
+                    restoreSchedulesFromServer()
+                }
+            }
+        }
+    }
+    // PlannerView.swift 내부의 restoreSchedulesFromServer 함수
+    private func restoreSchedulesFromServer() {
+        guard !currentUserId.isEmpty else { return }
+        
+        Task {
+            do {
+                let fetchedData = try await ScheduleManager.shared.fetchSchedules(userId: currentUserId)
+                
+                if !fetchedData.isEmpty {
+                    await MainActor.run {
+                        for data in fetchedData {
+                            // 이미 존재하는지 ID로 체크 (중복 방지 로직이 있다면 사용)
+                            let newItem = ScheduleItem(
+                                id: data.id,
+                                title: data.title,
+                                details: data.details,
+                                startDate: data.startDate,
+                                endDate: data.endDate,
+                                subject: data.subject,
+                                isCompleted: data.isCompleted,
+                                hasReminder: data.hasReminder,
+                                ownerID: data.ownerID,
+                                isPostponed: data.isPostponed,
+                                
+                                // ✨ [수정] 서버 데이터에서 공부 목적을 가져와서 넣어줍니다.
+                                // 만약 data(DTO)에 studyPurpose가 아직 없다면 ScheduleManager의 DTO도 확인이 필요합니다.
+                                // 일단 DTO에 해당 필드가 있다고 가정하고 추가합니다.
+                                studyPurpose: data.studyPurpose
+                            )
+                            modelContext.insert(newItem)
+                        }
+                        print("✅ 서버에서 일정 \(fetchedData.count)개 복구 완료")
+                    }
+                }
+            } catch {
+                print("❌ 일정 복구 실패: \(error)")
             }
         }
     }

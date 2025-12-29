@@ -4,20 +4,24 @@ import FirebaseAuth
 import Combine
 
 struct GoalListView: View {
-    @Query private var goals: [Goal]
+    // 날짜순 정렬
+    @Query(sort: \Goal.targetDate) private var goals: [Goal]
+    @Environment(\.modelContext) private var modelContext
     
     @State private var showingAddGoalSheet = false
     @State private var showingCharacterDetail = false
     @State private var selectedGoal: Goal?
     
+    // 명언 상태
     @State private var todayQuote: Quote = Quote(id: nil, text: "오늘의 명언을 불러오는 중...", author: "")
+    
     @Environment(\.scenePhase) var scenePhase
     @EnvironmentObject var authManager: AuthManager
     
-    private var currentUserId: String {
-        Auth.auth().currentUser?.uid ?? ""
-    }
+    private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
+    private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
+    // 생성자에서 필터링
     init(userId: String) {
         _goals = Query(filter: #Predicate<Goal> { goal in
             goal.ownerID == userId
@@ -53,8 +57,28 @@ struct GoalListView: View {
                             .buttonStyle(.plain)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            // 꾹 눌러서 대표 목표 설정
+                            .contextMenu {
+                                Button {
+                                    setPrimaryGoal(goal)
+                                } label: {
+                                    if goal.isPrimaryGoal {
+                                        Label("이미 대표 목표입니다", systemImage: "crown.fill")
+                                    } else {
+                                        Label("대표 목표로 설정", systemImage: "crown")
+                                    }
+                                }
+                                .disabled(goal.isPrimaryGoal)
+                                
+                                Divider()
+                                
+                                Button(role: .destructive) {
+                                    deleteGoal(goal)
+                                } label: {
+                                    Label("삭제", systemImage: "trash")
+                                }
+                            }
                         }
-                        .onDelete(perform: deleteGoals)
                     }
                     .listStyle(.plain)
                 }
@@ -64,51 +88,98 @@ struct GoalListView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     HStack(spacing: 15) {
                         NavigationLink(destination: ReportListView(userId: currentUserId)) {
-                            Image(systemName: "doc.text.image")
-                                .font(.title3).foregroundColor(.blue)
+                            Image(systemName: "doc.text.image").font(.title3).foregroundColor(brandColor)
                         }
                         NavigationLink(destination: NoticeListView()) {
-                            Image(systemName: "megaphone.fill")
-                                .font(.title3).foregroundColor(.orange)
+                            Image(systemName: "megaphone.fill").font(.title3).foregroundColor(.orange)
                         }
                     }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddGoalSheet = true }) {
-                        Image(systemName: "plus").foregroundColor(.blue)
+                        Image(systemName: "plus").foregroundColor(brandColor)
                     }
                 }
             }
             .sheet(isPresented: $showingAddGoalSheet) {
                 AddGoalView()
             }
-            // ✨ [수정됨] 상세 화면에 데이터 전달 (색상, 이름 포함)
+            // ✨ [수정 완료] 이제 에러 안 납니다! (데이터 전달 추가)
             .sheet(item: $selectedGoal) { goal in
                 VStack(spacing: 30) {
                     Text("나의 성장 기록").font(.title2).bold().padding(.top, 30)
                     Text(goal.title).font(.headline).foregroundColor(.gray)
                     
+                    // ✨ 여기에 필요한 정보를 꽉 채워줍니다
                     CharacterView(
                         userId: currentUserId,
                         totalGoalDays: goal.totalDays,
                         characterName: goal.characterName,
                         themeColorName: goal.characterColor
-                    )
-                    .padding()
+                    ).padding()
                     
                     Spacer()
                 }
                 .presentationDetents([.medium])
             }
-            .onAppear { checkAndLoadDailyQuote() }
+            .onAppear {
+                checkAndLoadDailyQuote()
+                if goals.isEmpty {
+                    restoreGoalsFromServer()
+                }
+            }
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active { checkAndLoadDailyQuote() }
             }
         }
     }
     
-    // ... (명언 로직은 기존과 동일)
+    // MARK: - Logic
+    
+    private func restoreGoalsFromServer() {
+        guard !currentUserId.isEmpty else { return }
+        Task {
+            do {
+                let fetchedGoals = try await GoalManager.shared.fetchGoals(userId: currentUserId)
+                if !fetchedGoals.isEmpty {
+                    await MainActor.run {
+                        for data in fetchedGoals {
+                            let goal = Goal(
+                                id: data.id,
+                                title: data.title,
+                                targetDate: data.targetDate,
+                                ownerID: data.ownerID,
+                                hasCharacter: data.hasCharacter,
+                                startDate: data.startDate,
+                                characterName: data.characterName,
+                                characterColor: data.characterColor,
+                                isPrimaryGoal: data.isPrimaryGoal
+                            )
+                            modelContext.insert(goal)
+                        }
+                        print("✅ 서버에서 목표 \(fetchedGoals.count)개 복구 완료")
+                    }
+                }
+            } catch {
+                print("목표 복구 실패: \(error)")
+            }
+        }
+    }
+    
+    private func setPrimaryGoal(_ targetGoal: Goal) {
+        for g in goals { g.isPrimaryGoal = false }
+        targetGoal.isPrimaryGoal = true
+        GoalManager.shared.saveGoal(targetGoal)
+        for g in goals { if g !== targetGoal { GoalManager.shared.saveGoal(g) } }
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+    }
+    
+    private func deleteGoal(_ goal: Goal) {
+        GoalManager.shared.deleteGoal(goalId: goal.id.uuidString, userId: currentUserId)
+        modelContext.delete(goal)
+    }
+    
     func checkAndLoadDailyQuote() {
         let defaults = UserDefaults.standard
         let todayKey = Date().formatted(date: .numeric, time: .omitted)
@@ -140,14 +211,10 @@ struct GoalListView: View {
             }
         }
     }
-    
-    @Environment(\.modelContext) private var modelContext
-    private func deleteGoals(offsets: IndexSet) {
-        for index in offsets { modelContext.delete(goals[index]) }
-    }
 }
 
-// Subviews
+// MARK: - Subviews
+
 struct CompactQuoteView: View {
     let quote: Quote
     var body: some View {
@@ -163,7 +230,6 @@ struct CompactQuoteView: View {
     }
 }
 
-// ✨ [수정됨] 색상과 별명이 반영된 목표 카드
 struct GoalRow: View {
     let goal: Goal
     let userId: String
@@ -171,9 +237,11 @@ struct GoalRow: View {
     @Query private var records: [StudyRecord]
     @Query private var scheduleItems: [ScheduleItem]
     
-    // 목표별 테마 색상 (Helper 사용)
+    // GoalColorHelper는 AddGoalView 파일에 있는 것을 사용합니다.
+    // 만약 찾을 수 없다는 에러가 나면, AddGoalView.swift에 있는 struct GoalColorHelper {...}를 복사해서
+    // 이 파일 맨 아래에 붙여넣어주세요.
     var themeColor: Color {
-        GoalColorHelper.color(for: goal.characterColor)
+        return GoalColorHelper.color(for: goal.characterColor)
     }
     
     init(goal: Goal, userId: String) {
@@ -191,62 +259,67 @@ struct GoalRow: View {
         return CharacterLevel.getLevel(currentDays: uniqueDays, totalGoalDays: goal.totalDays).emoji
     }
     
-    var dDay: String {
+    var dDayString: String {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let target = calendar.startOfDay(for: goal.targetDate)
-        let components = calendar.dateComponents([.day], from: today, to: target)
-        if let days = components.day {
-            if days == 0 { return "D-Day" } else if days > 0 { return "D-\(days)" } else { return "D+\(-days)" }
-        }
-        return "Error"
+        let diff = calendar.dateComponents([.day], from: today, to: target).day ?? 0
+        if diff == 0 { return "D-Day" } else if diff > 0 { return "D-\(diff)" } else { return "D+\(-diff)" }
     }
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 15) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(goal.title).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                    if goal.isPrimaryGoal {
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.yellow)
+                            .shadow(color: .orange.opacity(0.5), radius: 2)
+                    }
+                    
+                    Text(goal.title)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+                
+                HStack(spacing: 6) {
+                    Text(goal.targetDate, style: .date)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
                     
                     if goal.hasCharacter {
-                        // ✨ 캐릭터 이모지 + 별명 표시
-                        HStack(spacing: 4) {
-                            Text(currentEmoji)
-                            Text(goal.characterName)
-                                .font(.caption2).fontWeight(.bold)
-                                .foregroundColor(themeColor) // 텍스트를 테마색으로
-                        }
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 8)
-                        .background(Color.white)
-                        .clipShape(Capsule())
+                        Text("•")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.5))
+                        Text("\(currentEmoji) \(goal.characterName)")
+                            .font(.caption).bold()
+                            .foregroundColor(.white)
                     }
                 }
-                Text(goal.targetDate, style: .date).font(.caption).foregroundColor(.white.opacity(0.9))
             }
+            
             Spacer()
             
-            // D-Day 배지
-            Text(dDay)
-                .font(.title).fontWeight(.black)
-                .foregroundColor(themeColor) // 텍스트를 테마색으로
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+            Text(dDayString)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .foregroundColor(themeColor)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
                 .background(Color.white)
-                .cornerRadius(10)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
         }
-        .padding()
-        // ✨ 배경 그라디언트에 테마 색상 적용
+        .padding(16)
         .background(
             LinearGradient(
-                gradient: Gradient(colors: [themeColor, themeColor.opacity(0.7)]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                gradient: Gradient(colors: [themeColor, themeColor.opacity(0.8)]),
+                startPoint: .topLeading, endPoint: .bottomTrailing
             )
         )
-        .cornerRadius(15)
-        .shadow(color: themeColor.opacity(0.3), radius: 5, x: 0, y: 5)
-        .padding(.vertical, 5)
+        .cornerRadius(20)
+        .shadow(color: themeColor.opacity(0.3), radius: 6, x: 0, y: 4)
+        .padding(.vertical, 6)
         .listRowSeparator(.hidden)
     }
 }

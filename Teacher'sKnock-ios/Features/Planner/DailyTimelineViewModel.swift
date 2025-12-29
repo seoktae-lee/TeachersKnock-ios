@@ -4,150 +4,154 @@ import SwiftUI
 import Combine
 
 class DailyTimelineViewModel: ObservableObject {
+    // MARK: - Published Properties
+    @Published var schedules: [ScheduleItem] = []
+    @Published var records: [StudyRecord] = []
     
-    let startHour = 0
-    let endHour = 24
+    // 날짜 및 유저 정보
+    let date: Date
+    let userId: String
+    private var modelContext: ModelContext?
     
-    // MARK: - Layout Logic
+    // MARK: - Computed Properties (통계)
     
-    // ✨ 날짜(date)를 인자로 받아서 계산
-    func calculateLayout(for items: [ScheduleItem], on date: Date) -> [PersistentIdentifier: (Int, Int)] {
-        let activeItems = items.filter { getEffectiveRange(for: $0, on: date) != nil }
+    // 1. 총 계획 개수
+    var totalPlannedCount: Int {
+        schedules.count
+    }
+    
+    // 2. 완료 개수 (미룬 일정 제외)
+    var completedCount: Int {
+        schedules.filter { $0.isCompleted && !$0.isPostponed }.count
+    }
+    
+    // 3. 달성률 (0.0 ~ 1.0)
+    var achievementRate: Double {
+        totalPlannedCount == 0 ? 0 : Double(completedCount) / Double(totalPlannedCount)
+    }
+    
+    // 4. 총 공부 시간 (초)
+    var totalStudySeconds: Int {
+        records.reduce(0) { $0 + $1.durationSeconds }
+    }
+    
+    // 5. 공부 시간 포맷 (예: "3시간 15분")
+    var studyTimeFormatted: String {
+        let h = totalStudySeconds / 3600
+        let m = (totalStudySeconds % 3600) / 60
+        if h > 0 {
+            return String(format: "%d시간 %d분", h, m)
+        } else {
+            return String(format: "%d분", m)
+        }
+    }
+    
+    // MARK: - Initializer
+    init(date: Date, userId: String) {
+        self.date = date
+        self.userId = userId
+    }
+    
+    // Context 설정 및 데이터 로드
+    func setContext(_ context: ModelContext) {
+        self.modelContext = context
+        fetchData()
+    }
+    
+    // MARK: - Data Operations
+    
+    // 데이터 불러오기
+    func fetchData() {
+        guard let context = modelContext else { return }
         
-        let sorted = activeItems.sorted {
-            let range1 = getEffectiveRange(for: $0, on: date)!
-            let range2 = getEffectiveRange(for: $1, on: date)!
-            return range1.start < range2.start
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: date)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        // 일정 가져오기
+        let scheduleDescriptor = FetchDescriptor<ScheduleItem>(
+            predicate: #Predicate { item in
+                item.ownerID == userId && item.startDate >= startOfDay && item.startDate < endOfDay
+            },
+            sortBy: [SortDescriptor(\.startDate)]
+        )
+        
+        // 공부 기록 가져오기
+        let recordDescriptor = FetchDescriptor<StudyRecord>(
+            predicate: #Predicate { record in
+                record.ownerID == userId && record.date >= startOfDay && record.date < endOfDay
+            }
+        )
+        
+        do {
+            self.schedules = try context.fetch(scheduleDescriptor)
+            self.records = try context.fetch(recordDescriptor)
+        } catch {
+            print("❌ 데이터 로드 실패: \(error)")
+        }
+    }
+    
+    // 완료 상태 토글
+    func toggleComplete(_ item: ScheduleItem) {
+        item.isCompleted.toggle()
+        ScheduleManager.shared.saveSchedule(item) // 서버 동기화
+        // View 갱신을 위해 데이터 다시 로드할 필요는 없지만(SwiftData가 처리), 명시적으로 알림
+        objectWillChange.send()
+    }
+    
+    // 일정 삭제 (서버 + 로컬)
+    func deleteSchedule(_ item: ScheduleItem) {
+        guard let context = modelContext else { return }
+        
+        // 1. 서버 삭제
+        ScheduleManager.shared.deleteSchedule(itemId: item.id.uuidString, userId: item.ownerID)
+        
+        // 2. 로컬 삭제
+        context.delete(item)
+        
+        // 3. 리스트 갱신
+        if let index = schedules.firstIndex(where: { $0.id == item.id }) {
+            schedules.remove(at: index)
+        }
+    }
+    
+    // 내일로 미루기
+    func postponeSchedule(_ item: ScheduleItem) {
+        guard let context = modelContext else { return }
+        
+        // 1. 현재 일정 상태 변경
+        item.isPostponed = true
+        ScheduleManager.shared.saveSchedule(item)
+        
+        // 2. 내일 날짜 계산
+        let calendar = Calendar.current
+        if let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: item.startDate),
+           let tomorrowEnd = item.endDate.map({ calendar.date(byAdding: .day, value: 1, to: $0)! }) {
+            
+            // 3. 새 일정 생성
+            let newItem = ScheduleItem(
+                title: item.title,
+                details: item.details,
+                startDate: tomorrowStart,
+                endDate: tomorrowEnd,
+                subject: item.subject,
+                isCompleted: false, // 미룬 건 다시 해야 함
+                hasReminder: item.hasReminder,
+                ownerID: item.ownerID,
+                isPostponed: false
+            )
+            
+            context.insert(newItem)
+            ScheduleManager.shared.saveSchedule(newItem) // 새 일정도 서버 저장
         }
         
-        var map: [PersistentIdentifier: (Int, Int)] = [:]
-        if sorted.isEmpty { return map }
-        
-        var clusters: [[ScheduleItem]] = []
-        var currentCluster: [ScheduleItem] = [sorted[0]]
-        var clusterEnd = getEffectiveRange(for: sorted[0], on: date)!.end
-        
-        for i in 1..<sorted.count {
-            let item = sorted[i]
-            let range = getEffectiveRange(for: item, on: date)!
-            
-            if range.start < clusterEnd {
-                currentCluster.append(item)
-                if range.end > clusterEnd {
-                    clusterEnd = range.end
-                }
-            } else {
-                clusters.append(currentCluster)
-                currentCluster = [item]
-                clusterEnd = range.end
-            }
-        }
-        clusters.append(currentCluster)
-        
-        for cluster in clusters {
-            var columns: [[ScheduleItem]] = []
-            
-            for item in cluster {
-                var placed = false
-                let itemRange = getEffectiveRange(for: item, on: date)!
-                
-                for (colIndex, col) in columns.enumerated() {
-                    var fits = true
-                    for existing in col {
-                        let existingRange = getEffectiveRange(for: existing, on: date)!
-                        if itemRange.start < existingRange.end && existingRange.start < itemRange.end {
-                            fits = false
-                            break
-                        }
-                    }
-                    if fits {
-                        columns[colIndex].append(item)
-                        placed = true
-                        break
-                    }
-                }
-                
-                if !placed {
-                    columns.append([item])
-                }
-            }
-            
-            let totalColsInCluster = columns.count
-            for (colIndex, col) in columns.enumerated() {
-                for item in col {
-                    map[item.id] = (colIndex, totalColsInCluster)
-                }
-            }
-        }
-        
-        return map
+        objectWillChange.send()
     }
     
-    // MARK: - Helpers
-    
-    // 오늘 화면에 그릴 유효 범위 계산 (00:00 ~ 24:00 자르기)
-    func getEffectiveRange(for item: ScheduleItem, on date: Date) -> (start: Date, end: Date)? {
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: date)
-        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return nil }
-        
-        let itemEnd = item.endDate ?? item.startDate.addingTimeInterval(3600)
-        
-        let effectiveStart = max(item.startDate, dayStart)
-        let effectiveEnd = min(itemEnd, dayEnd)
-        
-        if effectiveStart >= effectiveEnd { return nil }
-        
-        return (effectiveStart, effectiveEnd)
-    }
-    
-    func calculateCenterY(for item: ScheduleItem, hourHeight: CGFloat, on date: Date) -> CGFloat {
-        guard let range = getEffectiveRange(for: item, on: date) else { return 0 }
-        
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: date)
-        
-        let startOffset = range.start.timeIntervalSince(dayStart)
-        let duration = range.end.timeIntervalSince(range.start)
-        
-        let topOffset = (CGFloat(startOffset) / 3600.0) * hourHeight
-        let visualHeight = max(CGFloat(duration / 3600.0) * hourHeight, 30)
-        
-        return topOffset + (visualHeight / 2)
-    }
-    
-    func getVisualHeight(for item: ScheduleItem, hourHeight: CGFloat, on date: Date) -> CGFloat {
-        guard let range = getEffectiveRange(for: item, on: date) else { return 0 }
-        let duration = range.end.timeIntervalSince(range.start)
-        
-        let height = max(CGFloat(duration / 3600.0) * hourHeight, 30)
-        return height > 2 ? height - 1 : height
-    }
-    
-    // ✨ 어제에서 이어지는가? (시작 시간이 오늘 0시보다 전이면 True)
-    func isContinuingFromYesterday(_ item: ScheduleItem, on date: Date) -> Bool {
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: date)
-        return item.startDate < dayStart
-    }
-    
-    // ✨ 내일로 이어지는가? (종료 시간이 내일 0시보다 후이면 True)
-    func isContinuingToTomorrow(_ item: ScheduleItem, on date: Date) -> Bool {
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: date)
-        // dayEnd = 내일 00:00
-        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return false }
-        
-        let itemEnd = item.endDate ?? item.startDate.addingTimeInterval(3600)
-        
-        // 24:00를 넘어가면 True
-        return itemEnd > dayEnd
-    }
-    
-    func getBlockStyle(isCompleted: Bool, isPostponed: Bool) -> (opacity: Double, saturation: Double, strokeOpacity: Double) {
-        let opacity = isPostponed ? 0.15 : (isCompleted ? 0.2 : 0.45)
-        let saturation = (isCompleted || isPostponed) ? 0.0 : 1.0
-        let strokeOpacity = isPostponed ? 0.2 : (isCompleted ? 0.3 : 0.8)
-        return (opacity, saturation, strokeOpacity)
+    // 미루기 취소
+    func cancelPostpone(_ item: ScheduleItem) {
+        item.isPostponed = false
+        ScheduleManager.shared.saveSchedule(item)
+        objectWillChange.send()
     }
 }

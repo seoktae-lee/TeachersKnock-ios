@@ -6,7 +6,10 @@ struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
     
-    // ✨ ViewModel 연결 (StateObject로 수명 관리)
+    // 네비게이션 매니저 연결
+    @EnvironmentObject var navManager: StudyNavigationManager
+    
+    // ViewModel 연결 (StateObject로 수명 관리)
     @StateObject private var viewModel = TimerViewModel()
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
@@ -20,7 +23,7 @@ struct TimerView: View {
             VStack(spacing: 30) {
                 Spacer().frame(height: 30)
                 
-                // 1. 과목 및 목적 선택 영역 (✨ 디자인 수정됨: 더 크고 시원하게)
+                // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
                     // 과목 선택
                     VStack(spacing: 8) {
@@ -38,8 +41,8 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
-                                    .font(.title3)        // ✨ 폰트 키움
-                                    .fontWeight(.bold)    // ✨ 두껍게
+                                    .font(.title3)
+                                    .fontWeight(.bold)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.5)
                                     .foregroundColor(.primary)
@@ -50,9 +53,9 @@ struct TimerView: View {
                                     .font(.body)
                                     .foregroundColor(.gray)
                             }
-                            .padding(.vertical, 16)       // ✨ 높이(터치 영역) 확대
+                            .padding(.vertical, 16)
                             .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity)   // ✨ 가로 꽉 채우기
+                            .frame(maxWidth: .infinity)
                             .background(Color.blue.opacity(0.1))
                             .cornerRadius(16)
                         }
@@ -61,48 +64,79 @@ struct TimerView: View {
                     // 목적 선택
                     VStack(spacing: 8) {
                         Text("공부 목적").font(.caption).foregroundColor(.gray)
-                        Menu {
-                            ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
-                                Button(purpose.localizedName) {
-                                    viewModel.selectedPurpose = purpose
+                        
+                        // 연동된 일정이 있는 경우
+                        if viewModel.linkedScheduleTitle != nil {
+                            Button(action: {
+                                // 클릭 시 연동 해제하고 다시 선택하고 싶다면 nil 처리 가능
+                                viewModel.linkedScheduleTitle = nil
+                            }) {
+                                HStack {
+                                    // ✨ [수정 완료] 제목(customTitle) 대신 목적(selectedPurpose)을 표시합니다!
+                                    Text(viewModel.selectedPurpose.localizedName)
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .foregroundColor(.white) // 강조 색상 유지
+                                    
+                                    Spacer()
+                                    
+                                    // 연동 해제(X) 버튼 아이콘
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.white.opacity(0.8))
                                 }
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 20)
+                                .frame(maxWidth: .infinity)
+                                .background(brandColor) // 연동 상태임을 강조 (파란 배경)
+                                .cornerRadius(16)
                             }
-                        } label: {
-                            HStack {
-                                Text(viewModel.selectedPurpose.localizedName)
-                                    .font(.title3)        // ✨ 폰트 키움
-                                    .fontWeight(.bold)    // ✨ 두껍게
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
-                                    .foregroundColor(.primary)
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.down")
-                                    .font(.body)
-                                    .foregroundColor(.gray)
+                        } else {
+                            // 연동된 일정이 없는 경우 (기존 메뉴 로직)
+                            Menu {
+                                ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
+                                    Button(purpose.localizedName) {
+                                        viewModel.selectedPurpose = purpose
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(viewModel.selectedPurpose.localizedName)
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.down")
+                                        .font(.body)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 20)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.green.opacity(0.1))
+                                .cornerRadius(16)
                             }
-                            .padding(.vertical, 16)       // ✨ 높이(터치 영역) 확대
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity)   // ✨ 가로 꽉 채우기
-                            .background(Color.green.opacity(0.1))
-                            .cornerRadius(16)
                         }
                     }
                 }
-                .padding(.horizontal, 20) // ✨ 전체 좌우 여백 조정
-                .disabled(viewModel.isRunning) // 공부 중엔 변경 불가
+                .padding(.horizontal, 20)
+                .disabled(viewModel.isRunning)
                 .opacity(viewModel.isRunning ? 0.6 : 1.0)
                 
                 Spacer()
                 
-                // 2. ✨ 타이머 시간 표시
+                // 2. 타이머 시간 표시
                 Text(viewModel.formatTime(seconds: viewModel.displayTime))
                     .font(.system(size: 90, weight: .medium, design: .monospaced))
                     .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                     .lineLimit(1).minimumScaleFactor(0.5)
                     .padding(.horizontal)
-                    .contentTransition(.numericText()) // 숫자 바뀔 때 부드럽게
+                    .contentTransition(.numericText())
                 
                 Spacer()
                 
@@ -158,9 +192,22 @@ struct TimerView: View {
                     }
                 }
             }
-            // 화면이 나타날 때 초기 과목 설정
+            // 화면이 나타날 때 초기 과목 설정 및 데이터 연동 확인
             .onAppear {
                 viewModel.setupInitialSubject(favorites: settingsManager.favoriteSubjects)
+                
+                // 매니저에 대기 중인 일정이 있다면 적용
+                if let schedule = navManager.targetSchedule {
+                    viewModel.applySchedule(schedule)
+                    navManager.clearTarget() // 적용 후 초기화 (중복 적용 방지)
+                }
+            }
+            // 탭이 전환되어 들어왔을 때도 감지 (onAppear 보완)
+            .onChange(of: navManager.targetSchedule) { _, newValue in
+                if let schedule = newValue {
+                    viewModel.applySchedule(schedule)
+                    navManager.clearTarget()
+                }
             }
             // 화면 나갈 때 타이머 자동 정지
             .onDisappear {
@@ -170,7 +217,7 @@ struct TimerView: View {
     }
 }
 
-// RecentRecordsView (기존과 동일)
+// RecentRecordsView는 기존 코드 유지
 struct RecentRecordsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]
