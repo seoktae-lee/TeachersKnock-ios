@@ -143,6 +143,9 @@ struct PlannerView: View {
                                 studyPurpose: data.studyPurpose
                             )
                             modelContext.insert(newItem)
+                            
+                            // ✨ [복구] 서버에서 불러온 일정에 대해 알림 다시 등록
+                            NotificationManager.shared.updateNotifications(for: newItem)
                         }
                         print("✅ 서버에서 일정 \(fetchedData.count)개 복구 완료")
                     }

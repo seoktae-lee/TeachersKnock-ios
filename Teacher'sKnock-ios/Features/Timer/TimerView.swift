@@ -143,6 +143,13 @@ struct TimerView: View {
                     navManager.clearTarget()
                 }
             }
+            // ✨ [추가] 이미 타이머 탭에 있을 때 딥링크로 데이터가 들어오면 즉시 반영
+            .onChange(of: navManager.targetSchedule) { newSchedule in
+                if let schedule = newSchedule {
+                    viewModel.applySchedule(schedule)
+                    navManager.clearTarget()
+                }
+            }
 
         }
 

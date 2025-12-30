@@ -53,7 +53,11 @@ struct AddScheduleView: View {
             }
             .onAppear {
                 viewModel.setContext(modelContext)
-                viewModel.autoSetStartTimeToLastSchedule()
+                
+                // ✨ [수정] 새 일정 추가 모드일 때만 '이어달리기' 시간 자동 설정
+                if viewModel.editingSchedule == nil {
+                    viewModel.autoSetStartTimeToLastSchedule()
+                }
                 
                 if viewModel.isStudySubject && !settingsManager.favoriteSubjects.isEmpty {
                     let allNames = settingsManager.favoriteSubjects.map { $0.name }
@@ -324,6 +328,8 @@ struct TimeSection: View {
             }
             .padding(.horizontal)
             
+
+            
             // 시간 조절 버튼들
             HStack(spacing: 8) {
                 Button("+10분") { feedback.impactOccurred(); viewModel.addDuration(10) }.frame(maxWidth: .infinity)
@@ -343,6 +349,28 @@ struct TimeSection: View {
                 .font(.caption)
                 .foregroundColor(.red)
                 .padding(.horizontal)
+            }
+            
+            // ✨ [알림] 알림 설정 토글 (최하단 이동)
+            Toggle(isOn: $viewModel.hasReminder) {
+                HStack {
+                    Image(systemName: "bell.fill")
+                        .foregroundColor(viewModel.hasReminder ? .blue : .gray)
+                    Text("시작 알림 받기")
+                        .font(.system(size: 16))
+                    if viewModel.hasReminder {
+                        Text("(정시 + 10분 전)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 5)
+            .onChange(of: viewModel.hasReminder) { newValue in
+                if newValue {
+                     NotificationManager.shared.requestAuthorization()
+                }
             }
         }
     }

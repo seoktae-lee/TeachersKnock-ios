@@ -1,5 +1,7 @@
 import Foundation
 import FirebaseFirestore
+import UserNotifications
+import UIKit
 
 class ScheduleManager {
     static let shared = ScheduleManager()
@@ -100,4 +102,83 @@ struct ScheduleData {
     let isPostponed: Bool
     // ✨ [추가] 오류 해결의 핵심!
     let studyPurpose: String
+}
+class NotificationManager {
+    static let shared = NotificationManager()
+    
+    private init() {}
+    
+    // 1. 권한 요청
+    func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                print("알림 권한 허용됨")
+            } else if let error = error {
+                print("알림 권한 요청 실패: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // 2. 알림 스케줄링 (정시 & 10분 전)
+    func updateNotifications(for schedule: ScheduleItem) {
+        // 기존 알림 취소 (업데이트 시 중복 방지)
+        cancelNotifications(for: schedule)
+        
+        // 알림 설정이 꺼져있거나 완료된 일정이면 스케줄링 하지 않음
+        guard schedule.hasReminder, !schedule.isCompleted, !schedule.isPostponed else { return }
+        
+        // 10분 전 알림
+        scheduleNotification(
+            for: schedule,
+            triggerDate: schedule.startDate.addingTimeInterval(-600), // 10분 전
+            identifier: "\(schedule.id.uuidString)_10min",
+            body: "10분뒤 일정이 시작됩니다!(\(schedule.subject)):\(schedule.title)"
+        )
+        
+        // 정시 알림
+        scheduleNotification(
+            for: schedule,
+            triggerDate: schedule.startDate,
+            identifier: "\(schedule.id.uuidString)_onTime",
+            body: "일정 시작 시간입니다!(\(schedule.subject)):\(schedule.title)"
+        )
+    }
+    
+    // 3. 알림 취소
+    func cancelNotifications(for schedule: ScheduleItem) {
+        let identifiers = [
+            "\(schedule.id.uuidString)_10min",
+            "\(schedule.id.uuidString)_onTime"
+        ]
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
+        print("알림 취소 완료: \(schedule.title)")
+    }
+    
+    // 내부 헬퍼: 실제 알림 등록
+    private func scheduleNotification(for schedule: ScheduleItem, triggerDate: Date, identifier: String, body: String) {
+        // 과거 시간은 알림 예약 불가
+        guard triggerDate > Date() else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "📅 일정 알림"
+        content.body = body
+        content.sound = .default
+        // ✨ [추가] 알림 클릭 시 딥링크를 위해 ID 포함
+        content.userInfo = ["scheduleID": schedule.id.uuidString]
+        
+        // 날짜 기반 트리거 생성
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        
+        // 요청 생성 및 등록
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("알림 등록 실패 (\(identifier)): \(error.localizedDescription)")
+            } else {
+                print("알림 등록 성공 (\(identifier)): \(triggerDate)")
+            }
+        }
+    }
 }

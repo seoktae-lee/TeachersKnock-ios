@@ -107,6 +107,9 @@ class DailyDetailViewModel: ObservableObject {
         context.insert(newItem)
         FirestoreSyncManager.shared.saveSchedule(newItem)
         
+        // ✨ [알림] 미뤄진 일정에 대해서도 알림 등록
+        NotificationManager.shared.updateNotifications(for: newItem)
+        
         // 원본 상태 변경
         item.isPostponed = true
         item.isCompleted = false
@@ -154,6 +157,9 @@ class DailyDetailViewModel: ObservableObject {
             let foundItems = try context.fetch(descriptor)
             // 찾은 것 중 하나 삭제 (가장 유력한 후보)
             if let copyToDelete = foundItems.first {
+                // ✨ [알림] 삭제될 일정의 알림 취소
+                NotificationManager.shared.cancelNotifications(for: copyToDelete)
+                
                 context.delete(copyToDelete)
                 print("🗑️ 미루기 취소: 내일 일정(\(copyToDelete.title))이 삭제되었습니다.")
             }
@@ -164,6 +170,10 @@ class DailyDetailViewModel: ObservableObject {
     
     func deleteSchedule(_ item: ScheduleItem) {
         guard let context = modelContext else { return }
+        
+        // ✨ [알림] 일정 삭제 시 알림도 함께 취소
+        NotificationManager.shared.cancelNotifications(for: item)
+        
         context.delete(item)
         saveContext()
         fetchData()

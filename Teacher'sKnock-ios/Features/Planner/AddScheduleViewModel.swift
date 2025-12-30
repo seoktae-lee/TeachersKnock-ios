@@ -78,7 +78,11 @@ class AddScheduleViewModel: ObservableObject {
     
     // 중복 일정 확인 프로퍼티
     var overlappingScheduleTitle: String? {
-        let activeSchedules = existingSchedules.filter { !$0.isPostponed }
+        // ✨ [수정] 수정 중인 나 자신(editingSchedule)은 제외하고 검사
+        let activeSchedules = existingSchedules.filter {
+            !$0.isPostponed && $0.id != editingSchedule?.id
+        }
+        
         for item in activeSchedules {
             let itemEnd = item.endDate ?? item.startDate.addingTimeInterval(3600)
             // 겹침 판정: (내 시작 < 남의 끝) AND (내 끝 > 남의 시작)
@@ -224,9 +228,10 @@ class AddScheduleViewModel: ObservableObject {
             existingItem.hasReminder = hasReminder
             existingItem.studyPurpose = selectedPurpose.rawValue
             
-            // ModelContext는 자동으로 변경사항 추적하므로 별도 insert 필요 없음
-            // 하지만 서버 동기화를 위해 Manager 호출 필요
             ScheduleManager.shared.saveSchedule(existingItem)
+            
+            // ✨ [알림] 수정된 내용으로 알림 갱신
+            NotificationManager.shared.updateNotifications(for: existingItem)
             
         } else {
             // [추가 모드] 새 객체 생성
@@ -245,6 +250,9 @@ class AddScheduleViewModel: ObservableObject {
             
             context.insert(newItem)
             ScheduleManager.shared.saveSchedule(newItem)
+            
+            // ✨ [알림] 새 일정 알림 등록
+            NotificationManager.shared.updateNotifications(for: newItem)
         }
         
         dismissAction()

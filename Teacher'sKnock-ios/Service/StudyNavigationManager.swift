@@ -12,6 +12,9 @@ class StudyNavigationManager: ObservableObject {
     // 타이머로 전달할 일정 데이터
     @Published var targetSchedule: ScheduleItem?
     
+    // ✨ [추가] 알림을 통해 들어온 일정 ID (비동기로 처리됨)
+    @Published var pendingScheduleID: String?
+    
     // 이 함수를 호출하면 타이머 탭으로 이동하며 데이터를 세팅합니다.
     func triggerStudy(for schedule: ScheduleItem) {
         self.targetSchedule = schedule

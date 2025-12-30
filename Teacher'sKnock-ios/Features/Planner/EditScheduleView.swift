@@ -25,6 +25,23 @@ struct EditScheduleView: View {
         _hasReminder = State(initialValue: item.hasReminder)
     }
     
+    // 겹침 확인을 위한 기존 일정 목록
+    @State private var existingSchedules: [ScheduleItem] = []
+    
+    var overlappingTitle: String? {
+        // 나 자신을 제외하고, 미뤄지지 않은 일정들 중에서 겹치는 것 찾기
+        let others = existingSchedules.filter { $0.id != item.id && !$0.isPostponed }
+        
+        for other in others {
+            let otherEnd = other.endDate ?? other.startDate.addingTimeInterval(3600)
+            // 겹침 판정
+            if startDate < otherEnd && endDate > other.startDate {
+                return other.title
+            }
+        }
+        return nil
+    }
+    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
     var body: some View {
@@ -39,9 +56,20 @@ struct EditScheduleView: View {
                 Section(header: Text("시간 변경")) {
                     DatePicker("시작", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
                         .tint(brandColor)
+                        .onChange(of: startDate) { _ in fetchSchedules() } // 날짜 변경 시 재조회
                     
                     DatePicker("종료", selection: $endDate, in: startDate..., displayedComponents: [.date, .hourAndMinute])
                         .tint(brandColor)
+                    
+                    // ✨ [겹침 경고]
+                    if let conflict = overlappingTitle {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text("'\(conflict)' 일정과 겹쳐요!")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    }
                 }
                 
                 Section {
@@ -72,6 +100,29 @@ struct EditScheduleView: View {
                         .foregroundColor(brandColor)
                 }
             }
+            .onAppear {
+                fetchSchedules()
+            }
+        }
+    }
+    
+    // 해당 날짜의 일정 불러오기
+    private func fetchSchedules() {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: startDate)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let ownerID = item.ownerID
+        
+        let descriptor = FetchDescriptor<ScheduleItem>(
+            predicate: #Predicate { target in
+                target.ownerID == ownerID && target.startDate >= startOfDay && target.startDate < endOfDay
+            }
+        )
+        
+        do {
+            existingSchedules = try modelContext.fetch(descriptor)
+        } catch {
+            print("일정 로드 실패: \(error)")
         }
     }
     
@@ -83,10 +134,16 @@ struct EditScheduleView: View {
         item.endDate = endDate
         item.hasReminder = hasReminder
         
+        // ✨ [알림] 변경된 내용으로 알림 업데이트
+        NotificationManager.shared.updateNotifications(for: item)
+        
         dismiss()
     }
     
     private func deleteSchedule() {
+        // ✨ [알림] 삭제 시 알림 취소
+        NotificationManager.shared.cancelNotifications(for: item)
+        
         modelContext.delete(item)
         dismiss()
     }
