@@ -5,11 +5,14 @@ enum CharacterLevel: Int, CaseIterable {
     
     // ✨ [수정] 현재 일수에 따른 레벨 계산
     static func getLevel(uniqueDays: Int) -> CharacterLevel {
+        return .lv2 // ✨ [테스트] 강제 레벨 2 반환
+        /*
         if uniqueDays < 3 { return .lv1 }
         
         // 기존 로그 기반 로직 유지
         let levelIndex = Int(log(Double(uniqueDays) / 2.0) / log(1.5))
         return CharacterLevel(rawValue: max(0, min(levelIndex, 9))) ?? .lv1
+        */
     }
     
     // ✨ [추가] 다음 레벨로 가기 위해 필요한 총 일수 계산
