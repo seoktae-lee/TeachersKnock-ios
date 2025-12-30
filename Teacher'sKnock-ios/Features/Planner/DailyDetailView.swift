@@ -22,6 +22,7 @@ struct DailyDetailView: View {
     @Query private var allRecords: [StudyRecord]
     
     @State private var showingAddSheet = false
+    @State private var editingItem: ScheduleItem? // 수정할 아이템
     @State private var isShareSheetPresented = false
     @State private var shareImage: UIImage?
     
@@ -111,6 +112,9 @@ struct DailyDetailView: View {
         }
         .sheet(isPresented: $showingAddSheet) {
             AddScheduleView(selectedDate: date)
+        }
+        .sheet(item: $editingItem) { item in
+            AddScheduleView(selectedDate: date, scheduleToEdit: item)
         }
         .sheet(isPresented: $isShareSheetPresented) {
             if let image = shareImage {
@@ -222,6 +226,7 @@ struct DailyDetailView: View {
                         context: modelContext,
                         postponeAction: { postponeSchedule(item) },
                         cancelPostponeAction: { cancelPostpone(item) },
+                        editAction: { editingItem = item },
                         startStudyAction: {
                             navManager.triggerStudy(for: item)
                         }
@@ -274,6 +279,40 @@ struct DailyDetailView: View {
     func cancelPostpone(_ item: ScheduleItem) {
         item.isPostponed = false
         ScheduleManager.shared.saveSchedule(item)
+        
+        // ✨ [미루기 취소 로직] 내일 일정을 찾아서 삭제
+        // 조건: 날짜가 내일 + 제목 동일 + 과목 동일
+        let calendar = Calendar.current
+        guard let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: item.startDate) else { return }
+        
+        // 내일 날짜 범위 (00:00 ~ 23:59)
+        let dayStart = calendar.startOfDay(for: tomorrowStart)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return }
+        
+        let targetTitle = item.title
+        let targetSubject = item.subject
+        
+        // ModelContext에서 직접 검색
+        let descriptor = FetchDescriptor<ScheduleItem>(
+            predicate: #Predicate { target in
+                target.ownerID == userId &&
+                target.startDate >= dayStart &&
+                target.startDate < dayEnd &&
+                target.title == targetTitle &&
+                target.subject == targetSubject
+            }
+        )
+        
+        do {
+            let foundItems = try modelContext.fetch(descriptor)
+            if let targetToDelete = foundItems.first {
+                // 하나 발견되면 삭제
+                modelContext.delete(targetToDelete)
+                ScheduleManager.shared.deleteSchedule(itemId: targetToDelete.id.uuidString, userId: userId)
+            }
+        } catch {
+            print("미루기 취소 중 검색 실패: \(error)")
+        }
     }
     
     @MainActor
@@ -502,6 +541,7 @@ struct ScheduleRow: View {
     let context: ModelContext
     var postponeAction: () -> Void
     var cancelPostponeAction: () -> Void
+    var editAction: () -> Void
     var startStudyAction: () -> Void
     
     var subjectColor: Color {
@@ -577,6 +617,9 @@ struct ScheduleRow: View {
             } else {
                 Button { postponeAction() } label: { Label("내일로 미루기", systemImage: "arrow.right.circle") }
             }
+            // ✨ [수정] 수정 기능 추가
+            Button { editAction() } label: { Label("수정", systemImage: "pencil") }
+            
             Divider()
             Button(role: .destructive) {
                 ScheduleManager.shared.deleteSchedule(itemId: item.id.uuidString, userId: item.ownerID)

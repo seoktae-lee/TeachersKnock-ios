@@ -89,15 +89,37 @@ class AddScheduleViewModel: ObservableObject {
         return nil
     }
     
-    init(userId: String, selectedDate: Date = Date()) {
+    // 수정 대상 (nil이면 새 일정 추가)
+    var editingSchedule: ScheduleItem?
+    
+    init(userId: String, selectedDate: Date = Date(), scheduleToEdit: ScheduleItem? = nil) {
         self.userId = userId
+        self.editingSchedule = scheduleToEdit
         
+        let calendar = Calendar.current
+        
+        // 1. 수정 모드일 경우: 기존 데이터로 초기화
+        if let item = scheduleToEdit {
+            self.title = item.title
+            self.selectedSubject = item.subject
+            self.isStudySubject = SubjectName.isStudySubject(item.subject)
+            self.startDate = item.startDate
+            self.endDate = item.endDate ?? item.startDate.addingTimeInterval(3600)
+            self.hasReminder = item.hasReminder
+            
+            // 공부 목적 데이터 복원
+            if let purpose = StudyPurpose(rawValue: item.studyPurpose) {
+                self.selectedPurpose = purpose
+            }
+            return
+        }
+        
+        // 2. 새 일정 추가 모드일 경우
         // 마지막으로 선택했던 과목 불러오기
         if let savedSubject = UserDefaults.standard.string(forKey: "LastSelectedSubject") {
             self.selectedSubject = savedSubject
         }
         
-        let calendar = Calendar.current
         var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: selectedDate)
         
         // 기본값: 현재 시간 or 오전 9시
@@ -188,23 +210,42 @@ class AddScheduleViewModel: ObservableObject {
             endDate = startDate.addingTimeInterval(1800)
         }
         
-        let newItem = draftSchedule
-        
-        // 과목명 강제 주입
-        newItem.subject = selectedSubject
-        
-        if newItem.title.isEmpty {
-            newItem.title = selectedSubject
-        }
+        let finalTitle = title.isEmpty ? selectedSubject : title
         
         // 저장할 때, 현재 선택된 과목을 기억해두기
         UserDefaults.standard.set(selectedSubject, forKey: "LastSelectedSubject")
         
-        // 1. 로컬 저장
-        context.insert(newItem)
-        
-        // 2. 서버 저장
-        ScheduleManager.shared.saveSchedule(newItem)
+        if let existingItem = editingSchedule {
+            // [수정 모드] 기존 객체 업데이트
+            existingItem.title = finalTitle
+            existingItem.startDate = startDate
+            existingItem.endDate = endDate
+            existingItem.subject = selectedSubject
+            existingItem.hasReminder = hasReminder
+            existingItem.studyPurpose = selectedPurpose.rawValue
+            
+            // ModelContext는 자동으로 변경사항 추적하므로 별도 insert 필요 없음
+            // 하지만 서버 동기화를 위해 Manager 호출 필요
+            ScheduleManager.shared.saveSchedule(existingItem)
+            
+        } else {
+            // [추가 모드] 새 객체 생성
+            let newItem = ScheduleItem(
+                title: finalTitle,
+                details: "",
+                startDate: startDate,
+                endDate: endDate,
+                subject: selectedSubject,
+                isCompleted: false,
+                hasReminder: hasReminder,
+                ownerID: userId,
+                isPostponed: false,
+                studyPurpose: selectedPurpose.rawValue
+            )
+            
+            context.insert(newItem)
+            ScheduleManager.shared.saveSchedule(newItem)
+        }
         
         dismissAction()
     }

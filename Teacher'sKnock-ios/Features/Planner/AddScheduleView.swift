@@ -10,9 +10,9 @@ struct AddScheduleView: View {
     // 뷰모델 연결
     @StateObject private var viewModel: AddScheduleViewModel
     
-    init(selectedDate: Date) {
+    init(selectedDate: Date, scheduleToEdit: ScheduleItem? = nil) {
         let uid = Auth.auth().currentUser?.uid ?? ""
-        _viewModel = StateObject(wrappedValue: AddScheduleViewModel(userId: uid, selectedDate: selectedDate))
+        _viewModel = StateObject(wrappedValue: AddScheduleViewModel(userId: uid, selectedDate: selectedDate, scheduleToEdit: scheduleToEdit))
     }
     
     var body: some View {
@@ -39,7 +39,7 @@ struct AddScheduleView: View {
                 .padding(.vertical)
             }
             .background(Color.white)
-            .navigationTitle("새 일정")
+            .navigationTitle(viewModel.editingSchedule == nil ? "새 일정" : "일정 수정")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) { Button("취소") { dismiss() } }
