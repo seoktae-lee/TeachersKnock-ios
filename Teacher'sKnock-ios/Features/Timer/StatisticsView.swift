@@ -68,8 +68,7 @@ struct StatisticsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: 25) {
                     // 상단 버튼 영역 (오늘 / 총 누적)
                     HStack(spacing: 15) {
@@ -215,4 +214,3 @@ struct StatisticsView: View {
             .navigationTitle("학습 통계")
         }
     }
-}

@@ -143,7 +143,9 @@ struct TimerView: View {
                     navManager.clearTarget()
                 }
             }
+
         }
+
     }
 }
 
@@ -160,7 +162,23 @@ struct RecentRecordsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("최근 공부 기록").font(.headline).padding(.horizontal)
+            HStack {
+                Text("최근 공부 기록").font(.headline)
+                Spacer()
+                NavigationLink(destination: StatisticsView(userId: userId)) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chart.bar.xaxis")
+                        Text("통계")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                    .clipShape(Capsule())
+                }
+            }
+            .padding(.horizontal)
             
             if records.isEmpty {
                 Text("아직 기록이 없습니다.")
