@@ -19,6 +19,14 @@ final class Goal {
     // ✨ [추가] 캐릭터의 스타팅 타입 (bird, plant, sea)
     var characterType: String
     
+    // ✨ [NEW] 역방향 관계 설정 (StudyRecord 삭제 시 자동 처리됨)
+    // Goal이 삭제되면 관련 기록은 유지할지 삭제할지 결정해야 하나,
+    // 보통 기록은 소중하므로 .nullify가 안전할 수 있습니다. 
+    // 하지만 "Goal에 속한 기록"의 개념이 강하다면 .cascade도 고려 가능합니다.
+    // 여기서는 안전하게 .nullify(기본값) 혹은 명시적으로 관계만 정의합니다.
+    @Relationship(deleteRule: .nullify, inverse: \StudyRecord.goal)
+    var records: [StudyRecord]? = []
+    
     var totalDays: Int {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: startDate)

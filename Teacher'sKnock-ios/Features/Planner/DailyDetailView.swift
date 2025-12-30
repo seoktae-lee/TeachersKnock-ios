@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import FirebaseAuth
 import Charts
+import UIKit
 
 struct DailyDetailView: View {
     let date: Date
@@ -281,6 +282,7 @@ struct DailyDetailView: View {
         var dDayText = "D-Day"
         var goalTitle = "목표를 설정해주세요"
         var charColor = brandColor
+        var charLevel = 0
         
         let targetGoal = goals.first(where: { $0.isPrimaryGoal })
                       ?? goals.sorted { $0.targetDate < $1.targetDate }.first
@@ -296,12 +298,13 @@ struct DailyDetailView: View {
             else { dDayText = "D+\(-diff)" }
             
             if goal.hasCharacter {
-                // ✨ [오류 해결] 비선형 성장 로직 적용
-                // ✨ [수정] 비선형 성장 로직 (Unique Days 기준)
-                // 해당 목표(goal)에 할당된 기록들 중 날짜가 서로 다른 날의 개수를 셉니다.
-                let goalRecords = allRecords.filter { $0.goal?.id == goal.id }
+                // ✨ [수정] 전체 레코드에서 필터링하는 대신, 역방향 관계를 사용하여 안전하게 접근
+                // 기존: let goalRecords = allRecords.filter { $0.goal?.id == goal.id }
+                let goalRecords = goal.records ?? []
+                
                 let uniqueDays = Set(goalRecords.map { Calendar.current.startOfDay(for: $0.date) }).count
                 let level = CharacterLevel.getLevel(uniqueDays: uniqueDays)
+                charLevel = level.rawValue
                 
                 charEmoji = level.emoji(for: goal.characterType)
                 charColor = GoalColorHelper.color(for: goal.characterColor)
@@ -310,15 +313,26 @@ struct DailyDetailView: View {
             }
         }
         
+        // 인스타그램 스토리 비율 (9:16)
+        // 1080 x 1920 해상도를 목표로 하되, 렌더링 시에는 포인트 단위로 작업
+        // iPhone 화면 포인트 기준 width: 375 ~ 430 정도.
+        // 여기서는 논리적 크기를 375x667(iPhone 8 기준 비율) 또는 적절한 비율로 잡고 scale을 키웁니다.
+        let width: CGFloat = 375
+        let height: CGFloat = 667 // 9:16 ratio approx
+        
         let renderer = ImageRenderer(content: DailyShareView(
             date: date,
             studyTime: studyTimeFormatted,
             characterEmoji: charEmoji,
+            characterLevel: charLevel,
             dDay: dDayText,
             goalTitle: goalTitle,
             themeColor: charColor
-        ))
-        renderer.scale = UIScreen.main.scale
+        ).frame(width: width, height: height))
+        
+        // ✨ [수정] 렌더링 사이즈 명시 및 스케일 설정
+        renderer.proposedSize = ProposedViewSize(width: width, height: height)
+        renderer.scale = 3.0
         
         if let image = renderer.uiImage {
             self.shareImage = image
@@ -327,83 +341,146 @@ struct DailyDetailView: View {
     }
 }
 
-// MARK: - 공유용 뷰
+// MARK: - 공유용 뷰 (인스타그램 스토리 스타일)
 struct DailyShareView: View {
     let date: Date
     let studyTime: String
     let characterEmoji: String
+    let characterLevel: Int
     let dDay: String
     let goalTitle: String
     let themeColor: Color
     
     var body: some View {
-        VStack(spacing: 25) {
-            Text("Teacher's Knock")
-                .font(.caption)
-                .tracking(2)
-                .foregroundColor(.gray)
-                .padding(.top, 30)
-            
-            Text(date.formatted(date: .complete, time: .omitted))
-                .font(.headline)
-                .foregroundColor(.black)
-            
-            Spacer().frame(height: 10)
-            
-            ZStack {
-                Circle()
-                    .fill(themeColor.opacity(0.1))
-                    .frame(width: 140, height: 140)
-                
-                Text(characterEmoji)
-                    .font(.system(size: 70))
-            }
-            .overlay(
-                Text(goalTitle)
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(themeColor))
-                    .offset(y: 65),
-                alignment: .center
+        ZStack {
+            // 1. 배경 (Background) - 테마 컬러를 활용한 감성적인 그라데이션
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    themeColor.opacity(0.8),
+                    themeColor.opacity(0.4),
+                    Color.white
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
+            .ignoresSafeArea()
             
-            Spacer().frame(height: 10)
+            // 배경 데코레이션 (부드러운 빛 효과)
+            Circle()
+                .fill(Color.white.opacity(0.2))
+                .frame(width: 400, height: 400)
+                .offset(x: -120, y: -200)
+                .blur(radius: 20)
             
-            VStack(spacing: 8) {
-                Text("TODAY STUDY")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.gray)
+            VStack {
+                Spacer()
                 
-                Text(studyTime)
-                    .font(.system(size: 36, weight: .black, design: .rounded))
-                    .foregroundColor(themeColor)
-            }
-            
-            Text(dDay)
-                .font(.title3)
-                .fontWeight(.heavy)
-                .foregroundColor(.white)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+                // 2. 포커스 카드 (Focus Card)
+                VStack(spacing: 25) {
+                    // 상단 날짜 헤더
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(date.formatted(.dateTime.weekday(.wide)))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.gray)
+                                .textCase(.uppercase)
+                            Text(date.formatted(.dateTime.month().day()))
+                                .font(.system(size: 20, weight: .heavy))
+                                .foregroundColor(.primary)
+                        }
+                        Spacer()
+                        
+                        // D-Day 뱃지
+                        Text(dDay)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(themeColor))
+                    }
+                    .padding(.horizontal, 10)
+                    
+                    Divider().opacity(0.5)
+                    
+                    // 메인 콘텐츠
+                    VStack(spacing: 15) {
+                        // 캐릭터 영역
+                        ZStack {
+                            Circle()
+                                .fill(themeColor.opacity(0.1))
+                                .frame(width: 140, height: 140)
+                            
+                            Text(characterEmoji)
+                                .font(.system(size: 80))
+                                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                            
+                            // 레벨 표시
+                            if characterLevel > 0 {
+                                VStack {
+                                    Spacer()
+                                    Text("Lv.\(characterLevel)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().fill(themeColor))
+                                        .offset(y: 10)
+                                }
+                                .frame(height: 140)
+                            }
+                        }
+                        .padding(.top, 10)
+                        
+                        // 공부 시간
+                        VStack(spacing: 0) {
+                            Text(studyTime)
+                                .font(.system(size: 52, weight: .black, design: .rounded))
+                                .foregroundColor(.primary)
+                            
+                            Text("TOTAL STUDY TIME")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(2)
+                                .foregroundColor(.gray.opacity(0.8))
+                                .padding(.top, 5)
+                        }
+                    }
+                    .padding(.vertical, 10)
+                    
+                    Divider().opacity(0.5)
+                    
+                    // 하단 목표 정보
+                    HStack {
+                        Image(systemName: "flag.fill")
+                            .foregroundColor(themeColor)
+                            .font(.caption)
+                        Text(goalTitle)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                    
+                }
+                .padding(30)
                 .background(
-                    LinearGradient(
-                        colors: [themeColor, themeColor.opacity(0.8)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    RoundedRectangle(cornerRadius: 30)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
                 )
-                .clipShape(Capsule())
-                .shadow(color: themeColor.opacity(0.4), radius: 8, x: 0, y: 4)
-            
-            Spacer()
+                .padding(.horizontal, 40)
+                .padding(.bottom, 60) // 중앙에서 약간 위로 배치
+                
+                Spacer()
+                
+                // 3. 하단 브랜딩
+                Text("Teacher's Knock")
+                    .font(.custom("Futura-Medium", size: 16))
+                    .foregroundColor(.white.opacity(0.9))
+                    .tracking(2)
+                    .padding(.bottom, 50)
+            }
         }
-        .frame(width: 320, height: 500)
-        .background(Color.white)
-        .cornerRadius(24)
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.gray.opacity(0.1), lineWidth: 1))
+        .frame(width: 375, height: 667)
+        .clipped()
     }
 }
 
