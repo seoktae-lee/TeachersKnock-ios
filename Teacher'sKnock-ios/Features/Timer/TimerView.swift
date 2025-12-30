@@ -8,6 +8,9 @@ struct TimerView: View {
     @EnvironmentObject var navManager: StudyNavigationManager
     @StateObject private var viewModel = TimerViewModel()
     
+    // ✨ 목표 데이터를 가져와 저장 시 연결하기 위함
+    @Query(sort: \Goal.targetDate) private var goals: [Goal]
+    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
@@ -18,13 +21,10 @@ struct TimerView: View {
                 
                 // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
-                    
-                    // 과목 선택 메뉴 (통합 버전)
                     VStack(spacing: 8) {
                         Text("과목").font(.caption).foregroundColor(.gray)
                         
                         Menu {
-                            // (1) 현재 등록된 모든 과목 (13개 기본 + 사용자 추가)
                             ForEach(settingsManager.favoriteSubjects) { subject in
                                 Button(action: {
                                     viewModel.selectedSubject = subject.name
@@ -37,14 +37,10 @@ struct TimerView: View {
                                     }
                                 }
                             }
-                            
                             Divider()
-                            
-                            // (2) 과목 추가/삭제 관리 화면으로 이동
                             NavigationLink(destination: SubjectManagementView()) {
                                 Label("과목 추가/관리", systemImage: "plus.circle")
                             }
-                            
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
@@ -52,61 +48,38 @@ struct TimerView: View {
                                     .fontWeight(.bold)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.5)
-                                    // 선택된 과목 색상 적용
                                     .foregroundColor(SubjectName.color(for: viewModel.selectedSubject))
-                                
                                 Spacer()
-                                
-                                Image(systemName: "chevron.down")
-                                    .font(.body)
-                                    .foregroundColor(.gray)
+                                Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
                             }
                             .padding(.vertical, 16)
                             .padding(.horizontal, 20)
                             .frame(maxWidth: .infinity)
                             .background(Color.white)
                             .cornerRadius(16)
-                            .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                            .shadow(color: .black.opacity(0.05), radius: 5)
                         }
                     }
                     
-                    // 목적 선택
                     VStack(spacing: 8) {
                         Text("공부 목적").font(.caption).foregroundColor(.gray)
-                        
-                        if viewModel.linkedScheduleTitle != nil {
-                            Button(action: { viewModel.linkedScheduleTitle = nil }) {
-                                HStack {
-                                    Text(viewModel.selectedPurpose.localizedName)
-                                        .font(.title3).fontWeight(.bold)
-                                        .lineLimit(1).minimumScaleFactor(0.5)
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Image(systemName: "xmark.circle.fill").foregroundColor(.white.opacity(0.8))
-                                }
-                                .padding(.vertical, 16).padding(.horizontal, 20)
-                                .frame(maxWidth: .infinity)
-                                .background(brandColor).cornerRadius(16)
+                        Menu {
+                            ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
+                                Button(purpose.localizedName) { viewModel.selectedPurpose = purpose }
                             }
-                        } else {
-                            Menu {
-                                ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
-                                    Button(purpose.localizedName) { viewModel.selectedPurpose = purpose }
-                                }
-                            } label: {
-                                HStack {
-                                    Text(viewModel.selectedPurpose.localizedName)
-                                        .font(.title3).fontWeight(.bold)
-                                        .lineLimit(1).minimumScaleFactor(0.5)
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
-                                }
-                                .padding(.vertical, 16).padding(.horizontal, 20)
-                                .frame(maxWidth: .infinity)
-                                .background(Color.white).cornerRadius(16)
-                                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                        } label: {
+                            HStack {
+                                Text(viewModel.selectedPurpose.localizedName)
+                                    .font(.title3).fontWeight(.bold)
+                                    .lineLimit(1).minimumScaleFactor(0.5)
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
                             }
+                            .padding(.vertical, 16).padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white).cornerRadius(16)
+                            .shadow(color: .black.opacity(0.05), radius: 5)
                         }
                     }
                 }
@@ -117,12 +90,10 @@ struct TimerView: View {
                 Spacer()
                 
                 // 2. 타이머 시간 표시
-                Text(viewModel.formatTime(seconds: viewModel.displayTime))
+                Text(viewModel.timeString)
                     .font(.system(size: 90, weight: .medium, design: .monospaced))
                     .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                     .lineLimit(1).minimumScaleFactor(0.5)
-                    .padding(.horizontal)
-                    .contentTransition(.numericText())
                 
                 Spacer()
                 
@@ -145,7 +116,10 @@ struct TimerView: View {
                     }
                     
                     if !viewModel.isRunning && viewModel.displayTime > 0 {
-                        Button(action: { viewModel.saveRecord(context: modelContext, ownerID: currentUserId) }) {
+                        Button(action: {
+                            let primaryGoal = goals.first { $0.isPrimaryGoal } ?? goals.first
+                            viewModel.saveRecord(context: modelContext, ownerID: currentUserId, primaryGoal: primaryGoal)
+                        }) {
                             VStack {
                                 Image(systemName: "checkmark.circle.fill").resizable().frame(width: 80, height: 80)
                                 Text("저장하기").font(.caption).padding(.top, 5)
@@ -155,21 +129,13 @@ struct TimerView: View {
                 }
                 .padding(.bottom, 20)
                 
-                // 4. 최근 기록 리스트 (오류 해결됨 ✅)
+                // ✅ [오류 해결] 1. RecentRecordsView를 하단에 정의 / 2. .bottom으로 마침표 추가
                 RecentRecordsView(userId: currentUserId).padding(.bottom, 10)
             }
             .background(Color(.systemGray6))
             .navigationTitle("집중 타이머")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: StatisticsView(userId: currentUserId)) {
-                        Image(systemName: "chart.bar.xaxis").font(.title3).foregroundColor(brandColor)
-                    }
-                }
-            }
             .onAppear {
-                // 초기 과목 설정: 없으면 "교직논술"
-                if viewModel.selectedSubject.isEmpty || !settingsManager.favoriteSubjects.map({$0.name}).contains(viewModel.selectedSubject) {
+                if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
                 }
                 if let schedule = navManager.targetSchedule {
@@ -177,57 +143,48 @@ struct TimerView: View {
                     navManager.clearTarget()
                 }
             }
-            .onChange(of: navManager.targetSchedule) { _, newValue in
-                if let schedule = newValue {
-                    viewModel.applySchedule(schedule)
-                    navManager.clearTarget()
-                }
-            }
-            .onDisappear { if viewModel.isRunning { viewModel.stopTimer() } }
         }
     }
 }
 
-// ✨ [누락되었던 부분] 최근 기록 리스트 뷰 정의
+// MARK: - RecentRecordsView (누락된 뷰 정의 추가)
 struct RecentRecordsView: View {
-    @Environment(\.modelContext) private var modelContext
+    let userId: String
     @Query private var records: [StudyRecord]
     
     init(userId: String) {
-        _records = Query(filter: #Predicate<StudyRecord> { record in
-            record.ownerID == userId
-        }, sort: \.date, order: .reverse)
+        self.userId = userId
+        // 해당 유저의 최근 기록 5개만 가져오기
+        _records = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId }, sort: \.date, order: .reverse)
     }
     
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("최근 학습 기록").font(.headline).padding(.horizontal).padding(.bottom, 5)
-            List {
-                if records.isEmpty {
-                    Text("아직 기록이 없습니다.").foregroundColor(.gray)
-                } else {
-                    ForEach(records.prefix(10)) { record in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(record.areaName).font(.subheadline).bold()
-                                Text(record.studyPurpose).font(.caption2).foregroundColor(.gray).padding(.horizontal, 6).padding(.vertical, 2).background(Color.gray.opacity(0.1)).cornerRadius(4)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("최근 공부 기록").font(.headline).padding(.horizontal)
+            
+            if records.isEmpty {
+                Text("아직 기록이 없습니다.")
+                    .font(.caption).foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity).padding()
+            } else {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(records.prefix(5)) { record in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(record.areaName).font(.subheadline).bold()
+                                    Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Text("\(record.durationSeconds / 60)분").font(.subheadline).bold()
                             }
-                            Spacer()
-                            if record.durationSeconds >= 3600 {
-                                Text("\(record.durationSeconds / 3600)시간 \((record.durationSeconds % 3600) / 60)분").font(.caption).foregroundColor(.gray)
-                            } else {
-                                Text("\(record.durationSeconds / 60)분 \(record.durationSeconds % 60)초").font(.caption).foregroundColor(.gray)
-                            }
+                            .padding().background(Color.white).cornerRadius(12)
                         }
                     }
-                    .onDelete(perform: deleteRecords)
+                    .padding(.horizontal)
                 }
+                .frame(height: 180)
             }
-            .listStyle(.plain).frame(height: 200)
         }
-    }
-    
-    private func deleteRecords(offsets: IndexSet) {
-        for index in offsets { modelContext.delete(records[index]) }
     }
 }

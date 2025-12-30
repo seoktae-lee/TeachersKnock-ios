@@ -16,6 +16,9 @@ final class Goal {
     var characterColor: String
     var isPrimaryGoal: Bool
     
+    // ✨ [추가] 캐릭터의 스타팅 타입 (bird, plant, sea)
+    var characterType: String
+    
     var totalDays: Int {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: startDate)
@@ -25,7 +28,7 @@ final class Goal {
     }
     
     init(
-        id: UUID = UUID(), // 기본값 생성
+        id: UUID = UUID(),
         title: String,
         targetDate: Date,
         ownerID: String,
@@ -33,7 +36,8 @@ final class Goal {
         startDate: Date = Date(),
         characterName: String = "티노",
         characterColor: String = "Blue",
-        isPrimaryGoal: Bool = false
+        isPrimaryGoal: Bool = false,
+        characterType: String = "bird" // ✨ 초기화 시 기본값 설정
     ) {
         self.id = id
         self.title = title
@@ -44,9 +48,10 @@ final class Goal {
         self.characterName = characterName
         self.characterColor = characterColor
         self.isPrimaryGoal = isPrimaryGoal
+        self.characterType = characterType // ✨ 할당
     }
     
-    // ✨ 서버 저장용 데이터 변환 (Dictionary)
+    // ✨ 서버 저장용 데이터 변환 (characterType 필드 포함)
     var asDictionary: [String: Any] {
         return [
             "id": id.uuidString,
@@ -57,7 +62,8 @@ final class Goal {
             "hasCharacter": hasCharacter,
             "characterName": characterName,
             "characterColor": characterColor,
-            "isPrimaryGoal": isPrimaryGoal
+            "isPrimaryGoal": isPrimaryGoal,
+            "characterType": characterType // ✨ 서버 동기화 시 데이터 추가
         ]
     }
 }

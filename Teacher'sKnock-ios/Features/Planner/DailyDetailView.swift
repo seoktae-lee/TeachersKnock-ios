@@ -10,20 +10,19 @@ struct DailyDetailView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) var modelContext
     
-    // ✨ [수정] 네비게이션 매니저 연결
+    // ✨ 네비게이션 매니저 연결
     @EnvironmentObject var navManager: StudyNavigationManager
     
     // 데이터 쿼리
     @Query private var schedules: [ScheduleItem]
     @Query private var records: [StudyRecord]
     @Query private var goals: [Goal]
+    // ✨ [추가] 캐릭터 레벨 계산을 위해 전체 기록을 가져옵니다.
+    @Query private var allRecords: [StudyRecord]
     
     @State private var showingAddSheet = false
     @State private var isShareSheetPresented = false
     @State private var shareImage: UIImage?
-    
-    // ✨ [삭제됨] 기존 타이머 팝업용 변수는 더 이상 사용하지 않음
-    // @State private var scheduleToStudy: ScheduleItem?
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     
@@ -61,6 +60,11 @@ struct DailyDetailView: View {
         })
         
         _goals = Query(filter: #Predicate<Goal> {
+            $0.ownerID == userId
+        })
+        
+        // ✨ [오류 해결용] 전체 공부 기록 쿼리 초기화
+        _allRecords = Query(filter: #Predicate<StudyRecord> {
             $0.ownerID == userId
         })
     }
@@ -112,7 +116,6 @@ struct DailyDetailView: View {
                 ShareSheet(items: [image])
             }
         }
-        // ✨ [삭제됨] .fullScreenCover(item: $scheduleToStudy) ... 부분 제거
     }
     
     // MARK: - Subviews
@@ -219,7 +222,6 @@ struct DailyDetailView: View {
                         postponeAction: { postponeSchedule(item) },
                         cancelPostponeAction: { cancelPostpone(item) },
                         startStudyAction: {
-                            // ✨ [수정] 매니저를 통해 타이머 탭으로 이동 및 데이터 전달
                             navManager.triggerStudy(for: item)
                         }
                     )
@@ -294,9 +296,14 @@ struct DailyDetailView: View {
             else { dDayText = "D+\(-diff)" }
             
             if goal.hasCharacter {
-                let totalStudyDays = calculateTotalStudyDays(for: userId)
-                let level = CharacterLevel.getLevel(currentDays: totalStudyDays, totalGoalDays: goal.totalDays)
-                charEmoji = level.emoji
+                // ✨ [오류 해결] 비선형 성장 로직 적용
+                // ✨ [수정] 비선형 성장 로직 (Unique Days 기준)
+                // 해당 목표(goal)에 할당된 기록들 중 날짜가 서로 다른 날의 개수를 셉니다.
+                let goalRecords = allRecords.filter { $0.goal?.id == goal.id }
+                let uniqueDays = Set(goalRecords.map { Calendar.current.startOfDay(for: $0.date) }).count
+                let level = CharacterLevel.getLevel(uniqueDays: uniqueDays)
+                
+                charEmoji = level.emoji(for: goal.characterType)
                 charColor = GoalColorHelper.color(for: goal.characterColor)
             } else {
                 charEmoji = "📝"
@@ -317,20 +324,6 @@ struct DailyDetailView: View {
             self.shareImage = image
             self.isShareSheetPresented = true
         }
-    }
-    
-    func calculateTotalStudyDays(for uid: String) -> Int {
-        do {
-            let recordDescriptor = FetchDescriptor<StudyRecord>(predicate: #Predicate<StudyRecord> { $0.ownerID == uid })
-            let scheduleDescriptor = FetchDescriptor<ScheduleItem>(predicate: #Predicate<ScheduleItem> { $0.ownerID == uid && $0.isCompleted == true })
-            let allRecords = try modelContext.fetch(recordDescriptor)
-            let allSchedules = try modelContext.fetch(scheduleDescriptor)
-            
-            let calendar = Calendar.current
-            let rDays = allRecords.map { calendar.startOfDay(for: $0.date) }
-            let sDays = allSchedules.map { calendar.startOfDay(for: $0.startDate) }
-            return Set(rDays + sDays).count
-        } catch { return 0 }
     }
 }
 
@@ -462,10 +455,8 @@ struct ScheduleRow: View {
                     
                     Spacer()
                     
-                    // 재생 버튼 (타이머 시작)
                     if !item.isPostponed && !item.isCompleted {
                         Button(action: startStudyAction) {
-                            // ✨ [수정] 아이콘 변경 (play.circle.fill -> stopwatch)
                             Image(systemName: "stopwatch")
                                 .font(.title2)
                                 .foregroundColor(subjectColor)

@@ -56,6 +56,7 @@
 		546B334E2F004E9900741EE2 /* ScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546B334D2F004E9900741EE2 /* ScheduleManager.swift */; };
 		546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */; };
 		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
+		54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */; };
 		547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */; };
 		54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */; };
 		54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */; };
@@ -119,6 +120,7 @@
 		546B334D2F004E9900741EE2 /* ScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleManager.swift; sourceTree = "<group>"; };
 		546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectManagementView.swift; sourceTree = "<group>"; };
 		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
+		54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalColorHelper.swift; sourceTree = "<group>"; };
 		547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectColorManager.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalTimelineView.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 				5459AE202EE19535008EE0E4 /* ScheduleItem.swift */,
 				5459AE272EE19535008EE0E4 /* StudyRecord.swift */,
 				5459AE172EE19535008EE0E4 /* Goal.swift */,
+				54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */,
 				546F5CD22EE331BF009105C7 /* StudySubject.swift */,
 			);
 			path = Model;
@@ -409,6 +412,7 @@
 				5459AE312EE19535008EE0E4 /* CharacterView.swift in Sources */,
 				54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */,
 				5459AE322EE19535008EE0E4 /* DailyDetailView.swift in Sources */,
+				54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */,
 				5459AE332EE19535008EE0E4 /* DailyTimelineView.swift in Sources */,
 				5459AE342EE19535008EE0E4 /* EditScheduleView.swift in Sources */,
 				5459AE352EE19535008EE0E4 /* FirestoreSyncManager.swift in Sources */,

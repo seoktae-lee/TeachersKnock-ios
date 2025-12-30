@@ -59,42 +59,35 @@ class TimerViewModel: ObservableObject {
         self.displayTime = Int(total)
     }
     
+    // ✨ [추가] 뷰에서 접근할 시간 문자열
+    var timeString: String {
+        formatTime(seconds: displayTime)
+    }
+    
     // MARK: - 데이터 저장
     
-    func saveRecord(context: ModelContext, ownerID: String) {
-        stopTimer()
-        
-        let finalTime = displayTime
-        
-        if finalTime < minimumStudyTime {
-            print("⚠️ 학습 시간이 너무 짧아 저장하지 않았습니다.")
+    func saveRecord(context: ModelContext, ownerID: String, primaryGoal: Goal?) {
+            stopTimer()
+            let finalTime = displayTime
+            guard finalTime >= minimumStudyTime else {
+                resetTimer()
+                return
+            }
+            
+            let newRecord = StudyRecord(
+                durationSeconds: finalTime,
+                areaName: selectedSubject,
+                date: Date(),
+                ownerID: ownerID,
+                studyPurpose: selectedPurpose.rawValue,
+                memo: linkedScheduleTitle,
+                goal: primaryGoal // ✨ [핵심] 현재 활성화된 목표를 기록에 연결
+            )
+            
+            context.insert(newRecord)
+            FirestoreSyncManager.shared.saveRecord(newRecord)
             resetTimer()
-            return
         }
-        
-        // studyPurpose: 통계용 (Enum의 rawValue)
-        // memo: 상세용 (플래너 일정 제목)
-        let newRecord = StudyRecord(
-            durationSeconds: finalTime,
-            areaName: selectedSubject,
-            date: Date(),
-            ownerID: ownerID,
-            studyPurpose: selectedPurpose.rawValue, // 현재 선택된 목적 저장
-            memo: linkedScheduleTitle // 플래너 제목 저장
-        )
-        
-        context.insert(newRecord)
-        
-        do {
-            try context.save()
-            print("✅ 저장 완료: \(finalTime)초 (목적: \(selectedPurpose.localizedName), 메모: \(linkedScheduleTitle ?? "없음"))")
-        } catch {
-            print("❌ 저장 실패: \(error)")
-        }
-        
-        FirestoreSyncManager.shared.saveRecord(newRecord)
-        resetTimer()
-    }
     
     private func resetTimer() {
         accumulatedTime = 0

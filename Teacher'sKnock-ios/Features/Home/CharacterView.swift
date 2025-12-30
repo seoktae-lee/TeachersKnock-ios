@@ -1,161 +1,187 @@
 import SwiftUI
-import SwiftData
-import FirebaseAuth
+
+// 1. 말풍선 꼬리 모양을 정의하는 Shape
+struct BubbleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let cornerRadius: CGFloat = 15
+        
+        // 메인 사각형 (하단 꼬리 공간 10포인트 제외)
+        path.addRoundedRect(in: CGRect(x: 0, y: 0, width: rect.width, height: rect.height - 10), cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+        
+        // 하단 중앙 삼각형 꼬리
+        path.move(to: CGPoint(x: rect.midX - 10, y: rect.height - 10))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.height))
+        path.addLine(to: CGPoint(x: rect.midX + 10, y: rect.height - 10))
+        path.closeSubpath()
+        
+        return path
+    }
+}
 
 struct CharacterView: View {
-    @Query private var records: [StudyRecord]
-    @Query private var scheduleItems: [ScheduleItem]
-    
-    let totalGoalDays: Int
+    // 필수 데이터 프로퍼티
+    let uniqueDays: Int
     let characterName: String
     let themeColorName: String
+    let characterType: String
+    let goalTitle: String
     
-    // 테마 컬러 변환
-    var themeColor: Color {
-        GoalColorHelper.color(for: themeColorName)
-    }
+    // 상태 변수
+    @State private var showMessage: Bool = false
+    @State private var currentMessage: String = ""
+    @State private var isWiggling: Bool = false
     
-    @State private var speechText: String = "오늘도 파이팅!"
-    @State private var showBubble: Bool = false
-    
-    let cheerMessages = [
-        "오늘도 파이팅!", "합격이 보여요!", "조금만 더 힘내!", "멋진 선생님이 될 거예요!",
-        "포기하지 마세요!", "당신을 믿어요!", "꾸준함이 답이다!", "넌 할 수 있어!",
-        "오늘 하루도 멋져!", "너의 능력을 믿어봐", "선생님, 저 벌써 3월이 기다려져요!",
-        "합격이라는 마침표가 아닌, 꿈의 시작점!", "지금 흘리는 값진 땀방울.",
-        "너는 이미 훌륭한 선생님이야", "칠판 앞에 설 너의모습이 기대돼!",
-        "조금 느려도 괜찮아", "마지막까지 펜 꽉 잡아!"
+    // 캐릭터 응원 문구 리스트
+    private let cheers = [
+        "오늘도 합격에 한 걸음 더!",
+        "교육과정 암기 파이팅!",
+        "티노는 당신을 믿어요!",
+        "조금만 더 힘내볼까요?",
+        "지금의 노력이 결실을 맺을 거예요."
     ]
     
-    // ✨ [수정] init에 name, color 추가
-    init(userId: String, totalGoalDays: Int, characterName: String, themeColorName: String) {
-        self.totalGoalDays = max(totalGoalDays, 1)
-        self.characterName = characterName
-        self.themeColorName = themeColorName
+    // 레벨 계산 로직
+    private var currentLevel: CharacterLevel {
+        CharacterLevel.getLevel(uniqueDays: uniqueDays)
+    }
+    
+    // 경험치 진행률 계산
+    private var progress: Double {
+        if currentLevel == .lv10 { return 1.0 }
+        let start = Double(currentLevel.daysRequiredForCurrentLevel)
+        let end = Double(currentLevel.daysRequiredForNextLevel)
+        let current = Double(uniqueDays)
         
-        _records = Query(filter: #Predicate<StudyRecord> { $0.ownerID == userId })
-        _scheduleItems = Query(filter: #Predicate<ScheduleItem> { $0.ownerID == userId })
+        let diff = end - start
+        return diff > 0 ? (current - start) / diff : 0
     }
     
-    var studyDays: Int {
-        let calendar = Calendar.current
-        let timerDays = records.map { calendar.startOfDay(for: $0.date) }
-        let plannerDays = scheduleItems.filter { $0.isCompleted }.map { calendar.startOfDay(for: $0.startDate) }
-        let allUniqueDays = Set(timerDays + plannerDays)
-        return allUniqueDays.count
-    }
-    
-    var currentLevel: CharacterLevel {
-        CharacterLevel.getLevel(currentDays: studyDays, totalGoalDays: totalGoalDays)
-    }
-    
-    var progress: Double {
-        if totalGoalDays == 0 { return 0 }
-        return min(Double(studyDays) / Double(totalGoalDays), 1.0)
+    // 다음 레벨까지 남은 일수
+    private var daysToNextLevel: Int {
+        if currentLevel == .lv10 { return 0 }
+        return max(0, currentLevel.daysRequiredForNextLevel - uniqueDays)
     }
     
     var body: some View {
-        HStack(spacing: 20) {
-            // 1. 캐릭터 + 말풍선
-            VStack(spacing: 5) {
-                if showBubble {
-                    Text(speechText)
-                        .font(.caption2).fontWeight(.bold)
-                        .foregroundColor(.black.opacity(0.8))
-                        .padding(.vertical, 6).padding(.horizontal, 10)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: .gray.opacity(0.2), radius: 3, x: 0, y: 2)
-                        .overlay(
-                            Image(systemName: "arrowtriangle.down.fill")
-                                .font(.caption2).foregroundColor(.white).offset(y: 8),
-                            alignment: .bottom
+        VStack(spacing: 0) {
+            // --- 상단 말풍선 영역 ---
+            ZStack {
+                if showMessage {
+                    Text(currentMessage)
+                        .font(.system(size: 14, weight: .bold))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            BubbleShape()
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                         )
-                        .transition(.scale.combined(with: .opacity))
-                        .offset(y: -5)
+                        .transition(.asymmetric(
+                            insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.3, dampingFraction: 0.6)),
+                            removal: .opacity.animation(.easeOut(duration: 0.2))
+                        ))
+                } else {
+                    // 말풍선이 없을 때도 높이를 유지하여 레이아웃 흔들림 방지
+                    Color.clear.frame(height: 50)
                 }
-                
-                Text(currentLevel.emoji)
-                    .font(.system(size: 60))
-                    .padding()
-                    .background(Circle().fill(Color.white))
-                    // ✨ 그림자 색상도 테마 색으로 은은하게
-                    .shadow(color: themeColor.opacity(0.3), radius: 8)
-                    .onTapGesture {
-                        triggerHapticFeedback()
-                        changeMessage()
-                    }
             }
-            .frame(width: 110)
+            .frame(height: 65)
+            .padding(.bottom, 10)
             
-            // 2. 정보 및 진행도
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    // ✨ 설정한 별명 표시
+            // --- 캐릭터 본체 ---
+            ZStack {
+                Circle()
+                    .fill(GoalColorHelper.color(for: themeColorName).opacity(0.1))
+                    .frame(width: 140, height: 140)
+                
+                Text(currentLevel.emoji(for: characterType))
+                    .font(.system(size: 80))
+                    .scaleEffect(isWiggling ? 1.1 : 1.0)
+                    .onTapGesture { triggerInteraction() }
+            }
+            
+            // --- 하단 정보 및 경험치 시스템 ---
+            VStack(spacing: 12) {
+                // 이름 및 레벨 텍스트
+                VStack(spacing: 4) {
                     Text(characterName)
                         .font(.headline)
+                    
+                    Text("LV.\(currentLevel.rawValue + 1) \(currentLevel.title)")
+                        .font(.subheadline)
                         .fontWeight(.bold)
-                    
-                    Spacer()
-                    
-                    Text("Lv.\(currentLevel.rawValue + 1)")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(themeColor.opacity(0.2)) // 테마 배경
-                        .cornerRadius(8)
+                        .foregroundColor(GoalColorHelper.color(for: themeColorName))
                 }
                 
-                Text(currentLevel.title)
-                    .font(.caption2).foregroundColor(.gray)
-                
-                // 게이지 바
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .frame(width: geometry.size.width, height: 8)
-                            .opacity(0.3)
-                            .foregroundColor(.gray)
-                        
-                        // ✨ 테마 색상으로 게이지 채우기
-                        Rectangle()
-                            .frame(width: max(progress * geometry.size.width, 0), height: 8)
-                            .foregroundColor(themeColor)
+                // 경험치 게이지 바 섹션
+                VStack(spacing: 6) {
+                    ProgressView(value: progress)
+                        .tint(GoalColorHelper.color(for: themeColorName))
+                        .background(GoalColorHelper.color(for: themeColorName).opacity(0.1))
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                        .clipShape(Capsule())
+                    
+                    HStack {
+                        Text("LV.\(currentLevel.rawValue + 1)")
+                        Spacer()
+                        if currentLevel != .lv10 {
+                            Text("다음 진화까지 \(daysToNextLevel)일")
+                        } else {
+                            Text("최고 레벨 달성!")
+                        }
+                        Spacer()
+                        // 만렙일 때는 다음 레벨 표시 안 함
+                        Text(currentLevel == .lv10 ? "" : "LV.\(currentLevel.rawValue + 2)")
                     }
-                    .cornerRadius(4.0)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
                 }
-                .frame(height: 8)
+                .padding(.horizontal, 30)
+                .padding(.top, 5)
                 
-                Text("총 \(studyDays)일 / 목표 \(totalGoalDays)일")
-                    .font(.caption).foregroundColor(.gray)
-                
-                Text("꾸준함이 합격을 만들어요!")
-                    .font(.system(size: 10))
-                    .foregroundColor(themeColor) // 테마 색상 텍스트
-                    .padding(.top, 2)
+                // 성장 방법 안내 가이드
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                    Text("매일 공부 기록을 완료하면 출석 일수에 따라 캐릭터가 진화해요!")
+                }
+                .font(.system(size: 10))
+                .foregroundColor(.gray.opacity(0.8))
+                .padding(.top, 4)
             }
+            .padding(.top, 15)
         }
-        .padding()
-        // ✨ 배경을 테마색의 아주 연한 톤으로
-        .background(themeColor.opacity(0.08))
-        .cornerRadius(15)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) { showBubble = true }
-            }
-        }
+        .padding(.vertical, 25)
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+        .cornerRadius(25)
+        .shadow(color: Color.black.opacity(0.05), radius: 15, x: 0, y: 8)
     }
     
-    func triggerHapticFeedback() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
+    // 캐릭터 터치 상호작용 로직
+    private func triggerInteraction() {
+        // 햅틱 피드백
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
         generator.impactOccurred()
-    }
-    
-    func changeMessage() {
-        withAnimation(.easeOut(duration: 0.1)) { showBubble = false }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            speechText = cheerMessages.randomElement() ?? "파이팅!"
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { showBubble = true }
+        
+        // 랜덤 메시지 선택
+        currentMessage = cheers.randomElement() ?? ""
+        
+        // 애니메이션 실행
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) {
+            isWiggling = true
+            showMessage = true
+        }
+        
+        // 캐릭터 흔들림 효과 원복 (0.2초 후)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation { isWiggling = false }
+        }
+        
+        // 말풍선 자동 숨김 (2.5초 후)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { showMessage = false }
         }
     }
 }
