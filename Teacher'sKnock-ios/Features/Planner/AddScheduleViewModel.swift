@@ -28,7 +28,7 @@ class AddScheduleViewModel: ObservableObject {
     ]
     
     // 생활/휴식 카테고리
-    let lifeCategories = ["식사", "운동", "휴식", "이동", "약속", "기타"]
+    let lifeCategories = SubjectName.lifeSubjects
     
     // MARK: - 입력 데이터
     @Published var title: String = ""

@@ -69,13 +69,13 @@ struct CharacterView: View {
             ZStack {
                 if showMessage {
                     Text(currentMessage)
-                        .font(.system(size: 14, weight: .bold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .font(.system(size: 13, weight: .bold)) // 14 -> 13
+                        .padding(.horizontal, 12) // 16 -> 12
+                        .padding(.vertical, 8) // 12 -> 8
                         .background(
                             BubbleShape()
                                 .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3) // radius 8->6
                         )
                         .transition(.asymmetric(
                             insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.3, dampingFraction: 0.6)),
@@ -83,43 +83,44 @@ struct CharacterView: View {
                         ))
                 } else {
                     // 말풍선이 없을 때도 높이를 유지하여 레이아웃 흔들림 방지
-                    Color.clear.frame(height: 50)
+                    Color.clear.frame(height: 40) // 50 -> 40
                 }
             }
-            .frame(height: 65)
-            .padding(.bottom, 10)
+            .frame(height: 55) // 65 -> 55
+            .padding(.bottom, 4) // 10 -> 4
             
             // --- 캐릭터 본체 ---
             ZStack {
                 Circle()
                     .fill(GoalColorHelper.color(for: themeColorName).opacity(0.1))
-                    .frame(width: 140, height: 140)
+                    .frame(width: 100, height: 100) // 140 -> 100
                 
                 Text(currentLevel.emoji(for: characterType))
-                    .font(.system(size: 80))
+                    .font(.system(size: 60)) // 80 -> 60
                     .scaleEffect(isWiggling ? 1.1 : 1.0)
                     .onTapGesture { triggerInteraction() }
             }
             
             // --- 하단 정보 및 경험치 시스템 ---
-            VStack(spacing: 12) {
+            VStack(spacing: 8) { // 12 -> 8
                 // 이름 및 레벨 텍스트
-                VStack(spacing: 4) {
+                VStack(spacing: 2) { // 4 -> 2
                     Text(characterName)
-                        .font(.headline)
+                        .font(.subheadline) // headline -> subheadline
+                        .bold()
                     
                     Text("LV.\(currentLevel.rawValue + 1) \(currentLevel.title)")
-                        .font(.subheadline)
+                        .font(.caption) // subheadline -> caption
                         .fontWeight(.bold)
                         .foregroundColor(GoalColorHelper.color(for: themeColorName))
                 }
                 
                 // 경험치 게이지 바 섹션
-                VStack(spacing: 6) {
+                VStack(spacing: 4) { // 6 -> 4
                     ProgressView(value: progress)
                         .tint(GoalColorHelper.color(for: themeColorName))
                         .background(GoalColorHelper.color(for: themeColorName).opacity(0.1))
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
+                        .scaleEffect(x: 1, y: 1.5, anchor: .center) // y: 2 -> 1.5
                         .clipShape(Capsule())
                     
                     HStack {
@@ -134,29 +135,29 @@ struct CharacterView: View {
                         // 만렙일 때는 다음 레벨 표시 안 함
                         Text(currentLevel == .lv10 ? "" : "LV.\(currentLevel.rawValue + 2)")
                     }
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 9, weight: .medium)) // 10 -> 9
                     .foregroundColor(.secondary)
                 }
-                .padding(.horizontal, 30)
-                .padding(.top, 5)
+                .padding(.horizontal, 24) // 30 -> 24
+                .padding(.top, 2) // 5 -> 2
                 
                 // 성장 방법 안내 가이드
                 HStack(spacing: 4) {
                     Image(systemName: "info.circle")
                     Text("매일 공부 기록을 완료하면 출석 일수에 따라 캐릭터가 진화해요!")
                 }
-                .font(.system(size: 10))
+                .font(.system(size: 9)) // 10 -> 9
                 .foregroundColor(.gray.opacity(0.8))
-                .padding(.top, 4)
+                .padding(.top, 2) // 4 -> 2
             }
-            .padding(.top, 15)
+            .padding(.top, 10) // 15 -> 10
         }
-        .padding(.vertical, 25)
-        .padding(.horizontal, 20)
+        .padding(.vertical, 16) // 25 -> 16
+        .padding(.horizontal, 16) // 20 -> 16
         .frame(maxWidth: .infinity)
         .background(Color.white)
-        .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.05), radius: 15, x: 0, y: 8)
+        .cornerRadius(20) // 25 -> 20
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6) // radius 15 -> 10
     }
     
     // 캐릭터 터치 상호작용 로직

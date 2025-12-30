@@ -193,9 +193,14 @@ struct GoalListView: View {
     }
 
     private func deleteGoal(_ goal: Goal) {
+        let goalId = goal.id.uuidString
+        let userId = goal.ownerID
+        
         modelContext.delete(goal)
         do {
             try modelContext.save()
+            // ✨ [수정] 서버 동기화 추가
+            GoalManager.shared.deleteGoal(goalId: goalId, userId: userId)
         } catch {
             print("Error deleting goal: \(error)")
         }

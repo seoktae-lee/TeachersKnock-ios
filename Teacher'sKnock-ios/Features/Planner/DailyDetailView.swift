@@ -455,7 +455,7 @@ struct ScheduleRow: View {
                     
                     Spacer()
                     
-                    if !item.isPostponed && !item.isCompleted {
+                    if !item.isPostponed && !item.isCompleted && SubjectName.isStudySubject(item.subject) {
                         Button(action: startStudyAction) {
                             Image(systemName: "stopwatch")
                                 .font(.title2)

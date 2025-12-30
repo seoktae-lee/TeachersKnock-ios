@@ -33,6 +33,8 @@ class GoalViewModel: ObservableObject {
         context.insert(newGoal)
         do {
             try context.save()
+            // ✨ [수정] 서버 동기화 추가
+            GoalManager.shared.saveGoal(newGoal)
         } catch {
             print("Error saving new goal: \(error)")
         }

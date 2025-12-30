@@ -3,7 +3,14 @@ import SwiftUI
 struct SubjectName {
     static let primarySubjects: [String] = ["교직논술", "국어", "영어", "총론/창체", "사회", "도덕", "실과", "수학", "미술", "통합교과", "과학", "음악", "체육"]
     static let secondarySubjects: [String] = ["심층면접", "수업실연", "과정안작성", "영어면접", "영어수업실연"]
+    // ✨ [추가] 생활 관련 과목 (타이머 미표시)
+    static let lifeSubjects: [String] = ["식사", "운동", "휴식", "이동", "약속", "기타"]
+    
     static var defaultList: [String] { primarySubjects + secondarySubjects }
+    
+    static func isStudySubject(_ name: String) -> Bool {
+        return !lifeSubjects.contains(name)
+    }
 
     static func color(for subjectName: String) -> Color {
         switch subjectName {
