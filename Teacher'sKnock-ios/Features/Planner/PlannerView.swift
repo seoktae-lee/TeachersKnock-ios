@@ -34,6 +34,32 @@ struct PlannerView: View {
                 .padding(.horizontal)
                 .padding(.top, 15)
                 
+                // 1.5. 일정 관리 헤더 및 등록 버튼
+                HStack {
+                    Text("일정 관리")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    NavigationLink(destination: AddScheduleView(selectedDate: selectedDate)) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                            Text("일정 등록")
+                        }
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(brandColor)
+                        .clipShape(Capsule())
+                        .shadow(color: brandColor.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 5)
+                
                 // 2. 상세 플랜 보기 카드
                 NavigationLink(destination: DailySwipeView(initialDate: selectedDate, userId: currentUserId)) {
                     HStack {
@@ -79,20 +105,6 @@ struct PlannerView: View {
             }
             .background(Color(.systemGray6).ignoresSafeArea())
             .navigationTitle("스터디 플래너")
-            .toolbar {
-                // ✨ 임시 버튼은 삭제되었습니다. (우측 상단 플러스 버튼만 유지)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: AddScheduleView(selectedDate: selectedDate)) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(brandColor)
-                            .padding(8)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-                    }
-                }
-            }
             .onAppear {
                 // 앱 재설치 시 서버에서 내 일정 복구
                 if schedules.isEmpty {
