@@ -31,6 +31,11 @@ class GoalViewModel: ObservableObject {
         )
         
         context.insert(newGoal)
+        do {
+            try context.save()
+        } catch {
+            print("Error saving new goal: \(error)")
+        }
         resetForm()
     }
     

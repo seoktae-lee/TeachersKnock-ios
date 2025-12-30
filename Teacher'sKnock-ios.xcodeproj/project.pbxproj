@@ -276,6 +276,7 @@
 			children = (
 				5459AE182EE19535008EE0E4 /* GoalListView.swift */,
 				5459AE5F2EE1A2BF008EE0E4 /* GoalViewModel.swift */,
+				546B334B2F004ABB00741EE2 /* GoalManager.swift */,
 				5459AE0D2EE19535008EE0E4 /* AddGoalView.swift */,
 				5459AE122EE19535008EE0E4 /* CharacterView.swift */,
 				54F81CD92EE1D13B002226B4 /* ReportListView.swift */,
@@ -283,7 +284,6 @@
 				54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */,
 				5432C7592EE3FCF7005B4221 /* NoticeSettingsView.swift */,
 				5432C75B2EE3FE24005B4221 /* NoticeListView.swift */,
-				546B334B2F004ABB00741EE2 /* GoalManager.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";

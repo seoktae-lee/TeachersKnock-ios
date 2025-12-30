@@ -9,21 +9,25 @@ struct GoalListView: View {
     
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
-    // ✨ [추가] 닉네임을 가져오기 위한 AuthManager 연동
     @EnvironmentObject var authManager: AuthManager
     
     @StateObject private var quoteManager = QuoteManager.shared
     @State private var showingAddGoalSheet = false
     @State private var selectedPhase: Int = 0
-    
-    // ✨ [추가] G스쿨 브라우저 시트 제어 변수
     @State private var showGSchool = false
     
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
+    // ✨ [해결] 계산 시점에서 발생할 수 있는 모든 유효성 검사를 수행합니다.
     private var primaryGoal: Goal? {
-        goals.first { $0.isPrimaryGoal && $0.hasCharacter } ?? goals.first { $0.hasCharacter }
+        if goals.isEmpty { return nil }
+        // 1. 대표 목표가 있고 삭제되지 않았으면 반환
+        if let primary = goals.first(where: { $0.isPrimaryGoal && !$0.isDeleted }) {
+            return primary
+        }
+        // 2. 대표 목표가 없으면 첫 번째 유효한 목표 반환
+        return goals.first(where: { !$0.isDeleted })
     }
     
     private var practicedSubjectNames: Set<String> {
@@ -31,7 +35,16 @@ struct GoalListView: View {
     }
     
     private func getUniqueDays(for goal: Goal) -> Int {
-        let goalRecords = allRecords.filter { $0.goal?.id == goal.id }
+        // goal 인스턴스가 살아있는지 확인
+        guard !goal.isDeleted else { return 0 }
+        
+        let goalRecords = allRecords.filter { record in
+            // record.goal 접근 시 크래시 방지: 관계가 nil이거나 삭제된 객체인지 확인
+            guard let recordGoal = record.goal,
+                  !recordGoal.isDeleted,
+                  recordGoal.persistentModelID == goal.persistentModelID else { return false }
+            return true
+        }
         let days = goalRecords.map { Calendar.current.startOfDay(for: $0.date) }
         return Set(days).count
     }
@@ -49,40 +62,40 @@ struct GoalListView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 28) {
-                    // 상단 D-Day 배너
                     DDayBannerView(targetOffice: settingsManager.targetOffice?.rawValue ?? "전국")
                     
-                    // 메인 캐릭터 영역
-                    if let goal = primaryGoal {
-                        CharacterView(
-                            uniqueDays: getUniqueDays(for: goal),
-                            characterName: goal.characterName,
-                            themeColorName: goal.characterColor,
-                            characterType: goal.characterType,
-                            goalTitle: goal.title
-                        )
-                        .padding(.horizontal)
-                        .padding(.top, 10)
+                    // ✨ [해결] 목표가 추가되는 순간의 경합을 막기 위해 뷰 구성을 안전하게 감쌉니다.
+                    Group {
+                        if !goals.isEmpty, let goal = primaryGoal {
+                            CharacterView(
+                                uniqueDays: getUniqueDays(for: goal),
+                                characterName: goal.characterName,
+                                themeColorName: goal.characterColor,
+                                characterType: goal.characterType,
+                                goalTitle: goal.title
+                            )
+                            .id(goal.id) // 뷰의 고유 식별자 부여로 성급한 재사용 방지
+                            .padding(.horizontal)
+                            .padding(.top, 10)
+                            .transition(.opacity)
+                        }
                     }
+                    .animation(.easeInOut, value: goals.count)
                     
-                    // ✨ [수정] 3개로 구성된 퀵 메뉴 버튼 (리포트 / 정보 / G스쿨)
                     HStack(spacing: 10) {
                         NavigationLink(destination: ReportListView(userId: currentUserId)) {
                             QuickMenuButton(title: "리포트", icon: "chart.bar.xaxis", color: .purple)
                         }
-                        
                         NavigationLink(destination: NoticeListView()) {
                             QuickMenuButton(title: "정보", icon: "megaphone.fill", color: .orange)
                         }
-                        
-                        // G스쿨 바로가기 (SafariView 연결)
                         Button(action: { showGSchool = true }) {
                             QuickMenuButton(title: "G스쿨", icon: "play.rectangle.fill", color: .blue)
                         }
                     }
                     .padding(.horizontal)
                     
-                    // 오늘의 과목 밸런스 섹션
+                    // 과목 밸런스 섹션
                     VStack(alignment: .leading, spacing: 15) {
                         HStack {
                             Text("오늘의 과목 밸런스").font(.headline)
@@ -109,14 +122,10 @@ struct GoalListView: View {
                         }
                     }
                     
-                    // 명언 섹션
                     CompactQuoteView(quote: quoteManager.currentQuote)
                         .padding(.horizontal)
-                        .onAppear {
-                            quoteManager.updateQuoteIfNeeded()
-                        }
+                        .onAppear { quoteManager.updateQuoteIfNeeded() }
                     
-                    // 나의 목표 리스트 섹션
                     VStack(alignment: .leading, spacing: 18) {
                         HStack {
                             Text("나의 목표 리스트").font(.title3).bold()
@@ -130,17 +139,20 @@ struct GoalListView: View {
                         if goals.isEmpty {
                             EmptyGoalView().padding(.horizontal)
                         } else {
-                            VStack(spacing: 12) {
+                            VStack(spacing: 14) {
+                                // ✨ [해결] 인덱스 오류를 막기 위해 id를 명시적으로 사용하고 유효성 검사 추가
                                 ForEach(goals) { goal in
-                                    OldStyleGoalCardView(goal: goal, uniqueDays: getUniqueDays(for: goal))
-                                        .onTapGesture {
-                                            withAnimation(.spring()) { setPrimaryGoal(goal) }
-                                        }
-                                        .contextMenu {
-                                            Button(role: .destructive) { deleteGoal(goal) } label: {
-                                                Label("목표 삭제", systemImage: "trash")
+                                    if !goal.isDeleted {
+                                        GoalCardView(goal: goal, uniqueDays: getUniqueDays(for: goal))
+                                            .onTapGesture {
+                                                withAnimation(.spring()) { setPrimaryGoal(goal) }
                                             }
-                                        }
+                                            .contextMenu {
+                                                Button(role: .destructive) { deleteGoal(goal) } label: {
+                                                    Label("목표 삭제", systemImage: "trash")
+                                                }
+                                            }
+                                    }
                                 }
                             }
                             .padding(.horizontal)
@@ -151,38 +163,91 @@ struct GoalListView: View {
                 .padding(.vertical)
             }
             .background(Color(.systemGroupedBackground))
-            // ✨ [수정] 닉네임 + 학습 센터 타이틀 적용
             .navigationTitle("\(authManager.userNickname)님의 학습 센터")
             .sheet(isPresented: $showingAddGoalSheet) { AddGoalView() }
-            // ✨ [추가] G스쿨 모바일 웹 뷰 시트
             .sheet(isPresented: $showGSchool) {
                 if let url = URL(string: "https://m.g-school.co.kr") {
-                    SafariView(url: url)
-                        .ignoresSafeArea()
+                    SafariView(url: url).ignoresSafeArea()
                 }
             }
         }
     }
     
     private func setPrimaryGoal(_ selectedGoal: Goal) {
-        for goal in goals { goal.isPrimaryGoal = (goal.id == selectedGoal.id) }
-        try? modelContext.save()
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        let context = modelContext
+        // 현재 선택된 목표를 대표로 설정
+        selectedGoal.isPrimaryGoal = true
+        
+        // 나머지 목표들의 isPrimaryGoal 해제
+        for goal in goals {
+            if goal.id != selectedGoal.id {
+                goal.isPrimaryGoal = false
+            }
+        }
+        
+        do {
+            try context.save()
+        } catch {
+            print("Error saving primary goal: \(error)")
+        }
     }
 
     private func deleteGoal(_ goal: Goal) {
         modelContext.delete(goal)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error deleting goal: \(error)")
+        }
     }
 }
+// ... (하단 컴포넌트들: GoalCardView, DDayBannerView, QuickMenuButton 등은 기존과 동일)
+// MARK: - 하위 컴포넌트들
 
-// MARK: - 하위 컴포넌트
+struct GoalCardView: View {
+    let goal: Goal
+    let uniqueDays: Int
+    
+    var body: some View {
+        let themeColor = GoalColorHelper.color(for: goal.characterColor)
+        let dDay = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: goal.targetDate)).day ?? 0
+        let currentLevel = CharacterLevel.getLevel(uniqueDays: uniqueDays)
+        
+        HStack(spacing: 16) {
+            ZStack {
+                Circle().fill(themeColor.opacity(0.15)).frame(width: 60, height: 60)
+                Text(currentLevel.emoji(for: goal.characterType)).font(.system(size: 32))
+                if goal.isPrimaryGoal {
+                    Image(systemName: "star.fill").font(.system(size: 12)).foregroundColor(.orange).padding(4).background(Circle().fill(Color.white)).offset(x: 22, y: -22).shadow(radius: 2)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(goal.title).font(.headline).foregroundColor(.primary).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text("LV.\(currentLevel.rawValue + 1)").font(.caption2).fontWeight(.bold).padding(.horizontal, 6).padding(.vertical, 2).background(themeColor.opacity(0.2)).foregroundColor(themeColor).cornerRadius(4)
+                    Text("\(uniqueDays)일째 열공 중").font(.caption2).foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(dDay >= 0 ? "D-\(dDay)" : "완료").font(.system(size: 20, weight: .black, design: .rounded)).foregroundColor(dDay <= 7 ? .red : .primary)
+                Text(formatDate(goal.targetDate)).font(.system(size: 10)).foregroundColor(.secondary)
+            }
+        }
+        .padding().background(RoundedRectangle(cornerRadius: 18).fill(Color.white).shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 4))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(goal.isPrimaryGoal ? themeColor.opacity(0.3) : Color.clear, lineWidth: 2))
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy.MM.dd"
+        return formatter.string(from: date)
+    }
+}
 
 struct DDayBannerView: View {
     let targetOffice: String
     private let examDate: Date = {
-        var components = DateComponents()
-        components.year = 2026; components.month = 11; components.day = 14
+        var components = DateComponents(); components.year = 2026; components.month = 11; components.day = 14
         return Calendar.current.date(from: components) ?? Date()
     }()
     
@@ -196,9 +261,7 @@ struct DDayBannerView: View {
             Spacer()
             Image(systemName: "graduationcap.fill").font(.system(size: 50)).foregroundColor(.white.opacity(0.3))
         }
-        .padding(24)
-        .background(LinearGradient(gradient: Gradient(colors: [.blue, Color(red: 0.29, green: 0.54, blue: 0.86)]), startPoint: .topLeading, endPoint: .bottomTrailing))
-        .cornerRadius(20).padding(.horizontal)
+        .padding(24).background(LinearGradient(gradient: Gradient(colors: [.blue, Color(red: 0.29, green: 0.54, blue: 0.86)]), startPoint: .topLeading, endPoint: .bottomTrailing)).cornerRadius(20).padding(.horizontal)
     }
 }
 
@@ -237,28 +300,6 @@ struct CompactQuoteView: View {
             Text("- \(quote.author) -").font(.system(size: 12)).foregroundColor(.secondary)
         }
         .padding(24).frame(maxWidth: .infinity).background(Color.white).cornerRadius(20).shadow(color: .black.opacity(0.03), radius: 10, x: 0, y: 5)
-    }
-}
-
-struct OldStyleGoalCardView: View {
-    let goal: Goal; let uniqueDays: Int
-    var body: some View {
-        let themeColor = GoalColorHelper.color(for: goal.characterColor)
-        let dDay = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: goal.targetDate)).day ?? 0
-        HStack(spacing: 16) {
-            ZStack {
-                Circle().fill(themeColor.opacity(goal.isPrimaryGoal ? 0.2 : 0.1)).frame(width: 50, height: 50)
-                Text(CharacterLevel.getLevel(uniqueDays: uniqueDays).emoji(for: goal.characterType))
-            }
-            VStack(alignment: .leading) {
-                Text(goal.title).font(.headline)
-                Text(dDay >= 0 ? "D-\(dDay)" : "완료").font(.subheadline).foregroundColor(.secondary)
-            }
-            Spacer()
-            if goal.isPrimaryGoal { Image(systemName: "star.fill").foregroundColor(.orange) }
-        }
-        .padding().background(Color.white).cornerRadius(15)
-        .overlay(RoundedRectangle(cornerRadius: 15).stroke(goal.isPrimaryGoal ? themeColor : Color.clear, lineWidth: 1.5))
     }
 }
 
