@@ -205,10 +205,6 @@ struct CharacterView: View {
     // 이 뷰가 나타나거나 데이터가 변경될 때 체크
     private func checkEvolution() {
         let key = "lastViewedLevel_\(goalTitle)" // 간단히 목표 제목을 키로 사용 (혹은 ID가 있다면 더 좋음)
-        
-        // ✨ [테스트] 강제로 기억 지우기 (항상 레벨 1이었다고 착각하게 만듦)
-        UserDefaults.standard.set(0, forKey: key)
-        
         let lastLevelRaw = UserDefaults.standard.integer(forKey: key)
         
         // 데이터가 아예 없으면(0) 현재 레벨로 세팅 (첫 실행 시 진화 방지)
@@ -264,6 +260,14 @@ struct EvolutionView: View {
     @State private var flashOpacity: Double = 0.0
     @State private var particles: [Particle] = []
     
+    // ✨ Fog Animation State
+    @State private var fogOpacity: Double = 0.0
+    @State private var fogScale: CGFloat = 1.0
+    
+    // ✨ Share Logic
+    @State private var isShareSheetPresented = false
+    @State private var shareImage: UIImage?
+    
     private let themeColor: Color
     
     enum AnimationPhase {
@@ -296,15 +300,15 @@ struct EvolutionView: View {
     
     var body: some View {
         ZStack {
-            // Background Blur
+            // Background (Darkness)
             Color.black.opacity(0.8)
                 .ignoresSafeArea()
             
-            // Background Rays (Rotated)
-            if animationState == .reveal || animationState == .celebration {
-                SunburstView(color: themeColor)
-                    .transition(.opacity)
-            }
+            // ✨ Fog Effect (Behind character)
+            FogView(color: .white.opacity(0.3))
+                .opacity(fogOpacity)
+                .scaleEffect(fogScale)
+                .ignoresSafeArea()
             
             VStack(spacing: 40) {
                 // Header Text
@@ -357,7 +361,14 @@ struct EvolutionView: View {
             }
             .padding()
             
-            // Flash Effect
+            // ✨ Front Fog (More density in front)
+            FogView(color: .white.opacity(0.2))
+                .opacity(fogOpacity * 0.5)
+                .scaleEffect(fogScale * 1.2)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            
+            // Flash Effect (Bright Light)
             Color.white
                 .opacity(flashOpacity)
                 .ignoresSafeArea()
@@ -375,14 +386,31 @@ struct EvolutionView: View {
             if animationState == .celebration {
                 VStack {
                     Spacer()
-                    Button(action: onCompletion) {
-                        Text("멋져요!")
+                    
+                    // ✨ Buttons Row
+                    HStack(spacing: 16) {
+                        Button(action: renderAndShare) {
+                            HStack {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("자랑하기")
+                            }
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(themeColor)
+                            .background(Color.white.opacity(0.2))
                             .cornerRadius(16)
+                        }
+                        
+                        Button(action: onCompletion) {
+                            Text("완료")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(themeColor)
+                                .cornerRadius(16)
+                        }
                     }
                     .padding(.horizontal, 40)
                     .padding(.bottom, 50)
@@ -392,6 +420,12 @@ struct EvolutionView: View {
         }
         .onAppear {
             startEvolutionSequence()
+        }
+        .sheet(isPresented: $isShareSheetPresented) {
+            if let image = shareImage {
+                EvolutionActivityView(activityItems: [image])
+                    .presentationDetents([.medium, .large])
+            }
         }
     }
     
@@ -411,14 +445,27 @@ struct EvolutionView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             withAnimation { animationState = .evolving }
             
+            // ✨ Start gathering fog during heavy shake
+            withAnimation(.easeIn(duration: 2.0)) {
+                fogOpacity = 1.0
+                fogScale = 1.0
+            }
+            
             // 2. Evolving (Shake for 2s)
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                // Flash Start
+                // Flash Start (Blinding Light)
                 withAnimation(.easeIn(duration: 0.2)) { flashOpacity = 1.0 }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     animationState = .reveal
-                    withAnimation(.easeOut(duration: 0.5)) { flashOpacity = 0.0 }
+                    
+                    // ✨ Reveal Sequence: Flash fades AND Fog clears (expands out)
+                    withAnimation(.easeOut(duration: 1.5)) {
+                        flashOpacity = 0.0
+                        fogOpacity = 0.0
+                        fogScale = 2.5 // Fog expands outwards
+                    }
+                    
                     createParticles()
                     
                     // 3. Celebration
@@ -461,6 +508,136 @@ struct EvolutionView: View {
             }
         }
     }
+    
+    // ✨ Share Logic Wrapper
+    @MainActor
+    private func renderAndShare() {
+        let width: CGFloat = 375
+        let height: CGFloat = 667
+        
+        // 공유용 뷰 생성
+        let renderView = EvolutionShareView(
+            characterType: characterType,
+            characterEmoji: newLevel.emoji(for: characterType),
+            levelTitle: newLevel.title,
+            levelRaw: newLevel.rawValue + 1,
+            themeColor: themeColor
+        )
+        .frame(width: width, height: height)
+        
+        // ✨ [Fix] Use explicitly sized rendering
+        let renderer = ImageRenderer(content: renderView)
+        renderer.scale = 3.0 // High resolution
+        
+        if let image = renderer.uiImage {
+            // print("✅ Image generated successfully")
+            self.shareImage = image
+            self.isShareSheetPresented = true
+        } else {
+            // print("❌ Failed to generate image")
+        }
+    }
+}
+
+// ✨ Dedicated Share View
+struct EvolutionShareView: View {
+    let characterType: String
+    let characterEmoji: String
+    let levelTitle: String
+    let levelRaw: Int
+    let themeColor: Color
+    
+    var body: some View {
+        ZStack {
+            // Background
+            LinearGradient(
+                gradient: Gradient(colors: [themeColor.opacity(0.8), Color.white]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
+            // Particles Decoration
+            ForEach(0..<15) { _ in
+                Circle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: CGFloat.random(in: 10...30))
+                    .position(
+                        x: CGFloat.random(in: 0...375),
+                        y: CGFloat.random(in: 0...667)
+                    )
+            }
+            
+            VStack(spacing: 30) {
+                // Header
+                Text("LEVEL UP!")
+                    .font(.system(size: 40, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(radius: 5)
+                    .padding(.top, 60)
+                
+                Spacer()
+                
+                // Character Card
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.9))
+                        .frame(width: 250, height: 250)
+                        .shadow(radius: 20)
+                    
+                    Text(characterEmoji)
+                        .font(.system(size: 140))
+                }
+                
+                // Info
+                VStack(spacing: 8) {
+                    Text("LV.\(levelRaw)")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(themeColor)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(Color.white))
+                        .shadow(radius: 2)
+                    
+                    Text(levelTitle)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                // Footer
+                HStack {
+                    Image(systemName: "graduationcap.fill")
+                    Text("Teacher's Knock")
+                }
+                .font(.headline)
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.bottom, 40)
+            }
+        }
+        .frame(width: 375, height: 667)
+    }
+}
+
+// ✨ Dedicated Local Share Sheet Wrapper
+fileprivate struct EvolutionActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+    
+    func makeUIViewController(context: UIViewControllerRepresentableContext<EvolutionActivityView>) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: applicationActivities
+        )
+        // iPad Support: Set popover source implicitly if possible, or leave to UIKit default behavior which often centers.
+        // For a robust implementation, we might need to inject sourceView via context, but .sheet usually handles this.
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: UIViewControllerRepresentableContext<EvolutionActivityView>) {}
 }
 
 // Shake Effect Modifier
@@ -473,28 +650,27 @@ struct ShakeEffect: GeometryEffect {
     }
 }
 
-// Sunburst Background Effect
-struct SunburstView: View {
+// ✨ Fog Effect View instead of Sunburst
+struct FogView: View {
     let color: Color
-    @State private var rotation: Double = 0
     
     var body: some View {
-        ZStack {
-            ForEach(0..<12) { i in
-                Rectangle()
-                    .fill(color.opacity(0.3))
-                    .frame(width: 40, height: 800) // Long beams
-                    .offset(y: -200)
-                    .rotationEffect(.degrees(Double(i) * 30))
-            }
-        }
-        .rotationEffect(.degrees(rotation))
-        .onAppear {
-            withAnimation(.linear(duration: 10).repeatForever(autoreverses: false)) {
-                rotation = 360
+        GeometryReader { proxy in
+            ZStack {
+                // Create multiple randomly placed blurred circles
+                ForEach(0..<8) { i in
+                    Circle()
+                        .fill(color)
+                        .frame(width: proxy.size.width * 0.8, height: proxy.size.width * 0.8)
+                        .position(
+                            x: CGFloat.random(in: 0...proxy.size.width),
+                            y: CGFloat.random(in: 0...proxy.size.height)
+                        )
+                        .blur(radius: 50)
+                }
             }
         }
     }
 }
 
-
+// ✨ SunburstView removed (replaced by FogView)
