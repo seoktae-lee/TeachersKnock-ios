@@ -1,5 +1,20 @@
 import SwiftUI
 
+import SwiftUI
+
+// ✨ 9가지 진화 테마 정의
+enum EvolutionTheme: CaseIterable {
+    case fog        // 1. 안개 (기존)
+    case flash      // 2. 섬광 (심플 화이트아웃)
+    case spin       // 3. 회전 (3D Spin)
+    case bounce     // 4. 통통 (Bounce)
+    case slide      // 5. 슬라이드 (Slide In/Out)
+    case zoom       // 6. 줌 (Zoom In)
+    case blur       // 7. 블러 (Blur Fade)
+    case curtain    // 8. 커튼 (Curtain Call)
+    case skyDrop    // 9. 낙하 (Sky Drop)
+}
+
 // 1. 말풍선 꼬리 모양을 정의하는 Shape
 struct BubbleShape: Shape {
     func path(in rect: CGRect) -> Path {
@@ -166,6 +181,7 @@ struct CharacterView: View {
                 themeColorName: themeColorName,
                 oldLevel: oldLevelForEvolution,
                 newLevel: currentLevel,
+                theme: evolutionTheme,
                 onCompletion: completeEvolution
             )
         }
@@ -201,6 +217,7 @@ struct CharacterView: View {
     // MARK: - 진화 시스템 로직
     @State private var isEvolving: Bool = false
     @State private var oldLevelForEvolution: CharacterLevel = .lv1
+    @State private var evolutionTheme: EvolutionTheme = .fog // ✨ 랜덤 테마 저장용
     
     // 이 뷰가 나타나거나 데이터가 변경될 때 체크
     private func checkEvolution() {
@@ -214,9 +231,6 @@ struct CharacterView: View {
         
         let savedLevel = CharacterLevel(rawValue: lastLevelRaw) ?? .lv1
         
-        // 저장된 레벨이 현재 레벨보다 낮고, 초기화 상태(데이터 없음)가 아닐 때
-        // (단, 키가 없으면 integer는 0반환. 1레벨(0) -> 2레벨(1) 시 정상 작동)
-        // 저장이 안되어 있으면(최초), 현재 레벨 저장하고 종료
         if UserDefaults.standard.object(forKey: key) == nil {
             UserDefaults.standard.set(currentLevel.rawValue, forKey: key)
             return
@@ -224,6 +238,8 @@ struct CharacterView: View {
         
         if savedLevel.rawValue < currentLevel.rawValue {
             oldLevelForEvolution = savedLevel
+            // ✨ 진화 시 랜덤 테마 선택
+            evolutionTheme = EvolutionTheme.allCases.randomElement() ?? .fog
             isEvolving = true
         }
     }
@@ -254,6 +270,7 @@ struct EvolutionView: View {
     let themeColorName: String
     let oldLevel: CharacterLevel
     let newLevel: CharacterLevel
+    let theme: EvolutionTheme // ✨ Injected Theme
     let onCompletion: () -> Void
     
     @State private var animationState: AnimationPhase = .start
@@ -263,6 +280,15 @@ struct EvolutionView: View {
     // ✨ Fog Animation State
     @State private var fogOpacity: Double = 0.0
     @State private var fogScale: CGFloat = 1.0
+    
+    // ✨ Additional Animation States
+    @State private var rotationY: Double = 0.0      // for Spin
+    @State private var bounceOffset: CGFloat = 0.0  // for Bounce, SkyDrop
+    @State private var slideOffsetOld: CGFloat = 0.0   // for Slide (Old)
+    @State private var slideOffsetNew: CGFloat = 0.0   // for Slide (New)
+    @State private var zoomScale: CGFloat = 1.0     // for Zoom
+    @State private var blurRadius: CGFloat = 0.0    // for Blur
+    @State private var curtainWidth: CGFloat = 0.0  // for Curtain
     
     // ✨ Share Logic
     @State private var isShareSheetPresented = false
@@ -289,11 +315,12 @@ struct EvolutionView: View {
         var opacity: Double = 1.0
     }
     
-    init(characterType: String, themeColorName: String, oldLevel: CharacterLevel, newLevel: CharacterLevel, onCompletion: @escaping () -> Void) {
+    init(characterType: String, themeColorName: String, oldLevel: CharacterLevel, newLevel: CharacterLevel, theme: EvolutionTheme, onCompletion: @escaping () -> Void) {
         self.characterType = characterType
         self.themeColorName = themeColorName
         self.oldLevel = oldLevel
         self.newLevel = newLevel
+        self.theme = theme
         self.onCompletion = onCompletion
         self.themeColor = GoalColorHelper.color(for: themeColorName)
     }
@@ -305,10 +332,12 @@ struct EvolutionView: View {
                 .ignoresSafeArea()
             
             // ✨ Fog Effect (Behind character)
-            FogView(color: .white.opacity(0.3))
-                .opacity(fogOpacity)
-                .scaleEffect(fogScale)
-                .ignoresSafeArea()
+            if theme == .fog {
+                FogView(color: .white.opacity(0.3))
+                    .opacity(fogOpacity)
+                    .scaleEffect(fogScale)
+                    .ignoresSafeArea()
+            }
             
             VStack(spacing: 40) {
                 // Header Text
@@ -323,18 +352,22 @@ struct EvolutionView: View {
                 // Character Area
                 ZStack {
                     // Old Character
-                    if animationState == .start || animationState == .evolving {
+                    // ✨ Visible during start, evolving AND reveal (exiting)
+                    if animationState == .start || animationState == .evolving || animationState == .reveal {
                         Text(oldLevel.emoji(for: characterType))
                             .font(.system(size: 100))
-                            .modifier(ShakeEffect(animatableData: animationState == .evolving ? 1.0 : 0.0))
+                            // ✨ Apply Theme-specific effects for Old Character
+                            .modifier(EvolutionOldEffect(theme: theme, state: animationState, rotationY: rotationY, slideOffset: slideOffsetOld, blurRadius: blurRadius))
+                            .opacity(animationState == .reveal && theme != .slide ? 0 : 1) // Default Fade out in reveal unless Slide
+                            .animation(theme == .slide ? nil : .easeOut(duration: 0.5), value: animationState) // Smooth fade out
                     }
                     
                     // New Character
                     if animationState == .reveal || animationState == .celebration {
                         Text(newLevel.emoji(for: characterType))
                             .font(.system(size: 150))
-                            .scaleEffect(animationState == .reveal ? 0.1 : 1.0)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.5), value: animationState)
+                            // ✨ Apply Theme-specific effects for New Character
+                            .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
                     }
                 }
                 .frame(height: 200)
@@ -362,11 +395,25 @@ struct EvolutionView: View {
             .padding()
             
             // ✨ Front Fog (More density in front)
-            FogView(color: .white.opacity(0.2))
-                .opacity(fogOpacity * 0.5)
-                .scaleEffect(fogScale * 1.2)
+            if theme == .fog {
+                FogView(color: .white.opacity(0.2))
+                    .opacity(fogOpacity * 0.5)
+                    .scaleEffect(fogScale * 1.2)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+            
+            // ✨ Curtain Theme Elements
+            if theme == .curtain {
+                HStack(spacing: 0) {
+                    Color.black
+                        .frame(width: curtainWidth)
+                    Spacer()
+                    Color.black
+                        .frame(width: curtainWidth)
+                }
                 .ignoresSafeArea()
-                .allowsHitTesting(false)
+            }
             
             // Flash Effect (Bright Light)
             Color.white
@@ -441,39 +488,90 @@ struct EvolutionView: View {
     }
     
     private func startEvolutionSequence() {
-        // 1. Start (Wait 1s)
+        // ✨ Common Start Delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             withAnimation { animationState = .evolving }
             
-            // ✨ Start gathering fog during heavy shake
-            withAnimation(.easeIn(duration: 2.0)) {
-                fogOpacity = 1.0
-                fogScale = 1.0
-            }
+            // ✨ Theme Specific Preparation
+            prepareThemeAnimation()
             
-            // 2. Evolving (Shake for 2s)
+            // ✨ Wait for evolution duration (varies slightly or fixed 2s)
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                // Flash Start (Blinding Light)
-                withAnimation(.easeIn(duration: 0.2)) { flashOpacity = 1.0 }
+                // Flash Effect for some themes
+                if shouldFlash() {
+                    withAnimation(.easeIn(duration: 0.2)) { flashOpacity = 1.0 }
+                }
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     animationState = .reveal
                     
-                    // ✨ Reveal Sequence: Flash fades AND Fog clears (expands out)
-                    withAnimation(.easeOut(duration: 1.5)) {
-                        flashOpacity = 0.0
-                        fogOpacity = 0.0
-                        fogScale = 2.5 // Fog expands outwards
-                    }
+                    // ✨ Execute Reveal Animation
+                    runRevealAnimation()
                     
                     createParticles()
                     
                     // 3. Celebration
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         withAnimation { animationState = .celebration }
                     }
                 }
             }
+        }
+    }
+    
+    // ✨ Animation Logic Breakdown
+    private func prepareThemeAnimation() {
+        switch theme {
+        case .fog:
+            withAnimation(.easeIn(duration: 2.0)) { fogOpacity = 1.0; fogScale = 1.0 }
+        case .spin:
+            withAnimation(.linear(duration: 2.0)) { rotationY = 720 } // Spin 2 times
+        case .slide:
+            withAnimation(.easeInOut(duration: 2.0)) { slideOffsetOld = -50 } // Slight anticipate
+        case .zoom:
+            withAnimation(.easeInOut(duration: 2.0)) { zoomScale = 0.1 }
+        case .blur:
+             withAnimation(.easeInOut(duration: 2.0)) { blurRadius = 20 }
+        case .curtain:
+             withAnimation(.easeInOut(duration: 1.5)) { curtainWidth = UIScreen.main.bounds.width / 2 }
+        default: break
+        }
+    }
+    
+    private func shouldFlash() -> Bool {
+        return [.fog, .flash, .spin, .zoom].contains(theme)
+    }
+    
+    private func runRevealAnimation() {
+        switch theme {
+        case .fog:
+            withAnimation(.easeOut(duration: 1.5)) { flashOpacity = 0.0; fogOpacity = 0.0; fogScale = 2.5 }
+        case .flash:
+             withAnimation(.easeOut(duration: 1.0)) { flashOpacity = 0.0 }
+        case .spin:
+             rotationY = 0 // Reset doesn't affect old char if it fades out
+             withAnimation(.easeOut(duration: 1.0)) { flashOpacity = 0.0 }
+        case .bounce:
+            bounceOffset = 300
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.5)) { bounceOffset = 0 }
+        case .slide:
+            // ✨ Slide: Old moves out Left, New moves in from Right
+            slideOffsetNew = 300 // Start New from Right
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) { 
+                slideOffsetOld = -300 // Old exits Left
+                slideOffsetNew = 0    // New Enters Center
+            }
+        case .zoom:
+            zoomScale = 0.01
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) { zoomScale = 1.0; flashOpacity = 0.0 }
+        case .blur:
+            blurRadius = 20
+            withAnimation(.easeOut(duration: 1.0)) { blurRadius = 0 }
+        case .curtain:
+            withAnimation(.easeInOut(duration: 0.8).delay(0.2)) { curtainWidth = 0 }
+        case .skyDrop:
+            bounceOffset = -500 // Start from top
+            withAnimation(.interpolatingSpring(stiffness: 200, damping: 15)) { bounceOffset = 0 }
         }
     }
     
@@ -670,6 +768,48 @@ struct FogView: View {
                 }
             }
         }
+    }
+}
+
+// ✨ Custom Modifiers for Themes
+
+struct EvolutionOldEffect: ViewModifier {
+    let theme: EvolutionTheme
+    let state: EvolutionView.AnimationPhase
+    let rotationY: Double
+    let slideOffset: CGFloat
+    let blurRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content
+            .modifier(ShakeEffect(animatableData: state == .evolving && theme != .spin ? 1.0 : 0.0)) // Default Shake
+            .rotation3DEffect(.degrees(theme == .spin ? rotationY : 0), axis: (x: 0, y: 1, z: 0))
+            .offset(x: theme == .slide ? slideOffset : 0) // Uses slideOffsetOld
+            .blur(radius: theme == .blur ? blurRadius : 0)
+            .scaleEffect(theme == .zoom && state == .evolving ? 0.1 : 1.0)
+            .opacity(theme == .flash && state == .evolving ? (Double.random(in: 0.5...1)) : 1.0) // Flicker
+    }
+}
+
+struct EvolutionNewEffect: ViewModifier {
+    let theme: EvolutionTheme
+    let state: EvolutionView.AnimationPhase
+    let rotationY: Double
+    let bounceOffset: CGFloat
+    let slideOffset: CGFloat
+    let zoomScale: CGFloat
+    let blurRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect((theme == .zoom || theme == .fog) && state == .reveal ? zoomScale : 1.0)
+            .scaleEffect(state == .reveal && theme != .zoom && theme != .fog ? 1.0 : (theme == .fog ? (state == .reveal ? 0.1 : 1.0) : zoomScale))
+            
+            .rotation3DEffect(.degrees(theme == .spin ? 0 : 0), axis: (x: 0, y: 1, z: 0))
+            
+            .offset(y: (theme == .bounce || theme == .skyDrop) ? bounceOffset : 0)
+            .offset(x: theme == .slide ? slideOffset : 0) // Uses slideOffsetNew
+            .blur(radius: theme == .blur ? blurRadius : 0)
     }
 }
 
