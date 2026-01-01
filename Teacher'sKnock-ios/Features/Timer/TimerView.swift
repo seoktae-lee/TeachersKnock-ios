@@ -24,41 +24,37 @@ struct TimerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                // ✨ [UI 수정] 커스텀 헤더 (타이틀과 버튼 라인 맞추기)
+                // ✨ 커스텀 헤더 (타이틀과 허용 앱 설정 버튼)
                 HStack(alignment: .center) {
                     Text("집중 타이머")
                         .font(.largeTitle)
-                        .fontWeight(.bold) // 기본값이지만 명시 유지, 사이즈 문제라면 패딩이 원인일 수 있음
+                        .fontWeight(.bold)
                     
                     Spacer()
                     
-                    // ✨ 허용 앱(방해 금지) 설정 버튼
                     Button(action: {
                         showShieldingPicker = true
                     }) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             Image(systemName: "hand.raised.fill")
                             Text("허용 앱 설정")
-                                .font(.caption)
-                                .fontWeight(.semibold)
                         }
-                        .padding(.vertical, 8)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.vertical, 6)
                         .padding(.horizontal, 12)
-                        .background(Color.white)
-                        .foregroundColor(brandColor)
-                        .cornerRadius(20)
+                        .background(brandColor)
+                        .clipShape(Capsule())
                         .shadow(color: .black.opacity(0.1), radius: 3)
                     }
                 }
-                .padding(.horizontal, 16) // ✨ [수정] 표준 마진(16)으로 조정
-                .padding(.top, 60) // ✨ [수정] 타이틀 위치를 더 내려서(60pt) 시스템 Large Title과 유사하게 맞춤
-                
-                Spacer().frame(height: 30) // ✨ [수정] 타이틀과 버튼 사이 간격을 30pt로 늘려 답답함 해소
-                
+                .padding(.horizontal, 20)
+                .padding(.top, 200) // ⚙️'집중타이머' 상단 타이틀 글씨 높이 수정 부분
+
                 // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
                     VStack(spacing: 8) {
-                        Text("과목").font(.caption).foregroundColor(.gray)
+                        Text("공부 과목").font(.caption).foregroundColor(.gray)
                         
                         Menu {
                             ForEach(settingsManager.favoriteSubjects) { subject in
@@ -120,6 +116,7 @@ struct TimerView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 30) // ⚙️상단 타이틀과 과목/공부목적 버튼 사이의 간격 수정 부분
                 .disabled(viewModel.isRunning)
                 .opacity(viewModel.isRunning ? 0.6 : 1.0)
                 
@@ -169,7 +166,8 @@ struct TimerView: View {
                 RecentRecordsView(userId: currentUserId).padding(.bottom, 10)
             }
             .background(Color(.systemGray6))
-            // .navigationTitle("집중 타이머") // ✨ [제거] 커스텀 헤더 사용
+            .toolbar(.hidden, for: .navigationBar) // ✨ [추가] 커스텀 헤더 사용을 위해 시스템 네비게이션 바 숨김
+                // 1. 과목 및 목적 선택 영역
             .onAppear {
                 if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"

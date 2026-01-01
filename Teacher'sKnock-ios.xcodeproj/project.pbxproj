@@ -58,6 +58,17 @@
 		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
 		54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */; };
 		547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */; };
+		5498D8ED2F062DE800BAB26B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EC2F062DE800BAB26B /* WidgetKit.framework */; };
+		5498D8EF2F062DE800BAB26B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EE2F062DE800BAB26B /* SwiftUI.framework */; };
+		5498D8FE2F062DE900BAB26B /* Teacher'sKnockWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5498D90D2F06330900BAB26B /* WidgetDataHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D90C2F06330900BAB26B /* WidgetDataHelper.swift */; };
+		5498D90E2F0634B000BAB26B /* GoalColorHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */; };
+		5498D90F2F0634D000BAB26B /* CharacterLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5459AE112EE19535008EE0E4 /* CharacterLevel.swift */; };
+		5498D91A2F064FEF00BAB26B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5498D9122F064FEF00BAB26B /* Assets.xcassets */; };
+		5498D91B2F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9152F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift */; };
+		5498D91C2F064FEF00BAB26B /* PrimaryGoalWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */; };
+		5498D91D2F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */; };
+		5498D91E2F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */; };
 		54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */; };
 		54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */; };
 		54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */; };
@@ -72,6 +83,30 @@
 		54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CDB2EE1D47B002226B4 /* WeeklyReportDetailView.swift */; };
 		54F81CDE2EE1D5C7002226B4 /* MonthlyReportDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CDD2EE1D5C7002226B4 /* MonthlyReportDetailView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5498D8FC2F062DE900BAB26B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 54A1D35C2EDA82FF008BD532 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5498D8EA2F062DE800BAB26B;
+			remoteInfo = "Teacher'sKnockWidgetExtension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5498D8FF2F062DE900BAB26B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5498D8FE2F062DE900BAB26B /* Teacher'sKnockWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		5432C7572EE3FCBF005B4221 /* NoticeData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeData.swift; sourceTree = "<group>"; };
@@ -122,6 +157,18 @@
 		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
 		54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalColorHelper.swift; sourceTree = "<group>"; };
 		547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectColorManager.swift; sourceTree = "<group>"; };
+		5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Teacher'sKnockWidgetExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5498D8EC2F062DE800BAB26B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		5498D8EE2F062DE800BAB26B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		5498D90C2F06330900BAB26B /* WidgetDataHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataHelper.swift; sourceTree = "<group>"; };
+		5498D9102F06371300BAB26B /* Teacher'sKnock-ios.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Teacher'sKnock-ios.entitlements"; sourceTree = "<group>"; };
+		5498D9112F06374500BAB26B /* Teacher'sKnockWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Teacher'sKnockWidgetExtension.entitlements"; sourceTree = "<group>"; };
+		5498D9122F064FEF00BAB26B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5498D9132F064FEF00BAB26B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoalWidget.swift; sourceTree = "<group>"; };
+		5498D9152F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoalWidgetEntryView.swift; sourceTree = "<group>"; };
+		5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoalWidgetProvider.swift; sourceTree = "<group>"; };
+		5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeachersKnockWidgetBundle.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalTimelineView.swift; sourceTree = "<group>"; };
 		54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySwipeView.swift; sourceTree = "<group>"; };
@@ -139,6 +186,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		5498D8E82F062DE800BAB26B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5498D8EF2F062DE800BAB26B /* SwiftUI.framework in Frameworks */,
+				5498D8ED2F062DE800BAB26B /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		54A1D3612EDA82FF008BD532 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -155,6 +211,8 @@
 		543440902EDB139300E736A0 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5498D8EC2F062DE800BAB26B /* WidgetKit.framework */,
+				5498D8EE2F062DE800BAB26B /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -162,6 +220,7 @@
 		5459AE502EE19D31008EE0E4 /* Teacher'sKnock-ios */ = {
 			isa = PBXGroup;
 			children = (
+				5498D9102F06371300BAB26B /* Teacher'sKnock-ios.entitlements */,
 				5459AE552EE19EAB008EE0E4 /* Features */,
 				5459AE542EE19E76008EE0E4 /* Service */,
 				5459AE532EE19E41008EE0E4 /* Model */,
@@ -211,6 +270,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				5498D90C2F06330900BAB26B /* WidgetDataHelper.swift */,
 				5459AE102EE19535008EE0E4 /* AuthManager.swift */,
 				5459AE212EE19535008EE0E4 /* SettingsManager.swift */,
 				5459AE162EE19535008EE0E4 /* FirestoreSyncManager.swift */,
@@ -307,9 +367,24 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		5498D9182F064FEF00BAB26B /* Teacher'sKnockWidget */ = {
+			isa = PBXGroup;
+			children = (
+				5498D9122F064FEF00BAB26B /* Assets.xcassets */,
+				5498D9132F064FEF00BAB26B /* Info.plist */,
+				5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */,
+				5498D9152F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift */,
+				5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */,
+				5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */,
+			);
+			path = "Teacher'sKnockWidget";
+			sourceTree = "<group>";
+		};
 		54A1D35B2EDA82FF008BD532 = {
 			isa = PBXGroup;
 			children = (
+				5498D9182F064FEF00BAB26B /* Teacher'sKnockWidget */,
+				5498D9112F06374500BAB26B /* Teacher'sKnockWidgetExtension.entitlements */,
 				5459AE502EE19D31008EE0E4 /* Teacher'sKnock-ios */,
 				543440902EDB139300E736A0 /* Frameworks */,
 				54A1D3652EDA82FF008BD532 /* Products */,
@@ -320,6 +395,7 @@
 			isa = PBXGroup;
 			children = (
 				54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */,
+				5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -327,6 +403,25 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		5498D8EA2F062DE800BAB26B /* Teacher'sKnockWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5498D9032F062DE900BAB26B /* Build configuration list for PBXNativeTarget "Teacher'sKnockWidgetExtension" */;
+			buildPhases = (
+				5498D8E72F062DE800BAB26B /* Sources */,
+				5498D8E82F062DE800BAB26B /* Frameworks */,
+				5498D8E92F062DE800BAB26B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Teacher'sKnockWidgetExtension";
+			packageProductDependencies = (
+			);
+			productName = "Teacher'sKnockWidgetExtension";
+			productReference = 5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		54A1D3632EDA82FF008BD532 /* Teacher'sKnock-ios */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 54A1D3712EDA8300008BD532 /* Build configuration list for PBXNativeTarget "Teacher'sKnock-ios" */;
@@ -334,10 +429,12 @@
 				54A1D3602EDA82FF008BD532 /* Sources */,
 				54A1D3612EDA82FF008BD532 /* Frameworks */,
 				54A1D3622EDA82FF008BD532 /* Resources */,
+				5498D8FF2F062DE900BAB26B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5498D8FD2F062DE900BAB26B /* PBXTargetDependency */,
 			);
 			name = "Teacher'sKnock-ios";
 			packageProductDependencies = (
@@ -356,9 +453,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					5498D8EA2F062DE800BAB26B = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					54A1D3632EDA82FF008BD532 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -382,11 +482,20 @@
 			projectRoot = "";
 			targets = (
 				54A1D3632EDA82FF008BD532 /* Teacher'sKnock-ios */,
+				5498D8EA2F062DE800BAB26B /* Teacher'sKnockWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5498D8E92F062DE800BAB26B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5498D91A2F064FEF00BAB26B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		54A1D3622EDA82FF008BD532 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -399,6 +508,19 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		5498D8E72F062DE800BAB26B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5498D90F2F0634D000BAB26B /* CharacterLevel.swift in Sources */,
+				5498D90E2F0634B000BAB26B /* GoalColorHelper.swift in Sources */,
+				5498D91B2F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift in Sources */,
+				5498D91C2F064FEF00BAB26B /* PrimaryGoalWidget.swift in Sources */,
+				5498D91D2F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift in Sources */,
+				5498D91E2F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		54A1D3602EDA82FF008BD532 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -454,6 +576,7 @@
 				54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */,
 				5432C75C2EE3FE24005B4221 /* NoticeListView.swift in Sources */,
 				5432C75A2EE3FCF7005B4221 /* NoticeSettingsView.swift in Sources */,
+				5498D90D2F06330900BAB26B /* WidgetDataHelper.swift in Sources */,
 				54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */,
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
 				544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */,
@@ -467,7 +590,79 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		5498D8FD2F062DE900BAB26B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5498D8EA2F062DE800BAB26B /* Teacher'sKnockWidgetExtension */;
+			targetProxy = 5498D8FC2F062DE900BAB26B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		5498D9002F062DE900BAB26B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = "Teacher'sKnockWidgetExtension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Teacher'sKnockWidget/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Teacher'sKnockWidget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.seoktaedev.TeachersKnock-ios.Teacher-sKnockWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5498D9012F062DE900BAB26B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = "Teacher'sKnockWidgetExtension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Teacher'sKnockWidget/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Teacher'sKnockWidget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.seoktaedev.TeachersKnock-ios.Teacher-sKnockWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		54A1D36F2EDA8300008BD532 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -592,8 +787,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Teacher'sKnock-ios/Teacher'sKnock-ios.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Teacher-sKnock-ios-Info.plist";
@@ -602,6 +799,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -624,8 +822,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Teacher'sKnock-ios/Teacher'sKnock-ios.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Teacher-sKnock-ios-Info.plist";
@@ -634,6 +834,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -654,6 +855,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		5498D9032F062DE900BAB26B /* Build configuration list for PBXNativeTarget "Teacher'sKnockWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5498D9002F062DE900BAB26B /* Debug */,
+				5498D9012F062DE900BAB26B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		54A1D35F2EDA82FF008BD532 /* Build configuration list for PBXProject "Teacher'sKnock-ios" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

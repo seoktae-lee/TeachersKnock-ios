@@ -12,6 +12,7 @@ struct GoalListView: View {
     @EnvironmentObject var authManager: AuthManager
     
     @StateObject private var quoteManager = QuoteManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingAddGoalSheet = false
     @State private var selectedPhase: Int = 0
     @State private var showGSchool = false
@@ -171,6 +172,23 @@ struct GoalListView: View {
                 }
             }
         }
+        // ✨ [추가] 앱이 백그라운드로 갈 때 위젯 데이터 갱신
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .background {
+                updateWidget()
+            }
+        }
+    }
+    
+
+    
+    private func updateWidget() {
+        if let goal = primaryGoal {
+            let uniqueDays = getUniqueDays(for: goal)
+            WidgetDataHelper.shared.updatePrimaryGoal(goal: goal, uniqueDays: uniqueDays)
+        } else {
+            WidgetDataHelper.shared.clearData()
+        }
     }
     
     private func setPrimaryGoal(_ selectedGoal: Goal) {
@@ -187,6 +205,8 @@ struct GoalListView: View {
         
         do {
             try context.save()
+            // ✨ [추가] 위젯 데이터 즉시 갱신
+            updateWidget()
         } catch {
             print("Error saving primary goal: \(error)")
         }
@@ -201,6 +221,8 @@ struct GoalListView: View {
             try modelContext.save()
             // ✨ [수정] 서버 동기화 추가
             GoalManager.shared.deleteGoal(goalId: goalId, userId: userId)
+            // ✨ [추가] 위젯 데이터 갱신 (삭제 후 다음 대표 목표 찾기)
+            updateWidget()
         } catch {
             print("Error deleting goal: \(error)")
         }
