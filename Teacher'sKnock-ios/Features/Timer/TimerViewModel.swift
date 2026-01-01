@@ -21,14 +21,34 @@ class TimerViewModel: ObservableObject {
     private var accumulatedTime: TimeInterval = 0
     private var timer: Timer?
     
+    // MARK: - 초기화
+    init() {
+        restoreTimerState()
+    }
+    
     // MARK: - 타이머 제어
     
     func startTimer() {
         guard !isRunning else { return }
         
-        startTime = Date()
+        // 1. 이미 시작된 적 없다면 현재 시간 기록
+        if startTime == nil {
+            startTime = Date()
+        } else {
+            // 일시정지 후 재시작: startTime을 현재시간 - 누적시간으로 조정하여 연속성 유지 효과
+            // (accumulatedTime을 초기화할 필요 없음)
+            startTime = Date().addingTimeInterval(-accumulatedTime)
+            accumulatedTime = 0 
+        }
+        
         isRunning = true
         UIApplication.shared.isIdleTimerDisabled = true
+        
+        // ✨ Shielding(방해 금지) 시작
+        ShieldingManager.shared.startShielding()
+        
+        // 상태 저장
+        saveTimerState()
         
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -40,16 +60,24 @@ class TimerViewModel: ObservableObject {
     func stopTimer() {
         guard isRunning else { return }
         
+        updateDisplayTime() // 정지 직전 시간 갱신
+        
         if let start = startTime {
-            accumulatedTime += Date().timeIntervalSince(start)
+            accumulatedTime = Date().timeIntervalSince(start)
         }
-        displayTime = Int(accumulatedTime)
-        startTime = nil
+        
+        startTime = nil // 재시작 시 새로운 로직을 위해 nil 처리 (위 startTimer 로직 참조)
         isRunning = false
         
         timer?.invalidate()
         timer = nil
         UIApplication.shared.isIdleTimerDisabled = false
+        
+        // ✨ Shielding(방해 금지) 해제
+        ShieldingManager.shared.stopShielding()
+        
+        // 상태 저장 해제 (또는 일시정지 상태 저장)
+        clearTimerState() 
     }
     
     private func updateDisplayTime() {
@@ -64,10 +92,58 @@ class TimerViewModel: ObservableObject {
         formatTime(seconds: displayTime)
     }
     
+    // MARK: - Persistence (백그라운드/앱 종료 대응)
+    
+    private let kIsRunning = "timer_isRunning"
+    private let kStartTime = "timer_startTime"
+    private let kAccumulated = "timer_accumulated"
+    private let kSubject = "timer_subject"
+    
+    private func saveTimerState() {
+        UserDefaults.standard.set(true, forKey: kIsRunning)
+        UserDefaults.standard.set(startTime, forKey: kStartTime)
+        UserDefaults.standard.set(accumulatedTime, forKey: kAccumulated)
+        UserDefaults.standard.set(selectedSubject, forKey: kSubject)
+    }
+    
+    private func clearTimerState() {
+        UserDefaults.standard.set(false, forKey: kIsRunning)
+        UserDefaults.standard.removeObject(forKey: kStartTime)
+        UserDefaults.standard.set(accumulatedTime, forKey: kAccumulated) // 일시정지 시간은 유지 가능
+    }
+    
+    private func restoreTimerState() {
+        let wasRunning = UserDefaults.standard.bool(forKey: kIsRunning)
+        let savedSubject = UserDefaults.standard.string(forKey: kSubject)
+        
+        if let subject = savedSubject {
+            self.selectedSubject = subject
+        }
+        
+        if wasRunning {
+            if let savedStart = UserDefaults.standard.object(forKey: kStartTime) as? Date {
+                self.startTime = savedStart
+                self.isRunning = true
+                self.accumulatedTime = UserDefaults.standard.double(forKey: kAccumulated)
+                
+                // 타이머 재가동
+                ShieldingManager.shared.startShielding()
+                UIApplication.shared.isIdleTimerDisabled = true
+                
+                timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.updateDisplayTime()
+                    }
+                }
+            }
+        }
+    }
+    
     // MARK: - 데이터 저장
     
     func saveRecord(context: ModelContext, ownerID: String, primaryGoal: Goal?) {
             stopTimer()
+            // 저장 로직 실행 시 accumulatedTime/displayTime 초기화
             let finalTime = displayTime
             guard finalTime >= minimumStudyTime else {
                 resetTimer()
@@ -93,7 +169,8 @@ class TimerViewModel: ObservableObject {
         accumulatedTime = 0
         displayTime = 0
         linkedScheduleTitle = nil
-        // 타이머 리셋 시 목적이나 과목을 초기화할지 여부는 선택 사항 (현재는 유지)
+        clearTimerState()
+        UserDefaults.standard.removeObject(forKey: kAccumulated)
     }
     
     // MARK: - 유틸리티 및 연동 로직
@@ -125,12 +202,79 @@ class TimerViewModel: ObservableObject {
         return String(format: "%02d:%02d:%02d", h, m, s)
     }
     
+
     func setupInitialSubject(favorites: [StudySubject]) {
-        if linkedScheduleTitle == nil {
-            if let first = favorites.first,
-               !favorites.contains(where: { $0.name == selectedSubject }) {
-                selectedSubject = first.name
-            }
+        if linkedScheduleTitle == nil && selectedSubject == "교육학" { // 기본값 상태일 때만
+             if let saved = UserDefaults.standard.string(forKey: kSubject) {
+                 selectedSubject = saved
+             } else if let first = favorites.first {
+                 selectedSubject = first.name
+             }
         }
     }
 }
+
+// ✨ [임시 추가] Xcode 프로젝트에 파일이 추가되지 않아 발생하는 오류를 방지하기 위해 여기에 정의합니다.
+// 추후 Service/ShieldingManager.swift 파일이 프로젝트에 추가되면 이 코드는 삭제해주세요.
+import FamilyControls
+import ManagedSettings
+
+@MainActor
+class ShieldingManager: ObservableObject {
+    static let shared = ShieldingManager()
+    
+    // Store for ManagedSettings
+    private let store = ManagedSettingsStore()
+    
+    // Selected apps/categories to shield (block)
+    @Published var discouragedSelection = FamilyActivitySelection()
+    
+    // Authorization status
+    @Published var isAuthorized: Bool = false
+    
+    init() {
+        checkAuthorizationStatus()
+    }
+    
+    func checkAuthorizationStatus() {
+        Task {
+            let status = AuthorizationCenter.shared.authorizationStatus
+            self.isAuthorized = status == .approved
+        }
+    }
+    
+    func requestAuthorization() async {
+        do {
+            try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            self.isAuthorized = true
+        } catch {
+            print("Failed to authorize FamilyControls: \(error)")
+            self.isAuthorized = false
+        }
+    }
+    
+    /// Starts shielding the selected apps.
+    func startShielding() {
+        // Clear existing shields first to be safe
+        store.clearAllSettings()
+        
+        let applications = discouragedSelection.applicationTokens
+        let categories = discouragedSelection.categoryTokens
+        
+        if applications.isEmpty && categories.isEmpty {
+            print("No apps selected to shield.")
+            return
+        }
+        
+        print("Starting shielding for \(applications.count) apps and \(categories.count) categories.")
+        store.shield.applicationCategories = ShieldSettings.ActivityCategoryPolicy.specific(categories, except: Set())
+        store.shield.applications = applications
+    }
+    
+    /// Stops shielding all apps.
+    func stopShielding() {
+        print("Stopping all shielding.")
+        store.clearAllSettings()
+    }
+}
+
