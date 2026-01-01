@@ -45,8 +45,20 @@ class GoalManager {
                 hasCharacter: data["hasCharacter"] as? Bool ?? false,
                 characterName: data["characterName"] as? String ?? "티노",
                 characterColor: data["characterColor"] as? String ?? "Blue",
-                isPrimaryGoal: data["isPrimaryGoal"] as? Bool ?? false
+                isPrimaryGoal: data["isPrimaryGoal"] as? Bool ?? false,
+                characterType: data["characterType"] as? String ?? "bird"
             )
+        }
+    }
+    // 4. 목표 제목 수정
+    func updateGoalTitle(goalId: String, userId: String, newTitle: String) {
+        let docRef = db.collection("users").document(userId).collection("goals").document(goalId)
+        docRef.updateData(["title": newTitle]) { error in
+            if let error = error {
+                print("❌ 목표 제목 업데이트 실패: \(error.localizedDescription)")
+            } else {
+                print("✅ 목표 제목 업데이트 완료: \(newTitle)")
+            }
         }
     }
 }
@@ -62,4 +74,6 @@ struct GoalData {
     let characterName: String
     let characterColor: String
     let isPrimaryGoal: Bool
+    let characterType: String
 }
+

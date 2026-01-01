@@ -59,6 +59,12 @@ struct GoalListView: View {
         _allRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == filterId })
     }
     
+
+    // MARK: - Goal Edit State
+    @State private var isEditingGoal = false
+    @State private var editingGoal: Goal? = nil
+    @State private var newGoalTitle = ""
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -149,6 +155,12 @@ struct GoalListView: View {
                                                 withAnimation(.spring()) { setPrimaryGoal(goal) }
                                             }
                                             .contextMenu {
+                                                Button {
+                                                    startEditing(goal)
+                                                } label: {
+                                                    Label("목표 이름 수정", systemImage: "pencil")
+                                                }
+                                                
                                                 Button(role: .destructive) { deleteGoal(goal) } label: {
                                                     Label("목표 삭제", systemImage: "trash")
                                                 }
@@ -171,6 +183,18 @@ struct GoalListView: View {
                     SafariView(url: url).ignoresSafeArea()
                 }
             }
+            .onAppear {
+                syncGoals()
+            }
+            .alert("목표 이름 수정", isPresented: $isEditingGoal) {
+                TextField("새로운 목표 이름을 입력하세요", text: $newGoalTitle)
+                Button("취소", role: .cancel) {}
+                Button("저장") {
+                    saveGoalTitle()
+                }
+            } message: {
+                Text("목표의 이름을 변경합니다.")
+            }
         }
         // ✨ [추가] 앱이 백그라운드로 갈 때 위젯 데이터 갱신
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -180,6 +204,64 @@ struct GoalListView: View {
         }
     }
     
+    // MARK: - Methods
+    
+    private func syncGoals() {
+        guard !currentUserId.isEmpty else { return }
+        
+        // 로컬 데이터가 없을 때만 서버에서 불러옵니다 (또는 필요에 따라 항상 동기화)
+        // 여기서는 앱 재설치 후 복원을 위해 로컬이 비어있으면 시도합니다.
+        if goals.isEmpty {
+            Task {
+                do {
+                    let fetchedGoals = try await GoalManager.shared.fetchGoals(userId: currentUserId)
+                    await MainActor.run {
+                        for data in fetchedGoals {
+                            // 중복 체크 (혹시 모르니)
+                            if !goals.contains(where: { $0.id == data.id }) {
+                                let newGoal = Goal(
+                                    id: data.id,
+                                    title: data.title,
+                                    targetDate: data.targetDate,
+                                    ownerID: data.ownerID,
+                                    hasCharacter: data.hasCharacter,
+                                    startDate: data.startDate,
+                                    characterName: data.characterName,
+                                    characterColor: data.characterColor,
+                                    isPrimaryGoal: data.isPrimaryGoal,
+                                    characterType: data.characterType
+                                )
+                                modelContext.insert(newGoal)
+                            }
+                        }
+                    }
+                } catch {
+                    print("Goal sync failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func startEditing(_ goal: Goal) {
+        editingGoal = goal
+        newGoalTitle = goal.title
+        isEditingGoal = true
+    }
+    
+    private func saveGoalTitle() {
+        guard let goal = editingGoal, !newGoalTitle.isEmpty else { return }
+        
+        goal.title = newGoalTitle
+        do {
+            try modelContext.save()
+            GoalManager.shared.updateGoalTitle(goalId: goal.id.uuidString, userId: currentUserId, newTitle: newGoalTitle)
+        } catch {
+            print("Error saving goal title: \(error)")
+        }
+        
+        editingGoal = nil
+        isEditingGoal = false
+    }
 
     
     private func updateWidget() {
@@ -243,7 +325,13 @@ struct GoalCardView: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle().fill(themeColor.opacity(0.15)).frame(width: 60, height: 60)
-                Text(currentLevel.emoji(for: goal.characterType)).font(.system(size: 32))
+                // ✨ [수정] 캐릭터 키우기 설정이 된 경우에만 캐릭터 표시
+                if goal.hasCharacter {
+                    Text(currentLevel.emoji(for: goal.characterType)).font(.system(size: 32))
+                } else {
+                    Image(systemName: "flag.checkered").font(.system(size: 24)).foregroundColor(themeColor)
+                }
+                
                 if goal.isPrimaryGoal {
                     Image(systemName: "star.fill").font(.system(size: 12)).foregroundColor(.orange).padding(4).background(Circle().fill(Color.white)).offset(x: 22, y: -22).shadow(radius: 2)
                 }
@@ -251,8 +339,13 @@ struct GoalCardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(goal.title).font(.headline).foregroundColor(.primary).lineLimit(1)
                 HStack(spacing: 6) {
-                    Text("LV.\(currentLevel.rawValue + 1)").font(.caption2).fontWeight(.bold).padding(.horizontal, 6).padding(.vertical, 2).background(themeColor.opacity(0.2)).foregroundColor(themeColor).cornerRadius(4)
-                    Text("\(uniqueDays)일째 열공 중").font(.caption2).foregroundColor(.secondary)
+                    // ✨ [수정] 캐릭터가 없으면 레벨 표시 숨김 또는 다른 문구 표시
+                    if goal.hasCharacter {
+                        Text("LV.\(currentLevel.rawValue + 1)").font(.caption2).fontWeight(.bold).padding(.horizontal, 6).padding(.vertical, 2).background(themeColor.opacity(0.2)).foregroundColor(themeColor).cornerRadius(4)
+                        Text("\(uniqueDays)일째 열공 중").font(.caption2).foregroundColor(.secondary)
+                    } else {
+                        Text("\(uniqueDays)일째 도전 중").font(.caption2).foregroundColor(.secondary)
+                    }
                 }
             }
             Spacer()
