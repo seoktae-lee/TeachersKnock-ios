@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import SwiftData
 import Combine
+import ActivityKit
 
 @MainActor
 class TimerViewModel: ObservableObject {
@@ -20,6 +21,9 @@ class TimerViewModel: ObservableObject {
     private var startTime: Date?
     private var accumulatedTime: TimeInterval = 0
     private var timer: Timer?
+    
+    // ✨ Live Activity
+    private var activity: Activity<StudyTimerAttributes>?
     
     // MARK: - 초기화
     init() {
@@ -50,6 +54,9 @@ class TimerViewModel: ObservableObject {
         // 상태 저장
         saveTimerState()
         
+        // ✨ Live Activity 시작
+        startActivity()
+        
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateDisplayTime()
@@ -77,7 +84,10 @@ class TimerViewModel: ObservableObject {
         ShieldingManager.shared.stopShielding()
         
         // 상태 저장 해제 (또는 일시정지 상태 저장)
-        clearTimerState() 
+        clearTimerState()
+        
+        // ✨ Live Activity 종료
+        endActivity()
     }
     
     private func updateDisplayTime() {
@@ -210,6 +220,53 @@ class TimerViewModel: ObservableObject {
              } else if let first = favorites.first {
                  selectedSubject = first.name
              }
+        }
+    }
+    
+    // MARK: - Live Activity Management
+    
+    private func startActivity() {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        
+        // 이미 실행 중인 활동이 있다면 종료
+        if let currentActivity = activity {
+            Task { await currentActivity.end(dismissalPolicy: .immediate) }
+        }
+        
+        let attributes = StudyTimerAttributes(
+            subject: selectedSubject,
+            purpose: selectedPurpose.localizedName
+        )
+        
+        // 타이머 시작 시간 계산 (현재 시간 - 누적 시간)
+        // Live Activity의 타이머는 절대 시간을 기준으로 하므로,
+        // 일시정지 후 재시작 시에도 마치 처음부터 시작한 것처럼 보이게 하거나,
+        // 아니면 단순히 현재 startTime을 넘겨주면 됨.
+        // 여기서는 TimerViewModel의 startTime 로직을 따름.
+        let activityStartTime = startTime ?? Date()
+        
+        let contentState = StudyTimerAttributes.ContentState(startTime: activityStartTime)
+        
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: .init(state: contentState, staleDate: nil),
+                pushType: nil
+            )
+            self.activity = activity
+            print("LIVE ACTIVITY STARTED: \(activity.id)")
+        } catch {
+            print("ERROR STARTING LIVE ACTIVITY: \(error.localizedDescription)")
+        }
+    }
+    
+    private func endActivity() {
+        guard let activity = activity else { return }
+        
+        Task {
+            await activity.end(dismissalPolicy: .immediate)
+            self.activity = nil
+            print("LIVE ACTIVITY ENDED")
         }
     }
 }

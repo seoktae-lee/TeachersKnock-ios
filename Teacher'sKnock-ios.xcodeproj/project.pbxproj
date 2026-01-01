@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5405212A2F0670D6001B48A7 /* StudyTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540521282F0670D6001B48A7 /* StudyTimerAttributes.swift */; };
+		5405212B2F0670D6001B48A7 /* StudyTimerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540521292F0670D6001B48A7 /* StudyTimerWidget.swift */; };
+		5405212D2F06710C001B48A7 /* StudyTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5405212C2F06710C001B48A7 /* StudyTimerAttributes.swift */; };
 		540ED2D62EDA9E9400CCC7A9 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 540ED2D52EDA9E9400CCC7A9 /* FirebaseAnalytics */; };
 		540ED2D82EDA9E9400CCC7A9 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 540ED2D72EDA9E9400CCC7A9 /* FirebaseAuth */; };
 		5432C7582EE3FCBF005B4221 /* NoticeData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5432C7572EE3FCBF005B4221 /* NoticeData.swift */; };
@@ -109,6 +112,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		540521282F0670D6001B48A7 /* StudyTimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyTimerAttributes.swift; sourceTree = "<group>"; };
+		540521292F0670D6001B48A7 /* StudyTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyTimerWidget.swift; sourceTree = "<group>"; };
+		5405212C2F06710C001B48A7 /* StudyTimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyTimerAttributes.swift; sourceTree = "<group>"; };
 		5432C7572EE3FCBF005B4221 /* NoticeData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeData.swift; sourceTree = "<group>"; };
 		5432C7592EE3FCF7005B4221 /* NoticeSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeSettingsView.swift; sourceTree = "<group>"; };
 		5432C75B2EE3FE24005B4221 /* NoticeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeListView.swift; sourceTree = "<group>"; };
@@ -322,6 +328,7 @@
 		5459AE572EE19F01008EE0E4 /* Timer */ = {
 			isa = PBXGroup;
 			children = (
+				5405212C2F06710C001B48A7 /* StudyTimerAttributes.swift */,
 				54DBCD192F011C2100B43C2B /* StudyTimerView.swift */,
 				5459AE2C2EE19535008EE0E4 /* TimerView.swift */,
 				5459AE5D2EE1A1F4008EE0E4 /* TimerViewModel.swift */,
@@ -372,6 +379,8 @@
 			children = (
 				5498D9122F064FEF00BAB26B /* Assets.xcassets */,
 				5498D9132F064FEF00BAB26B /* Info.plist */,
+				540521282F0670D6001B48A7 /* StudyTimerAttributes.swift */,
+				540521292F0670D6001B48A7 /* StudyTimerWidget.swift */,
 				5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */,
 				5498D9152F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift */,
 				5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */,
@@ -514,6 +523,8 @@
 			files = (
 				5498D90F2F0634D000BAB26B /* CharacterLevel.swift in Sources */,
 				5498D90E2F0634B000BAB26B /* GoalColorHelper.swift in Sources */,
+				5405212A2F0670D6001B48A7 /* StudyTimerAttributes.swift in Sources */,
+				5405212B2F0670D6001B48A7 /* StudyTimerWidget.swift in Sources */,
 				5498D91B2F064FEF00BAB26B /* PrimaryGoalWidgetEntryView.swift in Sources */,
 				5498D91C2F064FEF00BAB26B /* PrimaryGoalWidget.swift in Sources */,
 				5498D91D2F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift in Sources */,
@@ -577,6 +588,7 @@
 				5432C75C2EE3FE24005B4221 /* NoticeListView.swift in Sources */,
 				5432C75A2EE3FCF7005B4221 /* NoticeSettingsView.swift in Sources */,
 				5498D90D2F06330900BAB26B /* WidgetDataHelper.swift in Sources */,
+				5405212D2F06710C001B48A7 /* StudyTimerAttributes.swift in Sources */,
 				54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */,
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
 				544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */,

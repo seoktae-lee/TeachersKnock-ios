@@ -5,5 +5,6 @@ import SwiftUI
 struct TeachersKnockWidgetBundle: WidgetBundle {
     var body: some Widget {
         PrimaryGoalWidget()
+        StudyTimerWidget()
     }
 }
