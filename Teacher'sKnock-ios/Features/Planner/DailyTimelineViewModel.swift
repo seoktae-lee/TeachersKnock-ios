@@ -138,7 +138,9 @@ class DailyTimelineViewModel: ObservableObject {
                 isCompleted: false, // 미룬 건 다시 해야 함
                 hasReminder: item.hasReminder,
                 ownerID: item.ownerID,
-                isPostponed: false
+
+                isPostponed: false,
+                studyPurpose: item.studyPurpose
             )
             
             context.insert(newItem)

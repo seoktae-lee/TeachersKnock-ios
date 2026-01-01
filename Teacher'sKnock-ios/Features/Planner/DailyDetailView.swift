@@ -268,7 +268,8 @@ struct DailyDetailView: View {
                 isCompleted: false,
                 hasReminder: item.hasReminder,
                 ownerID: item.ownerID,
-                isPostponed: false
+                isPostponed: false,
+                studyPurpose: item.studyPurpose
             )
             modelContext.insert(newItem)
             ScheduleManager.shared.saveSchedule(newItem)

@@ -26,7 +26,9 @@ class PlannerViewModel: ObservableObject {
             isCompleted: false,
             hasReminder: hasReminder,
             ownerID: ownerID,
-            isPostponed: false
+
+            isPostponed: false,
+            studyPurpose: "인강시청" // 기본값 (PlannerViewModel은 보통 테스트용이거나 간소화된 추가 루틴에서 쓰임)
         )
         
         // 1. 내 폰에 저장 (SwiftData)
