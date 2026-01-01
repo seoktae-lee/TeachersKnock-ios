@@ -17,7 +17,7 @@ struct TimerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 30) {
-                Spacer().frame(height: 30)
+                Spacer().frame(height: 120)
                 
                 // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
@@ -157,8 +157,10 @@ struct TimerView: View {
 }
 
 // MARK: - RecentRecordsView (누락된 뷰 정의 추가)
+
 struct RecentRecordsView: View {
     let userId: String
+    @Environment(\.modelContext) private var modelContext
     @Query private var records: [StudyRecord]
     
     init(userId: String) {
@@ -192,24 +194,43 @@ struct RecentRecordsView: View {
                     .font(.caption).foregroundColor(.secondary)
                     .frame(maxWidth: .infinity).padding()
             } else {
-                ScrollView {
-                    VStack(spacing: 8) {
-                        ForEach(records.prefix(5)) { record in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(record.areaName).font(.subheadline).bold()
-                                    Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
-                                }
-                                Spacer()
-                                Text("\(record.durationSeconds / 60)분").font(.subheadline).bold()
+                List {
+                    ForEach(records.prefix(5)) { record in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(record.areaName).font(.subheadline).bold()
+                                Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
                             }
-                            .padding().background(Color.white).cornerRadius(12)
+                            Spacer()
+                            Text("\(record.durationSeconds / 60)분").font(.subheadline).bold()
                         }
+                        // List row styling to match the previous look as much as possible within a List
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.white)
+                        .padding(.vertical, 4)
                     }
-                    .padding(.horizontal)
+                    .onDelete(perform: deleteRecord)
                 }
-                .frame(height: 180)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden) // Remove default list background
+                .frame(height: 250) // Adjust height for List
+            }
+        }
+    }
+    
+    private func deleteRecord(at offsets: IndexSet) {
+        // Since we are showing only the prefix(5) but the query fetches all (sorted),
+        // we need to be careful. However, 'records' query returns them in order.
+        // The ForEach is over `records.prefix(5)`.
+        // The index in offsets corresponds to the index in the prefixed collection.
+        
+        for index in offsets {
+            if index < records.count {
+                let recordToDelete = records[index]
+                modelContext.delete(recordToDelete)
             }
         }
     }
 }
+
+
