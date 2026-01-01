@@ -427,7 +427,6 @@ struct OnboardingPage: View {
     }
 }
 
-
 // MARK: - RecentRecordsView (누락된 뷰 정의 추가)
 
 struct RecentRecordsView: View {
@@ -474,7 +473,7 @@ struct RecentRecordsView: View {
                                 Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
                             }
                             Spacer()
-                            Text("\(record.durationSeconds / 60)분").font(.subheadline).bold()
+                            Text(formatDuration(record.durationSeconds)).font(.subheadline).bold()
                         }
                         // List row styling to match the previous look as much as possible within a List
                         .listRowSeparator(.hidden)
@@ -488,6 +487,14 @@ struct RecentRecordsView: View {
                 .frame(height: 250) // Adjust height for List
             }
         }
+    }
+    
+    private func formatDuration(_ totalSeconds: Int) -> String {
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        
+        return "\(hours)시간 \(minutes)분 \(seconds)초"
     }
     
     private func deleteRecord(at offsets: IndexSet) {
@@ -504,5 +511,3 @@ struct RecentRecordsView: View {
         }
     }
 }
-
-
