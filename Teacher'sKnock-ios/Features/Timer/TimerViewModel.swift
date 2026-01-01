@@ -145,6 +145,11 @@ class TimerViewModel: ObservableObject {
                         self?.updateDisplayTime()
                     }
                 }
+                // 라이브 액티비티 복구
+                if let existingActivity = Activity<StudyTimerAttributes>.activities.first {
+                    self.activity = existingActivity
+                    print("🔄 RESTORED LIVE ACTIVITY: \(existingActivity.id)")
+                }
             }
         }
     }
@@ -261,12 +266,14 @@ class TimerViewModel: ObservableObject {
     }
     
     private func endActivity() {
-        guard let activity = activity else { return }
-        
+        // 현재 참조 중인 액티비티 외에도, 앱이 종료되어 참조를 잃은 좀비 액티비티가 있을 수 있으므로
+        // 해당 타입의 모든 액티비티를 찾아서 종료합니다.
         Task {
-            await activity.end(dismissalPolicy: .immediate)
+            for activity in Activity<StudyTimerAttributes>.activities {
+                await activity.end(dismissalPolicy: .immediate)
+                print("LIVE ACTIVITY ENDED: \(activity.id)")
+            }
             self.activity = nil
-            print("LIVE ACTIVITY ENDED")
         }
     }
 }
