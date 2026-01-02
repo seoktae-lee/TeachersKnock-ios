@@ -3,29 +3,53 @@ import Foundation
 enum CharacterLevel: Int, CaseIterable {
     case lv1 = 0, lv2, lv3, lv4, lv5, lv6, lv7, lv8, lv9, lv10
     
-    // ✨ [수정] 현재 일수에 따른 레벨 계산
+    // ✨ [수정] 누적 학습 일수에 따른 레벨 계산 (계단식 성장)
     static func getLevel(uniqueDays: Int) -> CharacterLevel {
-        if uniqueDays < 3 { return .lv1 }
-        
-        // 기존 로그 기반 로직 유지
-        let levelIndex = Int(log(Double(uniqueDays) / 2.0) / log(1.5))
-        return CharacterLevel(rawValue: max(0, min(levelIndex, 9))) ?? .lv1
+        // Lv.1(0) ~ Lv.10(180)
+        switch uniqueDays {
+        case 0..<5: return .lv1
+        case 5..<15: return .lv2
+        case 15..<30: return .lv3
+        case 30..<45: return .lv4  // 스타팅 졸업
+        case 45..<60: return .lv5
+        case 60..<90: return .lv6  // 희귀 졸업
+        case 90..<120: return .lv7
+        case 120..<150: return .lv8 // 전설 졸업
+        case 150..<180: return .lv9
+        default: return .lv10       // 신화 졸업 (최종)
+        }
     }
     
-    // ✨ [추가] 다음 레벨로 가기 위해 필요한 총 일수 계산
+    // ✨ [추가] 다음 레벨 진화를 위한 목표 일수 (누적 기준)
     var daysRequiredForNextLevel: Int {
-        if self == .lv10 { return 0 }
-        // getLevel 로직의 역산: uniqueDays = 2 * (1.5^levelIndex)
-        // 다음 레벨 인덱스는 rawValue + 1
-        let nextIndex = Double(self.rawValue + 1)
-        return Int(ceil(2.0 * pow(1.5, nextIndex)))
+        switch self {
+        case .lv1: return 5
+        case .lv2: return 15
+        case .lv3: return 30
+        case .lv4: return 45
+        case .lv5: return 60
+        case .lv6: return 90
+        case .lv7: return 120
+        case .lv8: return 150
+        case .lv9: return 180
+        case .lv10: return 0 // Max
+        }
     }
     
     // ✨ [추가] 현재 레벨의 시작 일수 (진행률 계산용)
     var daysRequiredForCurrentLevel: Int {
-        if self == .lv1 { return 0 }
-        let currentIndex = Double(self.rawValue)
-        return Int(ceil(2.0 * pow(1.5, currentIndex)))
+        switch self {
+        case .lv1: return 0
+        case .lv2: return 5
+        case .lv3: return 15
+        case .lv4: return 30
+        case .lv5: return 45
+        case .lv6: return 60
+        case .lv7: return 90
+        case .lv8: return 120
+        case .lv9: return 150
+        case .lv10: return 180
+        }
     }
     
     func emoji(for type: String) -> String {

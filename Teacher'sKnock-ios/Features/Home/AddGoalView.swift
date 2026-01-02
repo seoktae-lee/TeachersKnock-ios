@@ -33,80 +33,62 @@ struct AddGoalView: View {
                         .accentColor(GoalColorHelper.color(for: viewModel.selectedColorName))
                 }
                 
-                if dDay >= 200 {
+                // ✨ [수정] 첫 캐릭터 선택 UI (보유한 캐릭터가 없을 때만 표시)
+                if CharacterManager.shared.characters.isEmpty {
                     Section {
-                        Toggle(isOn: $viewModel.useCharacter) {
-                            VStack(alignment: .leading) {
-                                Text("티노 캐릭터 함께 키우기").font(.headline)
-                                Text("목표 기간에 맞춰 캐릭터가 성장합니다.").font(.caption).foregroundColor(.gray)
+                        Button(action: { showCharacterSelection = true }) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("운명의 파트너 선택하기")
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    Text("당신과 함께할 첫 번째 친구를 만나보세요")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                // 선택된 캐릭터 미리보기
+                                if !viewModel.selectedCharacterType.isEmpty {
+                                    let emoji = characterOptions.first(where: { $0.type == viewModel.selectedCharacterType })?.emoji ?? "🥚"
+                                    Text(emoji)
+                                        .font(.system(size: 30))
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    
+                    // 선택 완료 후 이름 입력 확인 (선택 뷰에서 이름을 가져오므로 여기선 표시만)
+                    if !viewModel.characterName.isEmpty {
+                        Section(header: Text("선택된 파트너")) {
+                            HStack {
+                                Text("이름")
+                                Spacer()
+                                Text(viewModel.characterName)
+                                    .foregroundColor(.gray)
                             }
                         }
-                        .tint(GoalColorHelper.color(for: viewModel.selectedColorName))
-                        
-                        if viewModel.useCharacter {
-                            TextField("캐릭터 별명", text: $viewModel.characterName).padding(.vertical, 4)
-                            
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("스타팅 캐릭터 선택").font(.caption).foregroundColor(.gray)
-                                HStack(spacing: 15) {
-                                    ForEach(characterOptions, id: \.type) { option in
-                                        VStack(spacing: 8) {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(viewModel.selectedCharacterType == option.type ?
-                                                          GoalColorHelper.color(for: viewModel.selectedColorName).opacity(0.15) :
-                                                          Color.gray.opacity(0.05))
-                                                    .frame(width: 65, height: 65)
-                                                Text(option.emoji).font(.system(size: 30))
-                                            }
-                                            .overlay(Circle().stroke(GoalColorHelper.color(for: viewModel.selectedColorName),
-                                                                   lineWidth: viewModel.selectedCharacterType == option.type ? 3 : 0))
-                                            
-                                            Text(option.name).font(.system(size: 11, weight: .bold))
-                                                .foregroundColor(viewModel.selectedCharacterType == option.type ? .primary : .gray)
-                                        }
-                                        .onTapGesture {
-                                            withAnimation(.spring()) { viewModel.selectedCharacterType = option.type }
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                    }
-                                }
-                                .padding(.vertical, 10)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("캐릭터 테마 색상").font(.caption).foregroundColor(.gray)
-                                HStack(spacing: 15) {
-                                    // ✨ viewModel에서 직접 availableColors를 참조하여 오류 해결
-                                    ForEach(viewModel.availableColors, id: \.self) { colorName in
-                                        let color = GoalColorHelper.color(for: colorName)
-                                        Circle()
-                                            .fill(color)
-                                            .frame(width: 30, height: 30)
-                                            .overlay(Circle().stroke(Color.gray.opacity(0.5),
-                                                                   lineWidth: viewModel.selectedColorName == colorName ? 3 : 0).scaleEffect(1.3))
-                                            .onTapGesture {
-                                                withAnimation(.spring()) { viewModel.selectedColorName = colorName }
-                                            }
-                                    }
-                                }
-                                .padding(.vertical, 8)
-                            }
+                    }
+                }
+                
+                if dDay >= 200 {
+                    // 메세지만 표시하고 캐릭터 설정 UI 제거 (캐릭터는 이제 전역 관리)
+                    Section {
+                        HStack {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                            Text("장기 목표를 달성하고 캐릭터를 성장시켜 보세요!")
+                                .font(.caption)
+                                .foregroundColor(.gray)
                         }
                     }
                 }
             }
             .navigationTitle("새 목표 추가")
-            .onChange(of: viewModel.targetDate) { newDate in
-                let dDayCount = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: newDate)).day ?? 0
-                withAnimation {
-                    if dDayCount >= 200 {
-                        viewModel.useCharacter = true
-                    } else {
-                        viewModel.useCharacter = false
-                    }
-                }
-            }
+            // .onChange 관련 로직 제거
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("취소") { dismiss() }.foregroundColor(.red)
@@ -114,14 +96,32 @@ struct AddGoalView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("저장") { saveGoal() }
                         .foregroundColor(GoalColorHelper.color(for: viewModel.selectedColorName))
-                        .disabled(viewModel.title.isEmpty)
+                        .disabled(viewModel.title.isEmpty || (CharacterManager.shared.characters.isEmpty && viewModel.characterName.isEmpty)) // 캐릭터 선택 필수
+                }
+            }
+            .sheet(isPresented: $showCharacterSelection) {
+                StartingCharacterSelectionView { type, name in
+                    viewModel.selectedCharacterType = type
+                    viewModel.characterName = name
                 }
             }
         }
     }
     
+    // ✨ [추가] 시트 제어 변수
+    @State private var showCharacterSelection = false
+    
     private func saveGoal() {
         guard let user = Auth.auth().currentUser else { return }
+        
+        // ✨ [추가] 캐릭터가 하나도 없다면 선택한 캐릭터 스타팅으로 지급
+        if CharacterManager.shared.characters.isEmpty {
+            CharacterManager.shared.unlockStartingCharacter(
+                type: viewModel.selectedCharacterType,
+                name: viewModel.characterName
+            )
+        }
+        
         // goals.count를 넘겨주어 첫 목표 자동 대표 설정
         viewModel.addGoal(ownerID: user.uid, context: modelContext, goalsCount: goals.count)
         dismiss()

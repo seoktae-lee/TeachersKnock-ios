@@ -186,6 +186,10 @@ class TimerViewModel: ObservableObject {
             
             context.insert(newRecord)
             FirestoreSyncManager.shared.saveRecord(newRecord)
+            
+            // ✨ [추가] 캐릭터 경험치 증가 (오늘 첫 공부일 때만 적용됨)
+            CharacterManager.shared.addExpToEquippedCharacter()
+            
             resetTimer()
         }
     
