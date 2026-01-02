@@ -141,9 +141,9 @@ struct MainCharacterView: View {
                         
                         Spacer()
                         
-                        // ✨ [수정] 경험치 바를 하단에 넓게 배치
+                        // ✨ [수정] 경험치(일수) 기반이 아닌 실제 저장된 레벨 사용 (등급별 제한 반영됨)
                         VStack(spacing: 6) {
-                            let level = CharacterLevel.getLevel(uniqueDays: character.exp)
+                            let level = CharacterLevel(rawValue: character.level) ?? .lv1
                             let nextDays = level.daysRequiredForNextLevel
                             let currentStart = level.daysRequiredForCurrentLevel
                             let progress = nextDays > 0 ? Double(character.exp - currentStart) / Double(nextDays - currentStart) : 1.0
@@ -156,7 +156,7 @@ struct MainCharacterView: View {
                                         .fill(Color.gray.opacity(0.15))
                                         .frame(height: 10)
                                     
-                                    if level != .lv10 {
+                                    if !level.isMaxLevel(for: character.type) {
                                         Capsule()
                                             .fill(CharacterManager.shared.getRarityColor(type: character.type))
                                             .frame(width: geometry.size.width * CGFloat(progress), height: 10)
@@ -178,13 +178,13 @@ struct MainCharacterView: View {
                                 
                                 Spacer()
                                 
-                                if level != .lv10 {
+                                if !level.isMaxLevel(for: character.type) {
                                     Text("다음 레벨까지 \(daysLeft)일 남음")
                                         .font(.caption)
                                         .bold()
                                         .foregroundColor(.gray)
                                 } else {
-                                    Text("최고 레벨 마스터!")
+                                    Text("최종 진화 완료")
                                         .font(.caption)
                                         .bold()
                                         .foregroundColor(.purple)
@@ -236,6 +236,7 @@ struct MainCharacterView: View {
             "절대 포기하지마",
             "나를 멋있게 진화시켜줘!!",
             "오늘 하루도 힘내세요💪",
+            "미미한 하루가 모여 큰 변화로 다가 올 거에요🌟"
         ]
         return cheers.randomElement() ?? "파이팅!"
     }

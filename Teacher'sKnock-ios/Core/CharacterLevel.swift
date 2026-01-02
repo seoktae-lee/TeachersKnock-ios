@@ -55,18 +55,38 @@ enum CharacterLevel: Int, CaseIterable {
     func emoji(for type: String) -> String {
         switch type {
         case "plant":
-            let plantLine = ["🤎", "🌱", "🌿", "☘️", "🍀", "🎋", "🌲", "🌳", "🍎", "🌈"]
-            return plantLine[min(self.rawValue, 9)]
+            // ✨ [수정] 일반 등급(스타팅)은 Lv.4까지만 성장하므로 이모지 축소
+            let plantLine = ["🍃", "🌱", "🌿", "☘️"]
+            return plantLine[min(self.rawValue, plantLine.count - 1)]
         case "sea":
-            let seaLine = ["🧊", "💧", "🐟", "🐬", "🐳", "🌊", "🐚", "🔱", "🧜‍♂️", "🌟"]
-            return seaLine[min(self.rawValue, 9)]
+            let seaLine = ["🫧", "💧", "🐟", "🐬"]
+            return seaLine[min(self.rawValue, seaLine.count - 1)]
         default:
-            let birdLine = ["🥚", "🐣", "🐥", "🐤", "🕊️", "🦅", "🦉", "🦢", "🐓", "👑"]
-            return birdLine[min(self.rawValue, 9)]
+            let birdLine = ["🥚", "🐣", "🐥", "🐤"]
+            return birdLine[min(self.rawValue, birdLine.count - 1)]
         }
     }
     
-    var title: String {
+    // ✨ [수정] 캐릭터 타입별 최종 진화 문구 반영
+    func title(for type: String) -> String {
+        // 1. 해당 캐릭터 타입의 최대 레벨(인덱스) 확인
+        let maxLevelIndex: Int
+        if ["unicorn", "dragon"].contains(type) {
+            maxLevelIndex = 9 // Lv.10
+        } else if ["whale", "phoenix"].contains(type) {
+            maxLevelIndex = 7 // Lv.8
+        } else if ["tree", "robot"].contains(type) {
+            maxLevelIndex = 5 // Lv.6
+        } else {
+            maxLevelIndex = 3 // Lv.4 (Normal)
+        }
+        
+    // 2. 현재 레벨이 최대 레벨 이상이면 최종 문구 반환
+        if isMaxLevel(for: type) {
+            return "최종 진화 완료"
+        }
+        
+        // 3. 그 외는 레벨별 기본 문구
         switch self {
         case .lv1: return "공부의 시작"
         case .lv2: return "깨어난 호기심"
@@ -79,5 +99,20 @@ enum CharacterLevel: Int, CaseIterable {
         case .lv9: return "만개하는 실력"
         case .lv10: return "최종 진화 완료"
         }
+    }
+    
+    // ✨ [추가] 해당 캐릭터 등급의 최대 레벨 달성 여부 확인
+    func isMaxLevel(for type: String) -> Bool {
+        let maxLevelIndex: Int
+        if ["unicorn", "dragon"].contains(type) {
+            maxLevelIndex = 9 // Lv.10
+        } else if ["whale", "phoenix"].contains(type) {
+            maxLevelIndex = 7 // Lv.8
+        } else if ["tree", "robot"].contains(type) {
+            maxLevelIndex = 5 // Lv.6
+        } else {
+            maxLevelIndex = 3 // Lv.4 (Normal)
+        }
+        return self.rawValue >= maxLevelIndex
     }
 }

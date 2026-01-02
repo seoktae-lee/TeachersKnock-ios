@@ -63,7 +63,7 @@ struct CharacterView: View {
     
     // 경험치 진행률 계산
     private var progress: Double {
-        if currentLevel == .lv10 { return 1.0 }
+        if currentLevel.isMaxLevel(for: characterType) { return 1.0 }
         let start = Double(currentLevel.daysRequiredForCurrentLevel)
         let end = Double(currentLevel.daysRequiredForNextLevel)
         let current = Double(uniqueDays)
@@ -74,7 +74,7 @@ struct CharacterView: View {
     
     // 다음 레벨까지 남은 일수
     private var daysToNextLevel: Int {
-        if currentLevel == .lv10 { return 0 }
+        if currentLevel.isMaxLevel(for: characterType) { return 0 }
         return max(0, currentLevel.daysRequiredForNextLevel - uniqueDays)
     }
     
@@ -124,7 +124,7 @@ struct CharacterView: View {
                         .font(.subheadline) // headline -> subheadline
                         .bold()
                     
-                    Text("LV.\(currentLevel.rawValue + 1) \(currentLevel.title)")
+                    Text("LV.\(currentLevel.rawValue + 1) \(currentLevel.title(for: characterType))")
                         .font(.caption) // subheadline -> caption
                         .fontWeight(.bold)
                         .foregroundColor(GoalColorHelper.color(for: themeColorName))
@@ -141,14 +141,14 @@ struct CharacterView: View {
                     HStack {
                         Text("LV.\(currentLevel.rawValue + 1)")
                         Spacer()
-                        if currentLevel != .lv10 {
+                        if !currentLevel.isMaxLevel(for: characterType) {
                             Text("다음 진화까지 \(daysToNextLevel)일")
                         } else {
-                            Text("최고 레벨 달성!")
+                            Text("최종 진화 완료")
                         }
                         Spacer()
                         // 만렙일 때는 다음 레벨 표시 안 함
-                        Text(currentLevel == .lv10 ? "" : "LV.\(currentLevel.rawValue + 2)")
+                        Text(currentLevel.isMaxLevel(for: characterType) ? "" : "LV.\(currentLevel.rawValue + 2)")
                     }
                     .font(.system(size: 9, weight: .medium)) // 10 -> 9
                     .foregroundColor(.secondary)
@@ -223,11 +223,6 @@ struct CharacterView: View {
     private func checkEvolution() {
         let key = "lastViewedLevel_\(goalTitle)" // 간단히 목표 제목을 키로 사용 (혹은 ID가 있다면 더 좋음)
         let lastLevelRaw = UserDefaults.standard.integer(forKey: key)
-        
-        // 데이터가 아예 없으면(0) 현재 레벨로 세팅 (첫 실행 시 진화 방지)
-        // 하지만 레벨 1이 0이므로, 저장 여부를 확인해야 함.
-        // 여기서는 편의상 UserDefaults.standard.object(forKey:)로 체크하거나,
-        // 로직을 단순화하여: 현재 레벨이 저장된 레벨보다 높으면 진화!
         
         let savedLevel = CharacterLevel(rawValue: lastLevelRaw) ?? .lv1
         
@@ -380,7 +375,7 @@ struct EvolutionView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.white.opacity(0.9))
                         
-                        Text(newLevel.title)
+                        Text(newLevel.title(for: characterType))
                             .font(.largeTitle)
                             .fontWeight(.black)
                             .foregroundColor(themeColor)
@@ -617,7 +612,7 @@ struct EvolutionView: View {
         let renderView = EvolutionShareView(
             characterType: characterType,
             characterEmoji: newLevel.emoji(for: characterType),
-            levelTitle: newLevel.title,
+            levelTitle: newLevel.title(for: characterType),
             levelRaw: newLevel.rawValue + 1,
             themeColor: themeColor
         )

@@ -74,6 +74,9 @@ class AuthManager: ObservableObject {
                         if let context = self.modelContext {
                             self.checkAndRestoreData(uid: user.uid, context: context)
                         }
+                        
+                        // ✨ [New] 캐릭터 데이터 복원 (앱 재설치 시)
+                        CharacterManager.shared.fetchFromFirestore(uid: user.uid)
                     } else {
                         self.isLoggedIn = false
                     }

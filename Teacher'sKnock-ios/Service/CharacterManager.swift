@@ -2,6 +2,8 @@ import Foundation
 import SwiftData
 import Combine
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 struct UserCharacter: Codable, Identifiable {
     var id: String { type }
@@ -29,6 +31,51 @@ struct UserCharacter: Codable, Identifiable {
         case "plant": return "🤎"
         case "sea": return "🧊"
         default: return "❓"
+        }
+    }
+    // ✨ [추가] Firestore 저장을 위한 Dictionary 변환
+    var asDictionary: [String: Any] {
+        var dict: [String: Any] = [
+            "type": type,
+            "name": name,
+            "level": level,
+            "exp": exp,
+            "isUnlocked": isUnlocked
+        ]
+        if let lastStudyDate = lastStudyDate {
+            dict["lastStudyDate"] = lastStudyDate.timeIntervalSince1970
+        }
+        return dict
+    }
+    
+    // ✨ [수정] 기본 Memberwise Initializer 복원
+    init(type: String, name: String, level: Int, exp: Int, isUnlocked: Bool, lastStudyDate: Date?) {
+        self.type = type
+        self.name = name
+        self.level = level
+        self.exp = exp
+        self.isUnlocked = isUnlocked
+        self.lastStudyDate = lastStudyDate
+    }
+    
+    // ✨ [추가] Dictionary -> UserCharacter 복원
+    init?(dictionary: [String: Any]) {
+        guard let type = dictionary["type"] as? String,
+              let name = dictionary["name"] as? String,
+              let level = dictionary["level"] as? Int,
+              let exp = dictionary["exp"] as? Int,
+              let isUnlocked = dictionary["isUnlocked"] as? Bool else { return nil }
+        
+        self.type = type
+        self.name = name
+        self.level = level
+        self.exp = exp
+        self.isUnlocked = isUnlocked
+        
+        if let dateTs = dictionary["lastStudyDate"] as? Double {
+            self.lastStudyDate = Date(timeIntervalSince1970: dateTs)
+        } else {
+            self.lastStudyDate = nil
         }
     }
 }
@@ -67,10 +114,70 @@ class CharacterManager: ObservableObject {
     }
     
     func saveCharacters() {
+        // 1. 로컬 저장 (UserDefaults)
         if let encoded = try? JSONEncoder().encode(characters) {
             UserDefaults.standard.set(encoded, forKey: storageKey)
         }
         UserDefaults.standard.set(equippedCharacterType, forKey: equippedKey)
+        
+        // 2. 서버 저장 (Firestore) - 로그인한 유저만
+        // ✨ 앱 삭제 후 재설치 대비
+        saveToFirestore()
+    }
+    
+    // ✨ [추가] Firestore에 데이터 저장
+    func saveToFirestore() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let characterData = characters.map { $0.asDictionary }
+        let data: [String: Any] = [
+            "characters": characterData,
+            "equippedType": equippedCharacterType,
+            "lastUpdated": FieldValue.serverTimestamp()
+        ]
+        
+        Firestore.firestore().collection("users").document(uid).collection("characters").document("data")
+            .setData(data) { error in
+                if let error = error {
+                    print("❌ 캐릭터 서버 저장 실패: \(error.localizedDescription)")
+                } else {
+                    print("✅ 캐릭터 서버 저장 완료")
+                }
+            }
+    }
+    
+    // ✨ [추가] Firestore에서 데이터 불러오기 (로그인 직후 호출)
+    func fetchFromFirestore(uid: String) {
+        Firestore.firestore().collection("users").document(uid).collection("characters").document("data")
+            .getDocument { [weak self] snapshot, error in
+                guard let self = self, let data = snapshot?.data() else { return }
+                
+                // 캐릭터 리스트 복원
+                if let charDataArray = data["characters"] as? [[String: Any]] {
+                    let fetchedCharacters = charDataArray.compactMap { UserCharacter(dictionary: $0) }
+                    
+                    // ✨ 로컬 데이터와 병합 (서버 데이터가 있으면 덮어씌움)
+                    if !fetchedCharacters.isEmpty {
+                        // 기존 로컬보다 서버 데이터가 더 최신이거나 앱 재설치 상황이라고 가정
+                        DispatchQueue.main.async {
+                            self.characters = fetchedCharacters
+                            print("✅ 서버에서 캐릭터 \(fetchedCharacters.count)개 복원 완료")
+                            
+                            // 장착 중인 캐릭터 복원
+                            if let savedType = data["equippedType"] as? String {
+                                self.equippedCharacterType = savedType
+                            }
+                            
+                            // 로컬에도 최신화 저장
+                            self.saveCharacters() // 재귀 호출 주의: saveCharacters -> saveToFirestore. 
+                            // 하지만 saveToFirestore는 비동기이고 데이터 변화가 없으면 괜찮음. 
+                            // 무한 루프 방지를 위해 로컬 저장은 따로 빼는 것이 좋으나, 
+                            // 여기서는 편의상 saveCharacters() 호출하되, 
+                            // saveCharacters() 내부의 saveToFirestore는 어차피 동일 데이터를 덮어쓰므로 큰 문제 없음.
+                        }
+                    }
+                }
+            }
     }
     
     func equipCharacter(type: String) {
