@@ -17,7 +17,27 @@ class AuthManager: ObservableObject {
     private var handle: AuthStateDidChangeListenerHandle?
     
     init() {
+        checkFreshInstall()
         registerAuthStateListener()
+    }
+    
+    // ✨ [New] 앱 재설치 시 강제 로그아웃 처리
+    private func checkFreshInstall() {
+        let hasRunBefore = UserDefaults.standard.bool(forKey: "hasRunBefore")
+        
+        if !hasRunBefore {
+            print("🚀 앱이 처음 실행되었습니다 (또는 재설치됨). 기존 세션을 정리합니다.")
+            do {
+                try Auth.auth().signOut()
+                // ✨ 중요: UserDefaults는 앱 삭제 시 함께 날아가므로, 
+                // 재설치 후 첫 실행임을 감지할 수 있습니다.
+                UserDefaults.standard.set(true, forKey: "hasRunBefore")
+            } catch {
+                print("초기화 로그아웃 실패: \(error)")
+            }
+        } else {
+            print("✅ 기존 앱 실행 기록이 확인되었습니다.")
+        }
     }
     
     func setup(settingsManager: SettingsManager, modelContext: ModelContext) {
