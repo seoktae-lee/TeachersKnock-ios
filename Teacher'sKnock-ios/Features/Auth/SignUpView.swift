@@ -425,21 +425,30 @@ struct SignUpView: View {
     }
     
     func saveUserData(uid: String) {
-        let db = Firestore.firestore()
-        let userData: [String: Any] = [
-            "uid": uid,
-            "email": email,
-            "nickname": nickname,
-            "university": selectedUniversity,
-            "joinDate": Timestamp(date: Date())
-        ]
-        
-        db.collection("users").document(uid).setData(userData) { error in
-            if let error = error {
-                print("저장 실패: \(error.localizedDescription)")
-            } else {
-                try? Auth.auth().signOut()
-                alertTitle = "가입 완료"; alertMessage = "회원가입이 완료되었습니다!\n로그인 화면으로 이동합니다."; isSuccess = true; showAlert = true
+        // ✨ [핵심] 저장 전에 티처스노크 ID 생성
+        authManager.generateUniqueTeacherKnockID { generatedID in
+            let db = Firestore.firestore()
+            let userData: [String: Any] = [
+                "uid": uid,
+                "email": self.email,
+                "nickname": self.nickname,
+                "university": self.selectedUniversity,
+                "teacherKnockID": generatedID, // [New] ID 추가
+                "joinDate": Timestamp(date: Date())
+            ]
+            
+            db.collection("users").document(uid).setData(userData) { error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("저장 실패: \(error.localizedDescription)")
+                    } else {
+                        try? Auth.auth().signOut()
+                        self.alertTitle = "가입 완료"
+                        self.alertMessage = "회원가입이 완료되었습니다!\n(ID: \(generatedID))\n로그인 화면으로 이동합니다."
+                        self.isSuccess = true
+                        self.showAlert = true
+                    }
+                }
             }
         }
     }

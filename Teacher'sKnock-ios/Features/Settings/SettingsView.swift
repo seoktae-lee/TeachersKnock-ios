@@ -78,6 +78,25 @@ struct SettingsView: View {
                             .foregroundColor(.gray)
                     }
                     
+                    // ✨ [New] 티처스노크 ID
+                    HStack {
+                        Label("티처스노크 ID", systemImage: "tag")
+                        Spacer()
+                        Text(authManager.userTeacherKnockID ?? "생성 중...")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        if let id = authManager.userTeacherKnockID {
+                            Button(action: {
+                                UIPasteboard.general.string = id
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                                    .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.borderless) // 리스트 내 버튼 동작 분리
+                        }
+                    }
+                    
                     Button("로그아웃") { showingLogoutAlert = true }
                         .foregroundColor(.red)
                         .alert("로그아웃", isPresented: $showingLogoutAlert) {

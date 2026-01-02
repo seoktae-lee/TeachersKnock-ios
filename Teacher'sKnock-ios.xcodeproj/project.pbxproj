@@ -72,6 +72,12 @@
 		5498D91C2F064FEF00BAB26B /* PrimaryGoalWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */; };
 		5498D91D2F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */; };
 		5498D91E2F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */; };
+		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
+		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
+		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
+		54BE67FC2F07C3B700E6EC64 /* MemberInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */; };
+		54BE67FD2F07C3B700E6EC64 /* StudyGroupListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F92F07C3B700E6EC64 /* StudyGroupListView.swift */; };
+		54BE67FE2F07C3B700E6EC64 /* StudyGroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F82F07C3B700E6EC64 /* StudyGroupDetailView.swift */; };
 		54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */; };
 		54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */; };
 		54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */; };
@@ -176,6 +182,12 @@
 		5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoalWidgetProvider.swift; sourceTree = "<group>"; };
 		5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeachersKnockWidgetBundle.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
+		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
+		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
+		54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupCreationView.swift; sourceTree = "<group>"; };
+		54BE67F82F07C3B700E6EC64 /* StudyGroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupDetailView.swift; sourceTree = "<group>"; };
+		54BE67F92F07C3B700E6EC64 /* StudyGroupListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupListView.swift; sourceTree = "<group>"; };
 		54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalTimelineView.swift; sourceTree = "<group>"; };
 		54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySwipeView.swift; sourceTree = "<group>"; };
 		54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCalendarView.swift; sourceTree = "<group>"; };
@@ -264,6 +276,7 @@
 		5459AE532EE19E41008EE0E4 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */,
 				5459AE202EE19535008EE0E4 /* ScheduleItem.swift */,
 				5459AE272EE19535008EE0E4 /* StudyRecord.swift */,
 				5459AE172EE19535008EE0E4 /* Goal.swift */,
@@ -276,6 +289,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */,
 				5498D90C2F06330900BAB26B /* WidgetDataHelper.swift */,
 				5459AE102EE19535008EE0E4 /* AuthManager.swift */,
 				5459AE212EE19535008EE0E4 /* SettingsManager.swift */,
@@ -290,6 +304,7 @@
 		5459AE552EE19EAB008EE0E4 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				54BE67FA2F07C3B700E6EC64 /* StudyGroup */,
 				5459AE5A2EE1A059008EE0E4 /* Settings */,
 				5459AE592EE19F53008EE0E4 /* Auth */,
 				5459AE582EE19F2B008EE0E4 /* Home */,
@@ -407,6 +422,17 @@
 				5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
+			isa = PBXGroup;
+			children = (
+				54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */,
+				54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */,
+				54BE67F82F07C3B700E6EC64 /* StudyGroupDetailView.swift */,
+				54BE67F92F07C3B700E6EC64 /* StudyGroupListView.swift */,
+			);
+			path = StudyGroup;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -559,6 +585,7 @@
 				5459AE3C2EE19535008EE0E4 /* QuoteManager.swift in Sources */,
 				546B334E2F004E9900741EE2 /* ScheduleManager.swift in Sources */,
 				5459AE3D2EE19535008EE0E4 /* RootView.swift in Sources */,
+				54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */,
 				5459AE3E2EE19535008EE0E4 /* ScheduleItem.swift in Sources */,
 				54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */,
 				546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */,
@@ -585,12 +612,17 @@
 				5432C7582EE3FCBF005B4221 /* NoticeData.swift in Sources */,
 				5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */,
 				54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */,
+				54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */,
 				5432C75C2EE3FE24005B4221 /* NoticeListView.swift in Sources */,
 				5432C75A2EE3FCF7005B4221 /* NoticeSettingsView.swift in Sources */,
 				5498D90D2F06330900BAB26B /* WidgetDataHelper.swift in Sources */,
 				5405212D2F06710C001B48A7 /* StudyTimerAttributes.swift in Sources */,
 				54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */,
 				5459AE5E2EE1A1F4008EE0E4 /* TimerViewModel.swift in Sources */,
+				54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */,
+				54BE67FC2F07C3B700E6EC64 /* MemberInviteView.swift in Sources */,
+				54BE67FD2F07C3B700E6EC64 /* StudyGroupListView.swift in Sources */,
+				54BE67FE2F07C3B700E6EC64 /* StudyGroupDetailView.swift in Sources */,
 				544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */,
 				54F81CDA2EE1D13B002226B4 /* ReportListView.swift in Sources */,
 				54DBCD1A2F011C2100B43C2B /* StudyTimerView.swift in Sources */,

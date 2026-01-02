@@ -24,9 +24,14 @@ struct MainTabView: View {
                 .tabItem { Label("타이머", systemImage: "timer") }
                 .tag(2) // StudyNavigationManager의 triggerStudy에서 이 번호로 이동
             
+            // ✨ [New] 스터디 그룹 탭
+            StudyGroupListView()
+                .tabItem { Label("스터디", systemImage: "person.3.fill") }
+                .tag(3)
+            
             SettingsView()
                 .tabItem { Label("설정", systemImage: "gearshape.fill") }
-                .tag(3)
+                .tag(4)
         }
         .accentColor(Color(red: 0.35, green: 0.65, blue: 0.95))
         // ✨ 3. 하위 뷰들이 접근할 수 있도록 환경 객체로 주입
