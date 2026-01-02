@@ -108,12 +108,14 @@ class TimerViewModel: ObservableObject {
     private let kStartTime = "timer_startTime"
     private let kAccumulated = "timer_accumulated"
     private let kSubject = "timer_subject"
+    private let kPurpose = "timer_purpose" // ✨ [추가] 공부 목적 저장 키
     
     private func saveTimerState() {
         UserDefaults.standard.set(true, forKey: kIsRunning)
         UserDefaults.standard.set(startTime, forKey: kStartTime)
         UserDefaults.standard.set(accumulatedTime, forKey: kAccumulated)
         UserDefaults.standard.set(selectedSubject, forKey: kSubject)
+        UserDefaults.standard.set(selectedPurpose.rawValue, forKey: kPurpose) // ✨ [추가] 목적 저장
     }
     
     private func clearTimerState() {
@@ -125,9 +127,16 @@ class TimerViewModel: ObservableObject {
     private func restoreTimerState() {
         let wasRunning = UserDefaults.standard.bool(forKey: kIsRunning)
         let savedSubject = UserDefaults.standard.string(forKey: kSubject)
+        let savedPurpose = UserDefaults.standard.string(forKey: kPurpose) // ✨ [추가] 목적 로드
         
         if let subject = savedSubject {
             self.selectedSubject = subject
+        }
+        
+        // ✨ [추가] 목적 복원 로직
+        if let purposeStr = savedPurpose,
+           let purpose = StudyPurpose.flexibleMatch(purposeStr) {
+            self.selectedPurpose = purpose
         }
         
         if wasRunning {
@@ -198,15 +207,15 @@ class TimerViewModel: ObservableObject {
         // 2. 제목 연동 (메모)
         self.linkedScheduleTitle = item.title
         
-        // 3. 공부 목적 연동 (이 부분이 누락되어 있었습니다!)
-        // ScheduleItem에 저장된 문자열(rawValue)을 StudyPurpose 타입으로 변환하여 적용
-        if let purpose = StudyPurpose(rawValue: item.studyPurpose) {
+        // 3. 공부 목적 연동
+        // ✨ [수정] 유연한 매칭 시스템 사용 (String -> Enum 변환 강화)
+        if let purpose = StudyPurpose.flexibleMatch(item.studyPurpose) {
             self.selectedPurpose = purpose
             print("🔄 타이머 목적 변경됨: \(purpose.localizedName)")
         } else {
             // 값이 없거나 매칭되지 않을 경우 기본값 사용
             self.selectedPurpose = .lectureWatching
-            print("⚠️ 공부 목적 연동 실패 (기본값 적용)")
+            print("⚠️ 공부 목적 연동 실패 (기본값 적용): \(item.studyPurpose)")
         }
     }
     

@@ -86,10 +86,14 @@ class FirestoreSyncManager {
                     let isPostponed = data["isPostponed"] as? Bool ?? false
                     let hasReminder = data["hasReminder"] as? Bool ?? false
                     
+                    // ✨ [수정] 공부 목적 복구 로직 추가
+                    let studyPurpose = data["studyPurpose"] as? String ?? StudyPurpose.lectureWatching.rawValue
+                    
                     let newItem = ScheduleItem(
                         id: id, title: title, details: details, startDate: startDate, endDate: endDate,
                         subject: subject, isCompleted: isCompleted, hasReminder: hasReminder,
-                        ownerID: uid, isPostponed: isPostponed
+                        ownerID: uid, isPostponed: isPostponed,
+                        studyPurpose: studyPurpose // ✨ parameter 전달
                     )
                     context.insert(newItem)
                 }

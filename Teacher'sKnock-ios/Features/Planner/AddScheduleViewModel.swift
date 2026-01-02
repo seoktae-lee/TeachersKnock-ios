@@ -137,7 +137,7 @@ class AddScheduleViewModel: ObservableObject {
             self.hasReminder = item.hasReminder
             
             // 공부 목적 데이터 복원
-            if let purpose = StudyPurpose(rawValue: item.studyPurpose) {
+            if let purpose = StudyPurpose.flexibleMatch(item.studyPurpose) {
                 self.selectedPurpose = purpose
             }
             return
