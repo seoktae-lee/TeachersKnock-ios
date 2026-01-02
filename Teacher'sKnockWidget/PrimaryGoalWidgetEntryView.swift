@@ -15,88 +15,108 @@ struct PrimaryGoalWidgetEntryView: View {
     
     @ViewBuilder
     func realContent(data: WidgetData) -> some View {
-        GeometryReader { proxy in
-            let themeColor = GoalColorHelper.color(for: data.characterColor)
-            let emoji = CharacterLevel(rawValue: data.level - 1)?.emoji(for: data.characterType) ?? "🥚"
-            
+        let themeColor = GoalColorHelper.color(for: data.characterColor)
+        let emoji = CharacterLevel(rawValue: data.level - 1)?.emoji(for: data.characterType) ?? "🥚"
+        
+        if family == .accessoryRectangular {
+            HStack(spacing: 0) {
+                Text(emoji)
+                    .font(.system(size: 20))
+                    .padding(6)
+                    .background(Circle().stroke(lineWidth: 1))
+                Spacer()
+                Text(dDayString(data.dDay))
+                    .font(.system(size: 32, weight: .black, design: .rounded))
+            }
+        } else if family == .accessoryCircular {
+            // Lock Screen Widget (Circular)
             ZStack {
-                // 배경: 은은한 그라데이션
-                LinearGradient(
-                    gradient: Gradient(colors: [themeColor.opacity(0.1), .white]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                
-                if family == .systemSmall {
-                    VStack(spacing: 8) {
-                        // D-Day
-                        Text(dDayString(data.dDay))
-                            .font(.system(size: 24, weight: .black, design: .rounded))
-                            .foregroundColor(data.dDay <= 7 ? .red : .primary)
-                            .minimumScaleFactor(0.8)
-                        
-                        // 캐릭터
-                        ZStack {
-                            Circle()
-                                .fill(themeColor.opacity(0.2))
-                                .frame(width: 50, height: 50)
-                            Text(emoji)
-                                .font(.system(size: 28))
-                        }
-                        
-                        // 목표 제목 (짧게)
-                        Text(data.goalTitle)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .lineLimit(1)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
-                } else {
-                    // Medium Size
-                    HStack(spacing: 20) {
-                        // 좌측: 캐릭터 영역
-                        VStack(spacing: 5) {
+                Text(emoji)
+                    .font(.system(size: 30))
+                    .padding(4)
+                    .background(Circle().stroke(lineWidth: 1))
+            }
+        } else {
+            GeometryReader { proxy in
+                ZStack {
+                    // 배경: 은은한 그라데이션
+                    LinearGradient(
+                        gradient: Gradient(colors: [themeColor.opacity(0.1), .white]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    if family == .systemSmall {
+                        VStack(spacing: 8) {
+                            // D-Day
+                            Text(dDayString(data.dDay))
+                                .font(.system(size: 24, weight: .black, design: .rounded))
+                                .foregroundColor(data.dDay <= 7 ? .red : .primary)
+                                .minimumScaleFactor(0.8)
+                            
+                            // 캐릭터
                             ZStack {
                                 Circle()
                                     .fill(themeColor.opacity(0.2))
-                                    .frame(width: 60, height: 60)
+                                    .frame(width: 50, height: 50)
                                 Text(emoji)
-                                    .font(.system(size: 34))
+                                    .font(.system(size: 28))
                             }
-                            Text("LV.\(data.level)")
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(themeColor.opacity(0.3))
-                                .cornerRadius(8)
-                                .foregroundColor(themeColor)
-                        }
-                        
-                        Divider()
-                            .frame(height: 60)
-                        
-                        // 우측: 정보 영역
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("나의 목표")
-                                .font(.caption)
-                                .foregroundColor(.gray)
                             
+                            // 목표 제목 (짧게)
                             Text(data.goalTitle)
-                                .font(.headline)
+                                .font(.caption2)
+                                .fontWeight(.bold)
                                 .lineLimit(1)
-                                .foregroundColor(.primary)
-                            
-                            Spacer().frame(height: 4)
-                            
-                            Text(dDayString(data.dDay))
-                                .font(.system(size: 32, weight: .black, design: .rounded))
-                                .foregroundColor(data.dDay <= 7 ? .red : themeColor)
+                                .foregroundColor(.secondary)
                         }
-                        Spacer()
+                        .padding()
+                    } else if family == .systemMedium {
+                        // Medium Size
+                        HStack(spacing: 20) {
+                            // 좌측: 캐릭터 영역
+                            VStack(spacing: 5) {
+                                ZStack {
+                                    Circle()
+                                        .fill(themeColor.opacity(0.2))
+                                        .frame(width: 60, height: 60)
+                                    Text(emoji)
+                                        .font(.system(size: 34))
+                                }
+                                Text("LV.\(data.level)")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(themeColor.opacity(0.3))
+                                    .cornerRadius(8)
+                                    .foregroundColor(themeColor)
+                            }
+                            
+                            Divider()
+                                .frame(height: 60)
+                            
+                            // 우측: 정보 영역
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("나의 목표")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                
+                                Text(data.goalTitle)
+                                    .font(.headline)
+                                    .lineLimit(1)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer().frame(height: 4)
+                                
+                                Text(dDayString(data.dDay))
+                                    .font(.system(size: 32, weight: .black, design: .rounded))
+                                    .foregroundColor(data.dDay <= 7 ? .red : themeColor)
+                            }
+                            Spacer()
+                        }
+                        .padding(20)
                     }
-                    .padding(20)
                 }
             }
         }
@@ -116,7 +136,7 @@ struct PrimaryGoalWidgetEntryView: View {
             }
         }
     }
-    
+        
     func dDayString(_ dDay: Int) -> String {
         if dDay == 0 { return "D-Day" }
         return dDay > 0 ? "D-\(dDay)" : "완료"
