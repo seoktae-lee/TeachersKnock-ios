@@ -104,4 +104,23 @@ class AuthManager: ObservableObject {
             user.delete { error in completion(error == nil, error) }
         }
     }
+    
+    // ✨ [New] 닉네임 중복 확인
+    func checkNicknameDuplicate(nickname: String, completion: @escaping (Bool) -> Void) {
+        Firestore.firestore().collection("users")
+            .whereField("nickname", isEqualTo: nickname)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("닉네임 중복 확인 실패: \(error)")
+                    completion(false) // 에러 시 일단 중복 아님(또는 에러 처리)으로 처리하지 않고, 안전하게 진행 불가하게 할 수도 있지만 여기선 true/false만 반환
+                    return
+                }
+                // 문서가 하나라도 있으면 중복
+                if let documents = snapshot?.documents, !documents.isEmpty {
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+    }
 }
