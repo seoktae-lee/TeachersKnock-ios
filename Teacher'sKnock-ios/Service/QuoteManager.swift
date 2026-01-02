@@ -71,22 +71,41 @@ class QuoteManager: ObservableObject {
     }
     
     private func fetchQuoteFromFirebase(completion: @escaping (Quote?) -> Void) {
-        db.collection("quotes").getDocuments { snapshot, error in
-            guard let documents = snapshot?.documents, !documents.isEmpty else {
-                print("⚠️ 명언 데이터를 가져오지 못했습니다: \(error?.localizedDescription ?? "알 수 없는 오류")")
+        // 1. 먼저 메타데이터에서 전체 명언 개수를 가져옵니다.
+        db.collection("metadata").document("quotes_info").getDocument { snapshot, error in
+            guard let data = snapshot?.data(),
+                  let totalCount = data["total_count"] as? Int,
+                  totalCount > 0 else {
+                print("⚠️ 명언 메타데이터를 가져오지 못했습니다: \(error?.localizedDescription ?? "알 수 없는 오류")")
+                // 메타데이터 실패 시 기존처럼 무작위로 하나만 가져오도록 시도하거나 기본값 반환
+                // 여기서는 안전하게 기본값 처리를 위해 nil 반환
                 completion(nil)
                 return
             }
             
-            if let randomDoc = documents.randomElement() {
-                let data = randomDoc.data()
-                let quote = Quote(
-                    id: randomDoc.documentID,
-                    text: data["text"] as? String ?? "오늘도 파이팅!",
-                    author: data["author"] as? String ?? "티노"
-                )
-                completion(quote)
-            }
+            // 2. 0부터 totalCount - 1 사이의 랜덤 인덱스 생성
+            let randomIndex = Int.random(in: 0..<totalCount)
+            
+            // 3. 해당 인덱스를 가진 명언 문서를 쿼리 (단 1개의 문서만 읽음)
+            self.db.collection("quotes")
+                .whereField("index", isEqualTo: randomIndex)
+                .limit(to: 1)
+                .getDocuments { snapshot, error in
+                    guard let documents = snapshot?.documents,
+                          let doc = documents.first else {
+                        print("⚠️ 명언 데이터를 가져오지 못했습니다(index: \(randomIndex)): \(error?.localizedDescription ?? "문서 없음")")
+                        completion(nil)
+                        return
+                    }
+                    
+                    let data = doc.data()
+                    let quote = Quote(
+                        id: doc.documentID,
+                        text: data["text"] as? String ?? "오늘도 파이팅!",
+                        author: data["author"] as? String ?? "티노"
+                    )
+                    completion(quote)
+                }
         }
     }
 }

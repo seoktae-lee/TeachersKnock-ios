@@ -1,0 +1,7 @@
+
+# Firebase Secrets
+scripts/serviceAccountKey.json
+
+# User-specific
+.DS_Store
+xcuserdata/
