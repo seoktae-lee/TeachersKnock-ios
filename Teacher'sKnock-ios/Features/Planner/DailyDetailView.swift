@@ -54,7 +54,12 @@ struct DailyDetailView: View {
         let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86400)
         
         _schedules = Query(filter: #Predicate<ScheduleItem> {
-            $0.ownerID == userId && $0.startDate >= start && $0.startDate < end
+            // 해당 날짜와 겹치는 모든 일정을 가져옵니다.
+            // 1. 해당 날짜에 시작하는 일정
+            ($0.ownerID == userId && $0.startDate >= start && $0.startDate < end) ||
+            // 2. 해당 날짜 이전에 시작해서 해당 날짜를 포함하거나 넘어가는 일정 (Cross-day)
+            // ✨ [수정] Force Unwrap(!) 제거하여 런타임 오류 방지. endDate가 없으면 startDate로 간주.
+            ($0.ownerID == userId && $0.startDate < start && ($0.endDate ?? $0.startDate) > start)
         }, sort: \.startDate)
         
         _records = Query(filter: #Predicate<StudyRecord> {

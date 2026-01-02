@@ -105,9 +105,9 @@ struct PlannerView: View {
             }
             .background(Color(.systemGray6).ignoresSafeArea())
             .navigationTitle("스터디 플래너")
-            .onAppear {
-                // 앱 재설치 시 서버에서 내 일정 복구
-                if schedules.isEmpty {
+            // ✨ [수정] onAppear 대신 task를 사용하여 비동기 작업 및 ID 변경 감지
+            .task(id: currentUserId) {
+                if !currentUserId.isEmpty && schedules.isEmpty {
                     restoreSchedulesFromServer()
                 }
             }

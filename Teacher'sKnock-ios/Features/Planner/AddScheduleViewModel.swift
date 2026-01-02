@@ -46,7 +46,8 @@ class AddScheduleViewModel: ObservableObject {
     
     // ✨ [수정] 예상 학습 시간 표시 문자열 (음수/0분 처리 보완)
     var durationString: String {
-        let diff = endDate.timeIntervalSince(startDate)
+        // ✨ 유효 종료 시간 사용
+        let diff = effectiveEndDate.timeIntervalSince(startDate)
         let minutes = Int(diff / 60)
         
         if minutes <= 0 { return "0분" }
@@ -59,13 +60,37 @@ class AddScheduleViewModel: ObservableObject {
         }
     }
     
+    // ✨ [추가] UI 표시용 날짜 포맷
+    var formattedDateString: String {
+        let f = DateFormatter()
+        f.dateFormat = "M월 d일"
+        f.locale = Locale(identifier: "ko_KR")
+        return f.string(from: startDate)
+    }
+    
+    // ✨ [추가] DatePicker 제한용 범위 (해당 날짜의 00:00 ~ 23:59)
+    var dateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: startDate)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)?.addingTimeInterval(-1) ?? startOfDay
+        return startOfDay...endOfDay
+    }
+    
+    // ✨ [추가] 유효 종료 시간 계산 (종료 시간이 시작 시간보다 빠르면 내일로 간주)
+    var effectiveEndDate: Date {
+        if endDate < startDate {
+            return Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+        }
+        return endDate
+    }
+    
     // MARK: - 임시 객체 생성
     var draftSchedule: ScheduleItem {
         ScheduleItem(
             title: title.isEmpty ? selectedSubject : title,
             details: "",
             startDate: startDate,
-            endDate: endDate,
+            endDate: effectiveEndDate, // ✨ 수정된 종료 시간 사용
             subject: selectedSubject,
             isCompleted: false,
             hasReminder: hasReminder,
@@ -210,9 +235,8 @@ class AddScheduleViewModel: ObservableObject {
     func saveSchedule(dismissAction: () -> Void) {
         guard let context = modelContext else { return }
         
-        if endDate <= startDate {
-            endDate = startDate.addingTimeInterval(1800)
-        }
+        // ✨ [수정] 유효 종료 시간 계산 (자정 넘김 처리)
+        let finalEndDate = effectiveEndDate
         
         let finalTitle = title.isEmpty ? selectedSubject : title
         
@@ -223,7 +247,7 @@ class AddScheduleViewModel: ObservableObject {
             // [수정 모드] 기존 객체 업데이트
             existingItem.title = finalTitle
             existingItem.startDate = startDate
-            existingItem.endDate = endDate
+            existingItem.endDate = finalEndDate
             existingItem.subject = selectedSubject
             existingItem.hasReminder = hasReminder
             existingItem.studyPurpose = selectedPurpose.rawValue
@@ -239,7 +263,7 @@ class AddScheduleViewModel: ObservableObject {
                 title: finalTitle,
                 details: "",
                 startDate: startDate,
-                endDate: endDate,
+                endDate: finalEndDate,
                 subject: selectedSubject,
                 isCompleted: false,
                 hasReminder: hasReminder,

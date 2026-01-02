@@ -3,7 +3,7 @@ import Foundation
 
 @Model
 final class ScheduleItem: Identifiable {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var title: String
     var details: String
     var startDate: Date

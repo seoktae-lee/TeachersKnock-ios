@@ -296,6 +296,8 @@ struct TitleSection: View {
 
 struct TimeSection: View {
     @ObservedObject var viewModel: AddScheduleViewModel
+    @State private var showingStartPicker = false
+    @State private var showingEndPicker = false
     private let feedback = UIImpactFeedbackGenerator(style: .medium)
     
     var body: some View {
@@ -303,6 +305,12 @@ struct TimeSection: View {
             HStack {
                 Image(systemName: "3.circle.fill").foregroundColor(.blue)
                 Text("시간을 설정해주세요").font(.headline)
+                
+                // 날짜 표시
+                Text("(\(viewModel.formattedDateString))")
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                    .fontWeight(.semibold)
                 
                 Spacer()
                 
@@ -317,18 +325,22 @@ struct TimeSection: View {
             }
             .padding(.horizontal)
             
+            // ✨ [수정] 커스텀 피커 버튼 영역
             HStack(spacing: 0) {
-                DatePicker("시작", selection: $viewModel.startDate, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
-                Image(systemName: "arrow.right").foregroundColor(.gray).frame(width: 40)
-                DatePicker("종료", selection: $viewModel.endDate, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
+                timeButton(title: "시작", date: viewModel.startDate) {
+                    showingStartPicker = true
+                }
+                
+                Image(systemName: "arrow.right")
+                    .foregroundColor(.gray)
+                    .frame(width: 40)
+                    .padding(.top, 20) // 텍스트 높이 고려하여 정렬 맞춤
+                
+                timeButton(title: "종료", date: viewModel.endDate) {
+                    showingEndPicker = true
+                }
             }
             .padding(.horizontal)
-            
-
             
             // 시간 조절 버튼들
             HStack(spacing: 8) {
@@ -351,7 +363,7 @@ struct TimeSection: View {
                 .padding(.horizontal)
             }
             
-            // ✨ [알림] 알림 설정 토글 (최하단 이동)
+            // 알림 설정 토글
             Toggle(isOn: $viewModel.hasReminder) {
                 HStack {
                     Image(systemName: "bell.fill")
@@ -373,5 +385,108 @@ struct TimeSection: View {
                 }
             }
         }
+        .sheet(isPresented: $showingStartPicker) {
+            SingleDayTimePicker(selection: $viewModel.startDate, title: "시작 시간 설정")
+                .presentationDetents([.height(300)])
+        }
+        .sheet(isPresented: $showingEndPicker) {
+            SingleDayTimePicker(selection: $viewModel.endDate, title: "종료 시간 설정")
+                .presentationDetents([.height(300)])
+        }
+    }
+    
+    // 시간 표시 버튼 헬퍼
+    func timeButton(title: String, date: Date, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Text(title).font(.caption).foregroundColor(.gray)
+                HStack {
+                    Text(formatTime(date))
+                        .font(.title3.bold())
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+            }
+        }
+    }
+    
+    func formatTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "a h:mm"
+        f.locale = Locale(identifier: "ko_KR")
+        return f.string(from: date)
+    }
+}
+
+// ✨ [추가] 커스텀 휠 피커 (날짜 변경 없는 순수 시간 선택기)
+struct SingleDayTimePicker: View {
+    @Binding var selection: Date
+    let title: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack {
+            // 헤더
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                Button("완료") {
+                    dismiss()
+                }
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            
+            // 휠 피커 영역
+            HStack(spacing: 0) {
+                // 시간 (0~23)
+                Picker("시간", selection: Binding(
+                    get: { Calendar.current.component(.hour, from: selection) },
+                    set: { newHour in
+                        let calendar = Calendar.current
+                        if let newDate = calendar.date(bySetting: .hour, value: newHour, of: selection) {
+                            selection = newDate
+                        }
+                    }
+                )) {
+                    ForEach(0..<24) { hour in
+                        Text("\(hour)시").tag(hour)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                
+                // 분 (0~59)
+                Picker("분", selection: Binding(
+                    get: { Calendar.current.component(.minute, from: selection) },
+                    set: { newMinute in
+                        let calendar = Calendar.current
+                        if let newDate = calendar.date(bySetting: .minute, value: newMinute, of: selection) {
+                            selection = newDate
+                        }
+                    }
+                )) {
+                    ForEach(0..<60) { minute in
+                        Text("\(minute)분").tag(minute)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal)
+            
+            Spacer()
+        }
+        .background(Color.white)
     }
 }
