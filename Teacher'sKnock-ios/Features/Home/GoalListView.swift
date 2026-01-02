@@ -373,15 +373,37 @@ struct DDayBannerView: View {
     
     var body: some View {
         let dDay = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: examDate)).day ?? 0
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(targetOffice) 임용 1차 시험까지").font(.subheadline).bold().foregroundColor(.white.opacity(0.9))
-                Text("D-\(dDay)").font(.system(size: 34, weight: .black, design: .rounded)).foregroundColor(.white)
+        ZStack {
+            // 배경 그라데이션
+            LinearGradient(gradient: Gradient(colors: [.blue, Color(red: 0.29, green: 0.54, blue: 0.86)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+            
+            // 은은한 배경 로고 (확대 및 우측 배치)
+            HStack {
+                Spacer()
+                Image("TeachersKnockLogo")
+                    .resizable()
+                    .renderingMode(.template)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 180, height: 180) // 로고 대폭 확대
+                    .rotationEffect(.degrees(-20)) // ✨ [추가] 살짝 기울여 생동감 부여
+                    .foregroundColor(.white.opacity(0.15)) // 은은하게 처리
+                    .offset(x: 40, y: 30) // 우측 하단으로 치우치게 배치
             }
-            Spacer()
-            Image(systemName: "graduationcap.fill").font(.system(size: 50)).foregroundColor(.white.opacity(0.3))
+            
+            // 전경 텍스트 내용
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(targetOffice) 임용 1차 시험까지").font(.subheadline).bold().foregroundColor(.white.opacity(0.9))
+                    Text("D-\(dDay)").font(.system(size: 34, weight: .black, design: .rounded)).foregroundColor(.white)
+                }
+                Spacer()
+            }
+            .padding(24)
         }
-        .padding(24).background(LinearGradient(gradient: Gradient(colors: [.blue, Color(red: 0.29, green: 0.54, blue: 0.86)]), startPoint: .topLeading, endPoint: .bottomTrailing)).cornerRadius(20).padding(.horizontal)
+        .frame(height: 120) // 높이 고정 (선택 사항, 내부 컨텐츠에 따라 조절 가능)
+        .cornerRadius(20)
+        .clipped() // 영역을 벗어나는 로고 잘라내기
+        .padding(.horizontal)
     }
 }
 
