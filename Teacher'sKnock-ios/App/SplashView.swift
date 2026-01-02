@@ -13,7 +13,7 @@ struct SplashView: View {
                 .ignoresSafeArea()
             
             // 2. 로고 및 텍스트
-            VStack(spacing: 25) { // 로고와 텍스트 그룹 사이의 간격 (40 -> 25로 축소)
+            VStack(spacing: 15) { // 로고와 텍스트 그룹 사이의 간격 (25 -> 15로 축소)
                 // 로고 아이콘
                 Image("TeachersKnockLogo")
                     .resizable()
@@ -35,7 +35,7 @@ struct SplashView: View {
             }
             .scaleEffect(startAnimation ? 1.0 : 0.8) // 작았다가 커지는 효과
             .opacity(startAnimation ? 1.0 : 0.0)     // 투명했다가 나타나는 효과
-            .offset(y: 40) // 화면 중앙보다 조금 아래로 배치
+            .offset(y: -20) // 화면 중앙보다 조금 위로 배치
         }
         .onAppear {
             // 0.3초 동안 부드럽게 등장
