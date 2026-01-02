@@ -101,6 +101,13 @@ class AuthManager: ObservableObject {
                     print("🎓 내 대학교 확인됨: \(univName)")
                 }
                 
+                // ✨ [New] Firestore에서 목표 교육청 정보 가져오기 (앱 재설치 대응)
+                if let officeRawValue = data["targetOffice"] as? String,
+                   let office = OfficeOfEducation(rawValue: officeRawValue) {
+                    self.settingsManager?.targetOffice = office
+                    print("🎯 목표 교육청 복원됨: \(officeRawValue)")
+                }
+                
                 // ✨ 티처스노크 ID 가져오기
                 if let tkID = data["teacherKnockID"] as? String {
                     self.userTeacherKnockID = tkID
