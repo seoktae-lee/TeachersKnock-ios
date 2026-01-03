@@ -23,7 +23,7 @@ class WidgetDataHelper {
     private init() {}
     
     /// 대표 목표 데이터를 App Group UserDefaults에 저장하고 위젯을 갱신합니다.
-    func updatePrimaryGoal(goal: Goal, uniqueDays: Int) {
+    func updatePrimaryGoal(goal: Goal, uniqueDays: Int, level: Int? = nil) {
         let calendar = Calendar.current
         
         // D-Day 계산
@@ -32,10 +32,13 @@ class WidgetDataHelper {
         let components = calendar.dateComponents([.day], from: startOfToday, to: startOfTarget)
         let dDay = components.day ?? 0
         
-        // 레벨 미리 계산 (CharacterLevel 로직 의존성을 줄이기 위해 여기서 계산해서 넘길 수도 있음)
-        // 하지만 Widget에서도 CharacterLevel을 쓰기로 했으므로, uniqueDays만 넘깁니다.
-        // 편의를 위해 level 숫자도 함께 넘깁니다.
-        let level = CharacterLevel.getLevel(uniqueDays: uniqueDays).rawValue + 1
+        // 레벨 결정: 구체적인 레벨이 전달되면 그걸 사용, 아니면 uniqueDays 기반 계산
+        let finalLevel: Int
+        if let explicitLevel = level {
+            finalLevel = explicitLevel
+        } else {
+            finalLevel = CharacterLevel.getLevel(uniqueDays: uniqueDays).rawValue + 1
+        }
         
         let data = WidgetData(
             goalTitle: goal.title,
@@ -44,7 +47,7 @@ class WidgetDataHelper {
             characterColor: goal.characterColor,
             characterType: goal.characterType,
             uniqueDays: uniqueDays,
-            level: level
+            level: finalLevel
         )
         
         if let userDefaults = UserDefaults(suiteName: appGroupId) {

@@ -122,6 +122,12 @@ struct GoalListView: View {
                 updateWidget()
             }
         }
+        // ✨ [추가] 캐릭터 상태 변경 시 위젯 업데이트 (진화/레벨업 반영)
+        // UserCharacter struct가 Equatable이어야 정확히 작동하므로 확인 필요하지만,
+        // 배열 자체가 변경되면 호출됨.
+        .onChange(of: characterManager.characters.map { $0.level }) { _ in
+            updateWidget()
+        }
     }
     
     // MARK: - Subviews
@@ -295,7 +301,13 @@ struct GoalListView: View {
     private func updateWidget() {
         if let goal = primaryGoal {
             let uniqueDays = getUniqueDays(for: goal)
-            WidgetDataHelper.shared.updatePrimaryGoal(goal: goal, uniqueDays: uniqueDays)
+            // ✨ [수정] 실제 캐릭터 레벨 반영 (위젯 동기화)
+            var realLevel = CharacterLevel.getLevel(uniqueDays: uniqueDays).rawValue + 1
+            if let character = characterManager.equippedCharacter {
+                realLevel = character.level + 1
+            }
+            
+            WidgetDataHelper.shared.updatePrimaryGoal(goal: goal, uniqueDays: uniqueDays, level: realLevel)
         } else {
             WidgetDataHelper.shared.clearData()
         }

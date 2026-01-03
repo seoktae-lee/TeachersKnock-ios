@@ -55,7 +55,7 @@ struct MainCharacterView: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.gray)
                     }
-                    .padding(.bottom, 3) 
+                    .padding(.bottom, 3)
                 }
                 
                 Spacer()
@@ -92,8 +92,8 @@ struct MainCharacterView: View {
                             Spacer()
                             // 로고 이미지 결정 로직
                             let logoName: String = {
-                                if let office = settingsManager.targetOffice, 
-                                   UIImage(named: office.logoImageName) != nil {
+                                if let office = settingsManager.targetOffice,
+                                    UIImage(named: office.logoImageName) != nil {
                                     return office.logoImageName
                                 } else {
                                     return "TeachersKnockLogo"
@@ -148,7 +148,7 @@ struct MainCharacterView: View {
                                             .fill(Color.white)
                                             .shadow(color: .black.opacity(0.05), radius: 2)
                                     )
-                                    // .padding(.trailing, 50) // ✨ 제거됨
+                                // .padding(.trailing, 50) // ✨ 제거됨
                                     .id("cheer_\(currentCheer)")
                                     .transition(.opacity.animation(.easeInOut))
                                 

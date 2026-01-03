@@ -376,13 +376,20 @@ struct EvolutionView: View {
                             .foregroundColor(.white.opacity(0.9))
                         
                         Text(newLevel.title(for: characterType))
-                            .font(.largeTitle)
-                            .fontWeight(.black)
-                            .foregroundColor(themeColor)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(Color.white)
-                            .cornerRadius(12)
+                            .font(.title2) // 크기 축소 (.largeTitle -> .title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20) // 패딩 축소 (24 -> 20)
+                            .padding(.vertical, 10)   // 패딩 축소 (12 -> 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16) // 코너 반지름 축소 (20 -> 16)
+                                    .fill(.ultraThinMaterial)
+                                    .shadow(color: themeColor.opacity(0.5), radius: 10, x: 0, y: 0)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                            )
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -702,8 +709,13 @@ struct EvolutionShareView: View {
                 Spacer()
                 
                 // Footer
-                HStack {
-                    Image(systemName: "graduationcap.fill")
+                HStack(spacing: 8) {
+                    Image("TeachersKnockLogo")
+                        .resizable()
+                        .renderingMode(.template) // 흰색 틴트 적용을 위해 템플릿 모드 사용
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                    
                     Text("Teacher's Knock")
                 }
                 .font(.headline)
