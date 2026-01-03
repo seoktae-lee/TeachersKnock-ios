@@ -23,6 +23,18 @@ struct TeachersKnock_iosApp: App {
                 // 환경 객체 주입
                 .environmentObject(authManager)
                 .environmentObject(settingsManager)
+                // ✨ [New] 앱 레벨에서 딥링크 처리 (Cold Start 대응 강화를 위해 위치 변경)
+                .onOpenURL { url in
+                    if url.scheme == "com.seoktaedev.TeachersKnock-ios" && url.host == "timer" {
+                        print("🔗 [App] 타이머 딥링크 감지, 타이머 탭으로 이동")
+                        // 싱글톤 매니저의 상태 업데이트
+                        DispatchQueue.main.async {
+                            print("🔗 [App] 타이머 탭 이동 플래그 설정")
+                            StudyNavigationManager.shared.shouldNavigateToTimer = true
+                            StudyNavigationManager.shared.tabSelection = 2
+                        }
+                    }
+                }
                 // ❌ 주의: 여기서 authManager.setup(...)을 호출하면 안 됩니다!
                 // RootView.swift에서 처리하도록 변경했습니다.
         }
@@ -45,6 +57,13 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound, .badge])
+    }
+    
+    // ✨ 앱 종료 시 호출
+    func applicationWillTerminate(_ application: UIApplication) {
+        print("⚠️ [AppDelegate] applicationWillTerminate 호출됨")
+        // 타이머 정리 로직 실행
+        TimerViewModel.handleAppTermination()
     }
     
     // ✨ 알림 클릭(반응) 시 호출되는 메서드

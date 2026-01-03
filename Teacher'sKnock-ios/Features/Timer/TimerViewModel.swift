@@ -104,30 +104,40 @@ class TimerViewModel: ObservableObject {
     
     // MARK: - Persistence (백그라운드/앱 종료 대응)
     
-    private let kIsRunning = "timer_isRunning"
-    private let kStartTime = "timer_startTime"
-    private let kAccumulated = "timer_accumulated"
-    private let kSubject = "timer_subject"
-    private let kPurpose = "timer_purpose" // ✨ [추가] 공부 목적 저장 키
+    // MARK: - Persistence Keys
+    private static let kIsRunning = "timer_isRunning"
+    private static let kStartTime = "timer_startTime"
+    private static let kAccumulated = "timer_accumulated"
+    private static let kSubject = "timer_subject"
+    private static let kPurpose = "timer_purpose"
+    
+    // ✨ [추가] 강제 종료 시 저장을 위한 임시 키
+    private static let kPendingRecordDuration = "pending_record_duration"
+    private static let kPendingRecordSubject = "pending_record_subject"
+    private static let kPendingRecordPurpose = "pending_record_purpose"
+    private static let kPendingRecordDate = "pending_record_date"
+    private static let kPendingRecordMemo = "pending_record_memo"
+
+
     
     private func saveTimerState() {
-        UserDefaults.standard.set(true, forKey: kIsRunning)
-        UserDefaults.standard.set(startTime, forKey: kStartTime)
-        UserDefaults.standard.set(accumulatedTime, forKey: kAccumulated)
-        UserDefaults.standard.set(selectedSubject, forKey: kSubject)
-        UserDefaults.standard.set(selectedPurpose.rawValue, forKey: kPurpose) // ✨ [추가] 목적 저장
+        UserDefaults.standard.set(true, forKey: Self.kIsRunning)
+        UserDefaults.standard.set(startTime, forKey: Self.kStartTime)
+        UserDefaults.standard.set(accumulatedTime, forKey: Self.kAccumulated)
+        UserDefaults.standard.set(selectedSubject, forKey: Self.kSubject)
+        UserDefaults.standard.set(selectedPurpose.rawValue, forKey: Self.kPurpose)
     }
     
     private func clearTimerState() {
-        UserDefaults.standard.set(false, forKey: kIsRunning)
-        UserDefaults.standard.removeObject(forKey: kStartTime)
-        UserDefaults.standard.set(accumulatedTime, forKey: kAccumulated) // 일시정지 시간은 유지 가능
+        UserDefaults.standard.set(false, forKey: Self.kIsRunning)
+        UserDefaults.standard.removeObject(forKey: Self.kStartTime)
+        UserDefaults.standard.set(accumulatedTime, forKey: Self.kAccumulated) // 일시정지 시간은 유지 가능
     }
     
     private func restoreTimerState() {
-        let wasRunning = UserDefaults.standard.bool(forKey: kIsRunning)
-        let savedSubject = UserDefaults.standard.string(forKey: kSubject)
-        let savedPurpose = UserDefaults.standard.string(forKey: kPurpose) // ✨ [추가] 목적 로드
+        let wasRunning = UserDefaults.standard.bool(forKey: Self.kIsRunning)
+        let savedSubject = UserDefaults.standard.string(forKey: Self.kSubject)
+        let savedPurpose = UserDefaults.standard.string(forKey: Self.kPurpose)
         
         if let subject = savedSubject {
             self.selectedSubject = subject
@@ -140,10 +150,15 @@ class TimerViewModel: ObservableObject {
         }
         
         if wasRunning {
-            if let savedStart = UserDefaults.standard.object(forKey: kStartTime) as? Date {
+            // ✨ [수정] 강제 종료 후 재실행이라면, wasRunning이 true여도 startTime이 없을 수 있음 (handleAppTermination에서 지웠으므로)
+            // 하지만 handleAppTermination이 호출되지 않았다면(크래시 등), 여기서 복구 로직이 동작.
+            // 만약 handleAppTermination이 정상 동작했다면 kIsRunning은 false였을 것임.
+            // 즉, 여기 들어왔다는 건 "비정상 종료" 또는 "아직 처리 안 된 상태"임.
+            
+            if let savedStart = UserDefaults.standard.object(forKey: Self.kStartTime) as? Date {
                 self.startTime = savedStart
                 self.isRunning = true
-                self.accumulatedTime = UserDefaults.standard.double(forKey: kAccumulated)
+                self.accumulatedTime = UserDefaults.standard.double(forKey: Self.kAccumulated)
                 
                 // 타이머 재가동
                 ShieldingManager.shared.startShielding()
@@ -198,7 +213,45 @@ class TimerViewModel: ObservableObject {
         displayTime = 0
         linkedScheduleTitle = nil
         clearTimerState()
-        UserDefaults.standard.removeObject(forKey: kAccumulated)
+        UserDefaults.standard.removeObject(forKey: Self.kAccumulated)
+    }
+    
+    // ✨ [New] 강제 종료되어 저장되지 못한 기록이 있는지 확인하고 저장
+    func checkAndSavePendingRecord(context: ModelContext, ownerID: String) {
+        let duration = UserDefaults.standard.integer(forKey: Self.kPendingRecordDuration)
+        
+        if duration > 0 {
+            print("💾 [TimerViewModel] 강제 종료된 세션 복구 중... (\(duration)초)")
+            
+            let subject = UserDefaults.standard.string(forKey: Self.kPendingRecordSubject) ?? "교육학"
+            let purposeRaw = UserDefaults.standard.string(forKey: Self.kPendingRecordPurpose) ?? StudyPurpose.lectureWatching.rawValue
+            let date = UserDefaults.standard.object(forKey: Self.kPendingRecordDate) as? Date ?? Date()
+            let memo = UserDefaults.standard.string(forKey: Self.kPendingRecordMemo)
+            
+            // 기록 생성
+            let newRecord = StudyRecord(
+                durationSeconds: duration,
+                areaName: subject,
+                date: date,
+                ownerID: ownerID,
+                studyPurpose: purposeRaw,
+                memo: memo,
+                goal: nil // 목표 연결은 복구 시점이라 어려울 수 있음 (가장 가까운 목표를 찾거나 nil)
+            )
+            
+            context.insert(newRecord)
+            FirestoreSyncManager.shared.saveRecord(newRecord)
+            CharacterManager.shared.addExpToEquippedCharacter()
+            
+            // 정리
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordDuration)
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordSubject)
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordPurpose)
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordDate)
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordMemo)
+            
+            print("✅ [TimerViewModel] 강제 종료 세션 복구 완료")
+        }
     }
     
     // MARK: - 유틸리티 및 연동 로직
@@ -233,7 +286,7 @@ class TimerViewModel: ObservableObject {
 
     func setupInitialSubject(favorites: [StudySubject]) {
         if linkedScheduleTitle == nil && selectedSubject == "교육학" { // 기본값 상태일 때만
-             if let saved = UserDefaults.standard.string(forKey: kSubject) {
+             if let saved = UserDefaults.standard.string(forKey: Self.kSubject) {
                  selectedSubject = saved
              } else if let first = favorites.first {
                  selectedSubject = first.name
@@ -287,6 +340,74 @@ class TimerViewModel: ObservableObject {
                 print("LIVE ACTIVITY ENDED: \(activity.id)")
             }
             self.activity = nil
+        }
+    }
+    
+    // ✨ 앱 종료(강제 종료) 시 호출되는 정적 메서드
+    static func handleAppTermination() {
+        // 1. 실행 중인지 확인
+        let wasRunning = UserDefaults.standard.bool(forKey: Self.kIsRunning)
+        
+        if wasRunning {
+            print("🛑 [TimerViewModel] 앱 종료 감지: 타이머 중지 처리 시작")
+            
+            // 2. 현재까지의 시간 계산하여 누적 시간에 저장
+            if let startTime = UserDefaults.standard.object(forKey: Self.kStartTime) as? Date {
+                let currentAccumulated = UserDefaults.standard.double(forKey: Self.kAccumulated)
+                let elapsed = Date().timeIntervalSince(startTime)
+                let finalAccumulated = currentAccumulated + elapsed
+                
+                // 3. 상태 업데이트 및 "Pending Record" 저장
+                // 실행 중단 처리
+                UserDefaults.standard.set(false, forKey: Self.kIsRunning)
+                UserDefaults.standard.removeObject(forKey: Self.kStartTime)
+                UserDefaults.standard.set(finalAccumulated, forKey: Self.kAccumulated)
+                
+                // ✨ 저장 데이터 생성 (다음 실행 시 DB 저장용)
+                let finalDuration = Int(finalAccumulated)
+                if finalDuration >= 5 { // 최소 시간 조건
+                    UserDefaults.standard.set(finalDuration, forKey: Self.kPendingRecordDuration)
+                    
+                    let subject = UserDefaults.standard.string(forKey: Self.kSubject)
+                    UserDefaults.standard.set(subject, forKey: Self.kPendingRecordSubject)
+                    
+                    let purpose = UserDefaults.standard.string(forKey: Self.kPurpose)
+                    UserDefaults.standard.set(purpose, forKey: Self.kPendingRecordPurpose)
+                    
+                    UserDefaults.standard.set(Date(), forKey: Self.kPendingRecordDate)
+                    
+                    // 제목(메모)은 따로 저장 안 했었으나 필요하면 추가 가능. 일단 패스하거나 kSubject 사용
+                }
+                
+                print("💾 [TimerViewModel] 앱 종료: \(finalDuration)초 저장 예약됨")
+            }
+            
+            // 4. Live Activity 종료 요청 (RunLoop Spinning)
+            // Semaphore는 Main Thread를 완전히 멈춰버려 비동기 작업(IPC 등)이 처리를 못하게 막을 수 있습니다.
+            // 대신 RunLoop를 돌리며 대기해야 합니다.
+            print("🛑 [TimerViewModel] Live Activity 종료 요청 시작 (RunLoop 방식)")
+            
+            var finished = false
+            
+            Task(priority: .high) {
+                for activity in Activity<StudyTimerAttributes>.activities {
+                    await activity.end(dismissalPolicy: .immediate)
+                    print("🛑 [TimerViewModel] Live Activity 종료 보냄: \(activity.id)")
+                }
+                finished = true
+            }
+            
+            // 최대 2.0초 동안 RunLoop를 돌리며 대기
+            let timeout = Date().addingTimeInterval(2.0)
+            while !finished && Date() < timeout {
+                RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+            }
+            
+            if finished {
+                print("✅ [TimerViewModel] Live Activity 종료 요청 성공")
+            } else {
+                print("⚠️ [TimerViewModel] Live Activity 종료 대기 시간 초과")
+            }
         }
     }
 }

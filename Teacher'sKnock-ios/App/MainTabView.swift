@@ -43,6 +43,12 @@ struct MainTabView: View {
         }
         .onAppear {
             // Cold Start 시 이미 값이 있으면 처리
+            if navigationManager.shouldNavigateToTimer {
+                print("🏁 [MainTabView] 타이머 이동 플래그 감지, 이동 수행")
+                navigationManager.tabSelection = 2
+                navigationManager.shouldNavigateToTimer = false
+            }
+            // 딥링크 확인
             if let pendingID = navigationManager.pendingScheduleID {
                 handleDeepLink(idString: pendingID)
             }

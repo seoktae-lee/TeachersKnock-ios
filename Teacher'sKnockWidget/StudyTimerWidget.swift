@@ -39,48 +39,58 @@ struct StudyTimerWidget: Widget {
             .padding(.vertical, 18)
             .activityBackgroundTint(Color(UIColor.systemBackground))
             .activitySystemActionForegroundColor(Color.black)
+            .widgetURL(URL(string: "com.seoktaedev.TeachersKnock-ios://timer"))
             
         } dynamicIsland: { context in
             // MARK: - Dynamic Island UI (심플하게 유지)
             DynamicIsland {
                 // Expanded Area
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack {
-                        Image(systemName: "timer")
-                            .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
-                        Text(context.attributes.subject)
-                            .font(.headline)
-                            .lineLimit(1)
+                    Link(destination: URL(string: "com.seoktaedev.TeachersKnock-ios://timer")!) {
+                        HStack {
+                            Image(systemName: "timer")
+                                .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
+                            Text(context.attributes.subject)
+                                .font(.headline)
+                                .lineLimit(1)
+                        }
+                        .padding(.leading, 8)
                     }
-                    .padding(.leading, 8)
                 }
                 
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(timerInterval: context.state.startTime...Date.distantFuture, countsDown: false)
-                        .monospacedDigit()
-                        .font(.title2) // Dynamic Island는 공간 제약으로 적절히 유지
-                        .padding(.trailing, 8)
+                    Link(destination: URL(string: "com.seoktaedev.TeachersKnock-ios://timer")!) {
+                        Text(timerInterval: context.state.startTime...Date.distantFuture, countsDown: false)
+                            .monospacedDigit()
+                            .font(.title2) // Dynamic Island는 공간 제약으로 적절히 유지
+                            .padding(.trailing, 8)
+                    }
                 }
                 
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text(context.attributes.purpose)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 8)
+                    Link(destination: URL(string: "com.seoktaedev.TeachersKnock-ios://timer")!) {
+                        Text(context.attributes.purpose)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 8)
+                    }
                 }
                 
             } compactLeading: {
                 Image(systemName: "timer")
                     .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
                     .padding(.leading, 4)
+                    .widgetURL(URL(string: "com.seoktaedev.TeachersKnock-ios://timer"))
             } compactTrailing: {
                 Text(timerInterval: context.state.startTime...Date.distantFuture, countsDown: false)
                     .monospacedDigit()
                     .font(.caption)
                     .frame(width: 50)
+                    .widgetURL(URL(string: "com.seoktaedev.TeachersKnock-ios://timer"))
             } minimal: {
                 Image(systemName: "timer")
                     .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
+                    .widgetURL(URL(string: "com.seoktaedev.TeachersKnock-ios://timer"))
             }
         }
     }

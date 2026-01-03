@@ -181,6 +181,9 @@ struct TimerView: View {
                 if !hasCompletedOnboarding {
                     showOnboarding = true
                 }
+                
+                // ✨ [New] 강제 종료 등으로 저장되지 못한 기록 복구
+                viewModel.checkAndSavePendingRecord(context: modelContext, ownerID: currentUserId)
             }
             // ✨ [추가] 이미 타이머 탭에 있을 때 딥링크로 데이터가 들어오면 즉시 반영
             .onChange(of: navManager.targetSchedule) { newSchedule in

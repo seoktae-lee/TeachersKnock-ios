@@ -12,6 +12,9 @@ class StudyNavigationManager: ObservableObject {
     // 타이머로 전달할 일정 데이터
     @Published var targetSchedule: ScheduleItem?
     
+    // ✨ [추가] 딥링크로 타이머 이동이 필요한지 여부 (Cold Start 대응)
+    @Published var shouldNavigateToTimer: Bool = false
+    
     // ✨ [추가] 알림을 통해 들어온 일정 ID (비동기로 처리됨)
     @Published var pendingScheduleID: String?
     
