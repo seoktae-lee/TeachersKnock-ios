@@ -171,7 +171,7 @@ struct MainCharacterView: View {
                             
                             // 텍스트 정보 (좌: 레벨, 우: 남은 일수)
                             HStack {
-                                Text("Lv.\(level.rawValue)")
+                                Text("Lv.\(level.rawValue + 1)")
                                     .font(.caption)
                                     .bold()
                                     .foregroundColor(.primary)
