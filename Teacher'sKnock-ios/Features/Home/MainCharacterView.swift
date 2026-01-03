@@ -35,6 +35,7 @@ struct LeftTailBubbleShape: Shape {
 // 메인 캐릭터 뷰 (홈 화면용)
 struct MainCharacterView: View {
     @ObservedObject var characterManager = CharacterManager.shared
+    @EnvironmentObject var settingsManager: SettingsManager // ✨ 추가
     @Binding var showStorage: Bool
     
     let primaryGoalTitle: String?
@@ -46,7 +47,17 @@ struct MainCharacterView: View {
     var body: some View {
         VStack(spacing: 6) {
             // ✨ [수정] 보관함 버튼을 UI 박스 밖 우측 상단으로 이동
-            HStack {
+            HStack(alignment: .bottom) {
+                // ✨ 교육청 정보 표시 (선택된 경우에만)
+                if let office = settingsManager.targetOffice {
+                    HStack(spacing: 4) {
+                        Text("\(office.rawValue) 소속 예비 선생님")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.bottom, 3) 
+                }
+                
                 Spacer()
                 Button(action: { showStorage = true }) {
                     HStack(spacing: 4) {
@@ -71,6 +82,37 @@ struct MainCharacterView: View {
                 LinearGradient(gradient: Gradient(colors: [Color(red: 0.96, green: 0.98, blue: 1.0), Color.white]), startPoint: .top, endPoint: .bottom)
                     .cornerRadius(24)
                     .shadow(color: .black.opacity(0.03), radius: 10, x: 0, y: 5)
+                
+                // ✨ [NEW] 교육청 로고 워터마크 (항상 표시)
+                // 미선택 시: 기본 로고, 선택 시: 해당 교육청 로고 (없으면 기본 로고)
+                GeometryReader { geo in
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            // 로고 이미지 결정 로직
+                            let logoName: String = {
+                                if let office = settingsManager.targetOffice, 
+                                   UIImage(named: office.logoImageName) != nil {
+                                    return office.logoImageName
+                                } else {
+                                    return "TeachersKnockLogo"
+                                }
+                            }()
+                            
+                            Image(logoName)
+                                .resizable()
+                                .scaledToFill() // ✨ 비율 유지하며 꽉 채우기 (글씨 잘리게)
+                                .frame(width: 140, height: 140, alignment: .leading) // ✨ 왼쪽(심벌) 기준 정렬
+                                .clipped() // 넘치는 부분 자르기
+                                .opacity(0.12) // 투명도 약간만 높임 (잘라내면 여백이 줄어드므로)
+                                .blendMode(.multiply)
+                                .rotationEffect(.degrees(-15)) // 살짝 기울기
+                                .offset(x: 10, y: 40) // 위치 미세 조정
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 24)) // 카드 모양에 맞춰 자르기
                 
                 if let character = characterManager.equippedCharacter {
                     VStack(spacing: 0) {

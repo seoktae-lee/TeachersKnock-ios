@@ -32,6 +32,12 @@ enum OfficeOfEducation: String, CaseIterable, Identifiable, Codable {
         default: return "https://www.google.com/search?q=\(self.rawValue)+초등임용공고"
         }
     }
+    
+    // ✨ 교육청 로고 이미지 이름 (Assets에 해당 이름의 이미지가 있어야 함)
+    // 없을 경우 뷰에서 기본 앱 로고를 대신 사용하도록 처리
+    var logoImageName: String {
+        return "OfficeLogo_\(self.rawValue)" // 다시 한글 이름 사용 (파일이 한글로 되어있음)
+    }
 }
 
 // 2. ✨ [수정됨] 대학교 데이터 (전국 교대 및 초등교육과)
