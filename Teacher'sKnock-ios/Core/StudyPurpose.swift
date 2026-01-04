@@ -8,7 +8,8 @@ enum StudyPurpose: String, Codable, CaseIterable {
     case problemSolving = "문제풀이"
     case mockTest = "모의고사"
     case errorNote = "오답노트"
-    case study = "스터디" // ✨ [추가됨] 스터디 항목
+    case speaking = "말하기" // ✨ [추가됨] 말하기 모드
+    case study = "스터디" 
     case etc = "기타"
 
     var localizedName: String { return self.rawValue }
@@ -23,7 +24,8 @@ enum StudyPurpose: String, Codable, CaseIterable {
             .problemSolving,
             .mockTest,
             .errorNote,
-            .study, // 오답노트 다음, 기타 전에 배치했습니다.
+            .speaking, // ✨ [추가] 말하기
+            .study,
             .etc
         ]
     }

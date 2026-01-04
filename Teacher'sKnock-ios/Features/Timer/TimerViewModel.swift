@@ -437,13 +437,42 @@ class TimerViewModel: ObservableObject {
         // 3. 공부 목적 연동
         // ✨ [수정] 유연한 매칭 시스템 사용 (String -> Enum 변환 강화)
         if let purpose = StudyPurpose.flexibleMatch(item.studyPurpose) {
-            self.selectedPurpose = purpose
-            print("🔄 타이머 목적 변경됨: \(purpose.localizedName)")
+            updateStudyPurpose(purpose)
         } else {
             // 값이 없거나 매칭되지 않을 경우 기본값 사용
-            self.selectedPurpose = .lectureWatching
+            updateStudyPurpose(.lectureWatching)
             print("⚠️ 공부 목적 연동 실패 (기본값 적용): \(item.studyPurpose)")
         }
+    }
+    
+    // ✨ [New] 공부 목적 변경 및 모드 자동 전환 처리 (수동 선택/일정 연동 공통 사용)
+    func updateStudyPurpose(_ purpose: StudyPurpose) {
+        self.selectedPurpose = purpose
+        
+        // 말하기 목적이면 말하기 모드로 자동 전환, 아니면 집중 모드로 전환
+        if purpose == .speaking {
+            if !isSpeakingMode {
+                toggleSpeakingMode() // 권한 체크 로직 포함된 토글
+                
+                // toggleSpeakingMode는 비동기 권한 요청이 있을 수 있으므로,
+                // 권한이 이미 있다면 바로 켜지지만, 없다면 콜백에서 처리됨.
+                // 여기서는 "사용자가 의도적으로 말하기를 골랐으니 켜는 시도"를 함.
+                // 강제로 켜는 로직은 toggleSpeakingMode 내부에 위임.
+                // 다만 toggleSpeakingMode는 'Toggle'이므로, 이미 켜져있으면 끄게 됨.
+                // 위 조건문 `if !isSpeakingMode`가 있어서 안전함.
+            }
+        } else {
+            // 다른 목적일 경우 집중 모드(말하기 모드 off)로 전환
+            // 단, 사용자가 "말하기 모드"를 켜둔 상태에서 다른 과목으로 바꿨을 때 
+            // 굳이 끄는게 맞는지? -> "Speaking Purpose" <-> "Speaking Mode" 강제 연동이라면 끄는게 맞음.
+            // 사용자 경험상 목적이 바뀌었는데 모드가 남아있으면 혼동될 수 있음.
+            if isSpeakingMode {
+                // 토글 호출
+                toggleSpeakingMode()
+            }
+        }
+        
+        print("🔄 타이머 목적 업데이트: \(purpose.localizedName), 말하기모드: \(isSpeakingMode)")
     }
     
     func formatTime(seconds: Int) -> String {

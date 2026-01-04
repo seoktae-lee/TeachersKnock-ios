@@ -182,7 +182,7 @@ struct TimerView: View {
                         Text("공부 목적").font(.caption2).foregroundColor(.gray).padding(.leading, 4)
                         Menu {
                             ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
-                                Button(purpose.localizedName) { viewModel.selectedPurpose = purpose }
+                                Button(purpose.localizedName) { viewModel.updateStudyPurpose(purpose) }
                             }
                         } label: {
                             HStack {
