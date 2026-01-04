@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
+import Combine
 
 struct StudyGroupDetailView: View {
     // Initial static group data passed from the list
@@ -269,6 +270,9 @@ struct MemberRow: View {
     @ObservedObject var studyManager: StudyGroupManager
     
     @State private var showDelegateAlert = false
+    @State private var currentDisplayTime: Int = 0
+    // 1초마다 갱신을 위한 타이머
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
         HStack(spacing: 15) {
@@ -296,33 +300,34 @@ struct MemberRow: View {
                             .foregroundColor(.yellow)
                             .font(.caption)
                     }
-                    
-                    if user.isStudying {
-                        Text("🔥 공부 중")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundColor(.orange)
-                            .cornerRadius(4)
-                    }
                 }
                 
-                HStack(spacing: 8) {
-                    if let uni = user.university, !uni.isEmpty {
-                        Text(uni)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    
-                    // ✨ [Modified] 오늘 공부 시간 표시 (항상 표시하되 0초는 회색)
-                    Text("오늘 \(formatTime(user.todayStudyTime))")
-                        .font(.caption.bold())
-                        .foregroundColor(user.todayStudyTime > 0 ? .blue : .gray.opacity(0.6))
+                if let uni = user.university, !uni.isEmpty {
+                    Text(uni)
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
             }
             
             Spacer()
+            
+            // ✨ [Modified] 오른쪽 빈 공간에 공부 시간 및 상태 표시
+            VStack(alignment: .trailing, spacing: 4) {
+                if user.isStudying {
+                    Text("🔥 공부 중")
+                        .font(.caption2.bold())
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(4)
+                }
+                
+                Text(formatTime(currentDisplayTime))
+                    .font(.system(.body, design: .monospaced)) // 숫자 등폭 폰트 사용
+                    .fontWeight(.bold)
+                    .foregroundColor(user.isStudying ? .blue : .gray)
+            }
         }
         .padding()
         // ✨ [New] 내 자신은 배경색 살짝 다르게 표시 (선택사항)
@@ -344,6 +349,29 @@ struct MemberRow: View {
             }
         } message: {
             Text("'\(user.nickname)' 님에게 방장 권한을 넘기시겠습니까?\n방장은 스터디 관리 권한을 갖으며, 이 작업은 되돌릴 수 없습니다.")
+        }
+        .onAppear {
+            updateTime()
+        }
+        .onReceive(timer) { _ in
+            if user.isStudying {
+                updateTime()
+            }
+        }
+        // 사용자가 변경될 때 시간 초기화 (재사용 row 문제 방지)
+        .onChange(of: user.id) { _ in updateTime() }
+        .onChange(of: user.isStudying) { _ in updateTime() }
+        .onChange(of: user.todayStudyTime) { _ in updateTime() }
+    }
+    
+    func updateTime() {
+        if user.isStudying, let startTime = user.currentStudyStartTime {
+            let elapsed = Int(Date().timeIntervalSince(startTime))
+            // 음수 방지 (시간 동기화 오차 등)
+            let addedTime = max(0, elapsed)
+            currentDisplayTime = user.todayStudyTime + addedTime
+        } else {
+            currentDisplayTime = user.todayStudyTime
         }
     }
     

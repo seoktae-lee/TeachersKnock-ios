@@ -45,6 +45,9 @@ class FirestoreSyncManager {
         ]
         
         db.collection("users").document(record.ownerID).collection("study_records").addDocument(data: data)
+        
+        // ✨ [New] 공부 시간 누적 업데이트
+        updateUserStudyTime(uid: record.ownerID, isStudying: false, duration: record.durationSeconds)
     }
     
     // MARK: - 2. 데이터 복구 (로그인 시 호출)
@@ -165,6 +168,9 @@ class FirestoreSyncManager {
         
         // 공부 종료 시 시간 업데이트
         if !isStudying, let duration = duration, duration > 0 {
+            // ✨ [Modified] 공부 종료 시 시작 시간 필드 삭제
+            data["currentStudyStartTime"] = FieldValue.delete()
+            
             let now = Date()
             let calendar = Calendar.current
             
@@ -204,7 +210,14 @@ class FirestoreSyncManager {
                 }
             }
         } else {
-            // 공부 시작 시 또는 시간 없는 종료
+            // 공부 시작 시
+            if isStudying {
+                data["currentStudyStartTime"] = Timestamp(date: Date())
+            } else {
+                // 시간 없이 종료되는 경우 (방어 코드)
+                data["currentStudyStartTime"] = FieldValue.delete()
+            }
+            
             db.collection("users").document(uid).updateData(data) { error in
                 if let error = error {
                     print("❌ Error updating study status (start study): \(error)")

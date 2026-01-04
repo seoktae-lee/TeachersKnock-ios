@@ -51,7 +51,7 @@ struct MainCharacterView: View {
                 // ✨ 교육청 정보 표시 (선택된 경우에만)
                 if let office = settingsManager.targetOffice {
                     HStack(spacing: 4) {
-                        Text("\(office.rawValue) 소속 예비 선생님")
+                        Text("\(office.rawValue) 소속 예비 초등교사")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.gray)
                     }

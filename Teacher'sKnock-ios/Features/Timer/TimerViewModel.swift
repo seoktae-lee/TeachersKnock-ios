@@ -3,6 +3,7 @@ import SwiftUI
 import SwiftData
 import Combine
 import ActivityKit
+import FirebaseAuth
 
 @MainActor
 class TimerViewModel: ObservableObject {
@@ -57,10 +58,76 @@ class TimerViewModel: ObservableObject {
         // ✨ Live Activity 시작
         startActivity()
         
+        // ✨ [New] 공부 시작 상태 동기화
+        if let uid = Auth.auth().currentUser?.uid {
+            FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: true)
+        }
+        
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateDisplayTime()
+                self?.checkMidnight()
             }
+        }
+    }
+    
+    // ✨ [New] 자정 감지 및 리셋 로직
+    private func checkMidnight() {
+        guard let start = startTime else { return }
+        let now = Date()
+        
+        // 시작 날짜와 현재 날짜가 다르면 (자정이 지난 경우)
+        if !Calendar.current.isDate(start, inSameDayAs: now) {
+            print("🌙 자정이 지났습니다. 타이머를 리셋하고 어제 기록을 저장합니다.")
+            
+            // 1. 어제 날짜로 기록 저장 (자정까지의 시간)
+            // startTime부터 어제 23:59:59까지의 시간 계산
+            let calendar = Calendar.current
+            // 오늘의 00:00:00
+            let startOfToday = calendar.startOfDay(for: now)
+            
+            // 어제 공부한 시간 (= 자정 - 시작시간 + 기존 누적시간)
+            let durationUntilMidnight = startOfToday.timeIntervalSince(start)
+            let totalYesterdaySeconds = Int(durationUntilMidnight + accumulatedTime)
+            
+            if totalYesterdaySeconds >= minimumStudyTime {
+                let yesterdayRecord = StudyRecord(
+                    durationSeconds: totalYesterdaySeconds,
+                    areaName: selectedSubject,
+                    date: start, // 시작 날짜 기준
+                    ownerID: Auth.auth().currentUser?.uid ?? "",
+                    studyPurpose: selectedPurpose.rawValue,
+                    memo: linkedScheduleTitle,
+                    goal: nil // 목표 연결은 복구 시점이라 어려울 수 있음
+                )
+                
+                // Firestore 저장
+                FirestoreSyncManager.shared.saveRecord(yesterdayRecord)
+                
+                // 캐릭터 경험치 (어제 분량)
+                CharacterManager.shared.addExpToEquippedCharacter()
+            }
+            
+            // 2. 타이머 상태 리셋 (오늘 00:00:00 부터 시작하는 것으로 변경)
+            self.startTime = startOfToday // 오늘 0시 0분 0초
+            self.accumulatedTime = 0
+            self.displayTime = Int(now.timeIntervalSince(startOfToday)) // 0시부터 현재까지 흐른 시간
+            
+            // 3. Firestore 상태 업데이트 (오늘 날짜로 갱신)
+            if let uid = Auth.auth().currentUser?.uid {
+                // 기존 currentStudyStartTime은 공부 시작 시간이므로, 
+                // 자정이 지나면 "오늘 0시"로 갱신해줘야 다른 유저들에게도 오늘치 공부 시간만 보임
+                FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: true) // 내부적으로 날짜 체크하여 갱신 로직이 돌겠지만, 명시적으로 리셋 필요할 수 있음
+                
+                // updateUserStudyTime은 'isStudying'만 건드리거나 단순 업데이트일 수 있음.
+                // 여기서는 "자정 리셋"을 위해 명시적으로 currentStudyStartTime을 오늘 0시로 맞춰주는게 좋음.
+                // 하지만 updateUserStudyTime 구현상 "isStudying: true" 보내면 start time을 'Now'로 갱신함? 
+                // -> Step 25 구현 확인: isStudying=true면 timestamp(date: Date())로 설정함.
+                // 즉, 여기서 호출하면 startTime이 '지금(00:00:01)'으로 바뀜. 의도와 부합.
+            }
+            
+            // 값 저장
+            saveTimerState()
         }
     }
     
@@ -88,6 +155,11 @@ class TimerViewModel: ObservableObject {
         
         // ✨ Live Activity 종료
         endActivity()
+        
+        // ✨ [New] 공부 종료 상태 동기화 (멈춤 상태)
+        if let uid = Auth.auth().currentUser?.uid {
+            FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: false)
+        }
     }
     
     private func updateDisplayTime() {

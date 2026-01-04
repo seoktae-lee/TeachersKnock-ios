@@ -13,6 +13,8 @@ struct User: Identifiable, Codable {
     var lastStudyDate: Date // 마지막 공부 날짜 (일일 초기화용)
     var createdAt: Date
     
+    var currentStudyStartTime: Date? // ✨ [New] 현재 공부 시작 시간
+    
     // UI Convenience
     var displayName: String { nickname }
     
@@ -30,6 +32,7 @@ struct User: Identifiable, Codable {
         // ✨ [Modified] Firestore 숫자 타입 안전하게 변환 (Int64 대응)
         self.todayStudyTime = (data["todayStudyTime"] as? NSNumber)?.intValue ?? 0
         self.lastStudyDate = (data["lastStudyDate"] as? Timestamp)?.dateValue() ?? Date()
+        self.currentStudyStartTime = (data["currentStudyStartTime"] as? Timestamp)?.dateValue()
         
         if let timestamp = data["createdAt"] as? Timestamp {
             self.createdAt = timestamp.dateValue()
@@ -39,7 +42,7 @@ struct User: Identifiable, Codable {
     }
     
     // Manual Init
-    init(id: String, nickname: String, tkID: String?, university: String?, friends: [String] = [], isStudying: Bool = false, todayStudyTime: Int = 0, lastStudyDate: Date = Date()) {
+    init(id: String, nickname: String, tkID: String?, university: String?, friends: [String] = [], isStudying: Bool = false, todayStudyTime: Int = 0, lastStudyDate: Date = Date(), currentStudyStartTime: Date? = nil) {
         self.id = id
         self.nickname = nickname
         self.teacherKnockID = tkID
@@ -48,6 +51,7 @@ struct User: Identifiable, Codable {
         self.isStudying = isStudying
         self.todayStudyTime = todayStudyTime
         self.lastStudyDate = lastStudyDate
+        self.currentStudyStartTime = currentStudyStartTime
         self.createdAt = Date()
     }
 }
