@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import Combine // ✨ [필수] 이게 있어야 타이머가 작동합니다!
+import FirebaseAuth
+import FirebaseFirestore
 
 struct StudyTimerView: View {
     @Environment(\.dismiss) var dismiss
@@ -88,6 +90,7 @@ struct StudyTimerView: View {
                     Button(action: {
                         isRunning.toggle()
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        // 일시정지 시에도 상태 업데이트를 원하면 여기에 추가 가능 (현재는 공부 중으로 유지)
                     }) {
                         Image(systemName: isRunning ? "pause.fill" : "play.fill")
                             .font(.system(size: 40))
@@ -104,6 +107,11 @@ struct StudyTimerView: View {
         .onAppear {
             // 화면 켜지면 바로 시작
             isRunning = true
+            updateStudyStatus(isStudying: true)
+        }
+        .onDisappear {
+            // 혹시라도 그냥 닫히면 상태 해제 (안전장치)
+            updateStudyStatus(isStudying: false)
         }
         .alert("공부를 종료할까요?", isPresented: $showStopAlert) {
             Button("취소", role: .cancel) { isRunning = true } // 다시 시작
@@ -117,6 +125,9 @@ struct StudyTimerView: View {
     
     // 기록 저장 로직
     func saveRecord() {
+        // 공부 상태 종료
+        updateStudyStatus(isStudying: false)
+        
         guard elapsedSeconds > 0 else {
             dismiss()
             return
@@ -135,6 +146,21 @@ struct StudyTimerView: View {
         modelContext.insert(newRecord)
         FirestoreSyncManager.shared.saveRecord(newRecord)
         
+        // Character EXP Logic
+        CharacterManager.shared.addExpToEquippedCharacter()
+        
         dismiss()
+    }
+    
+    // ✨ [New] 공부 상태 업데이트
+    func updateStudyStatus(isStudying: Bool) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        Firestore.firestore().collection("users").document(uid).updateData([
+            "isStudying": isStudying
+        ]) { error in
+            if let error = error {
+                print("Error updating study status: \(error)")
+            }
+        }
     }
 }

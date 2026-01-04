@@ -364,7 +364,7 @@ struct SignUpView: View {
         }
     }
     
-    func sendVerificationMail(user: User?) {
+    func sendVerificationMail(user: FirebaseAuth.User?) {
         guard let user = user else { return }
         user.sendEmailVerification { error in
             if let error = error {

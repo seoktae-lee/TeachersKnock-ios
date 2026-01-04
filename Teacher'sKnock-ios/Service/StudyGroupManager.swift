@@ -6,9 +6,15 @@ class StudyGroupManager: ObservableObject {
     @Published var myGroups: [StudyGroup] = []
     private var db = Firestore.firestore()
     
+    // 리스너 관리를 위한 변수
+    private var listener: ListenerRegistration?
+    
     // 나의 스터디 그룹 실시간 리스너
     func fetchMyGroups(uid: String) {
-        db.collection("study_groups")
+        // 기존 리스너 제거 (중복 방지)
+        listener?.remove()
+        
+        listener = db.collection("study_groups")
             .whereField("members", arrayContains: uid)
             .order(by: "createdAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -22,14 +28,28 @@ class StudyGroupManager: ObservableObject {
             }
     }
     
+    // 리스너 해제 (로그아웃 시 등)
+    func stopListening() {
+        listener?.remove()
+        listener = nil
+        myGroups = []
+    }
+    
     func createGroup(name: String, description: String, leaderID: String, completion: @escaping (Bool) -> Void) {
         // 미리 문서 레퍼런스를 생성하여 ID를 확보
         let ref = db.collection("study_groups").document()
         let newGroup = StudyGroup(id: ref.documentID, name: name, description: description, leaderID: leaderID, members: [leaderID])
         
+        // Optimistic UI: 먼저 로컬 목록에 추가하여 즉시 반응
+        self.myGroups.insert(newGroup, at: 0)
+        
         ref.setData(newGroup.toDictionary()) { error in
             if let error = error {
                 print("Error creating group: \(error)")
+                // 실패 시 롤백
+                if let index = self.myGroups.firstIndex(where: { $0.id == newGroup.id }) {
+                    self.myGroups.remove(at: index)
+                }
                 completion(false)
             } else {
                 completion(true)
@@ -85,6 +105,32 @@ class StudyGroupManager: ObservableObject {
             "members": FieldValue.arrayRemove([uid])
         ]) { error in
             completion(error == nil)
+        }
+    }
+    
+    // ✨ [New] 방장 위임
+    func delegateLeader(groupID: String, newLeaderUID: String, completion: @escaping (Bool) -> Void) {
+        db.collection("study_groups").document(groupID).updateData([
+            "leaderID": newLeaderUID
+        ]) { error in
+            if let error = error {
+                print("Error delegating leader: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    
+    // ✨ [New] 스터디 그룹 삭제 (방장 권한)
+    func deleteGroup(groupID: String, completion: @escaping (Bool) -> Void) {
+        db.collection("study_groups").document(groupID).delete { error in
+            if let error = error {
+                print("Error deleting group: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
         }
     }
 }

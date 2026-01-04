@@ -77,6 +77,10 @@
 		5498D91C2F064FEF00BAB26B /* PrimaryGoalWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9142F064FEF00BAB26B /* PrimaryGoalWidget.swift */; };
 		5498D91D2F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */; };
 		5498D91E2F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */; };
+		54A40FE72F0A1B4500A0474F /* AddFriendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE52F0A1B4500A0474F /* AddFriendView.swift */; };
+		54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE62F0A1B4500A0474F /* FriendListView.swift */; };
+		54A40FEA2F0A1B5E00A0474F /* FriendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE92F0A1B5E00A0474F /* FriendManager.swift */; };
+		54A40FEC2F0A1B6600A0474F /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FEB2F0A1B6600A0474F /* User.swift */; };
 		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
 		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
 		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
@@ -192,6 +196,10 @@
 		5498D9162F064FEF00BAB26B /* PrimaryGoalWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoalWidgetProvider.swift; sourceTree = "<group>"; };
 		5498D9172F064FEF00BAB26B /* TeachersKnockWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeachersKnockWidgetBundle.swift; sourceTree = "<group>"; };
 		54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Teacher'sKnock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		54A40FE52F0A1B4500A0474F /* AddFriendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFriendView.swift; sourceTree = "<group>"; };
+		54A40FE62F0A1B4500A0474F /* FriendListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendListView.swift; sourceTree = "<group>"; };
+		54A40FE92F0A1B5E00A0474F /* FriendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendManager.swift; sourceTree = "<group>"; };
+		54A40FEB2F0A1B6600A0474F /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
@@ -286,6 +294,7 @@
 		5459AE532EE19E41008EE0E4 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FEB2F0A1B6600A0474F /* User.swift */,
 				54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */,
 				5459AE202EE19535008EE0E4 /* ScheduleItem.swift */,
 				5459AE272EE19535008EE0E4 /* StudyRecord.swift */,
@@ -299,6 +308,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FE92F0A1B5E00A0474F /* FriendManager.swift */,
 				5435A2192F0807E3002A37D4 /* CharacterManager.swift */,
 				54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */,
 				5498D90C2F06330900BAB26B /* WidgetDataHelper.swift */,
@@ -442,6 +452,8 @@
 		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FE52F0A1B4500A0474F /* AddFriendView.swift */,
+				54A40FE62F0A1B4500A0474F /* FriendListView.swift */,
 				54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */,
 				54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */,
 				54BE67F82F07C3B700E6EC64 /* StudyGroupDetailView.swift */,
@@ -621,6 +633,8 @@
 				54F81CDE2EE1D5C7002226B4 /* MonthlyReportDetailView.swift in Sources */,
 				5459AE442EE19535008EE0E4 /* StudyPurpose.swift in Sources */,
 				5459AE452EE19535008EE0E4 /* StudyRecord.swift in Sources */,
+				54A40FE72F0A1B4500A0474F /* AddFriendView.swift in Sources */,
+				54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */,
 				544E3A042EE5E6F800551E30 /* TimeTableView.swift in Sources */,
 				5459AE462EE19535008EE0E4 /* SubjectDetailView.swift in Sources */,
 				5435A21A2F0807E3002A37D4 /* CharacterManager.swift in Sources */,
@@ -630,6 +644,8 @@
 				5459AE492EE19535008EE0E4 /* TeachersKnock_iosApp.swift in Sources */,
 				5432C7582EE3FCBF005B4221 /* NoticeData.swift in Sources */,
 				5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */,
+				54A40FEA2F0A1B5E00A0474F /* FriendManager.swift in Sources */,
+				54A40FEC2F0A1B6600A0474F /* User.swift in Sources */,
 				54F81CDC2EE1D47B002226B4 /* WeeklyReportDetailView.swift in Sources */,
 				54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */,
 				5432C75C2EE3FE24005B4221 /* NoticeListView.swift in Sources */,

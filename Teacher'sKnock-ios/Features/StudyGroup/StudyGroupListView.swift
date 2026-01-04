@@ -6,57 +6,85 @@ struct StudyGroupListView: View {
     @EnvironmentObject var authManager: AuthManager
     
     @State private var showingCreateSheet = false
+    @State private var selectedTab: StudyTabMode = .group
+    
+    enum StudyTabMode: String, CaseIterable {
+        case group = "스터디 그룹"
+        case friend = "친구 목록"
+    }
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(uiColor: .systemGroupedBackground)
-                    .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Custom Segmented Control or Picker
+                Picker("모드", selection: $selectedTab) {
+                    ForEach(StudyTabMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+                .background(Color(uiColor: .systemGroupedBackground))
                 
-                if studyManager.myGroups.isEmpty {
-                    emptyStateView
+                // Content View
+                if selectedTab == .group {
+                    groupListView
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 15) {
-                            ForEach(studyManager.myGroups) { group in
-                                NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
-                                    StudyGroupRow(group: group)
-                                }
-                                .buttonStyle(PlainButtonStyle())
+                    FriendListView()
+                }
+            }
+            .navigationTitle("스터디") // Title Changed
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+    
+    var groupListView: some View {
+        ZStack {
+            Color(uiColor: .systemGroupedBackground)
+                .ignoresSafeArea()
+            
+            if studyManager.myGroups.isEmpty {
+                emptyStateView
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 15) {
+                        ForEach(studyManager.myGroups) { group in
+                            NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
+                                StudyGroupRow(group: group)
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .padding()
                     }
+                    .padding()
                 }
-                
-                // Floating Action Button
-                VStack {
+            }
+            
+            // Floating Action Button
+            VStack {
+                Spacer()
+                HStack {
                     Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: { showingCreateSheet = true }) {
-                            Image(systemName: "plus")
-                                .font(.title2.bold())
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color(red: 0.35, green: 0.65, blue: 0.95))
-                                .clipShape(Circle())
-                                .shadow(radius: 4, y: 4)
-                        }
-                        .padding()
+                    Button(action: { showingCreateSheet = true }) {
+                        Image(systemName: "plus")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                            .clipShape(Circle())
+                            .shadow(radius: 4, y: 4)
                     }
+                    .padding()
                 }
             }
-            .navigationTitle("스터디 그룹")
-            .onAppear {
-                if let uid = Auth.auth().currentUser?.uid {
-                    studyManager.fetchMyGroups(uid: uid)
-                }
+        }
+        .onAppear {
+            if let uid = Auth.auth().currentUser?.uid {
+                studyManager.fetchMyGroups(uid: uid)
             }
-            .sheet(isPresented: $showingCreateSheet) {
-                StudyGroupCreationView(studyManager: studyManager)
-                    .presentationDetents([.medium, .large])
-            }
+        }
+        .sheet(isPresented: $showingCreateSheet) {
+            StudyGroupCreationView(studyManager: studyManager)
+                .presentationDetents([.medium, .large])
         }
     }
     
