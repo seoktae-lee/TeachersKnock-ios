@@ -65,55 +65,81 @@ struct TimerView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Spacer().frame(height: 20) // 상단 여백 추가
-
-                // 0. 말하기 모드 토글 (상단 배치)
-                if !viewModel.isRunning {
-                    HStack {
-                        Spacer()
+            VStack(spacing: 12) {
+                // 0. 네비게이션 타이틀과의 겹침 방지 여백 (다시 겹침 해결을 위해 140pt로 확대)
+                Spacer().frame(height: 300)
+                
+                // 1. 상단 컨트롤 영역 (토글 & 허용 앱)
+                HStack(alignment: .center) {
+                    // 말하기 모드 토글
+                    if !viewModel.isRunning {
                         Toggle(isOn: Binding(
                              get: { viewModel.isSpeakingMode },
                              set: { _ in viewModel.toggleSpeakingMode() }
                         )) {
-                            HStack {
+                            HStack(spacing: 4) {
                                 if viewModel.isSpeakingMode {
-                                    Text("🗣️ 말하기(인출) 모드 ON")
+                                    Text("말하기")
                                         .foregroundColor(.green)
                                         .fontWeight(.bold)
                                 } else {
-                                    Text("🤫 집중(침묵) 모드")
+                                    Text("집중")
                                         .foregroundColor(.gray)
                                 }
                             }
-                            .font(.caption)
+                            .font(.subheadline)
                         }
                         .toggleStyle(SwitchToggleStyle(tint: .green))
-                        .frame(width: 200)
-                        Spacer()
+                        .labelsHidden()
+                        .fixedSize()
+                        
+                        // 토글 라벨을 직접 옆에 배치하여 레이아웃 제어
+                        if viewModel.isSpeakingMode {
+                            Text("말하기 모드 ON")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                                .fontWeight(.bold)
+                        } else {
+                            Text("집중 모드")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    } else {
+                         // 실행 중 상태 표시
+                        Label(viewModel.isSpeakingMode ? "말하기 모드" : "집중 모드", systemImage: viewModel.isSpeakingMode ? "mic.fill" : "moon.fill")
+                             .font(.caption)
+                             .padding(6)
+                             .background(viewModel.isSpeakingMode ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+                             .foregroundColor(viewModel.isSpeakingMode ? .green : brandColor)
+                             .cornerRadius(8)
                     }
-                    .padding(.top, 10)
-                } else {
-                     // 실행 중일 때는 상태만 표시
-                     if viewModel.isSpeakingMode {
-                         HStack {
-                             Spacer()
-                             Label("말하기 인출 모드", systemImage: "mic.fill")
-                                 .font(.caption)
-                                 .padding(6)
-                                 .background(Color.green.opacity(0.1))
-                                 .foregroundColor(.green)
-                                 .cornerRadius(8)
-                             Spacer()
-                         }
-                         .padding(.top, 10)
-                     }
+                    
+                    Spacer()
+                    
+                    // 허용 앱 버튼 (Main View로 이동)
+                    Button(action: {
+                        showShieldingPicker = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hand.raised.fill")
+                            Text("허용 앱")
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(brandColor)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: .black.opacity(0.05), radius: 3)
+                    }
                 }
+                .padding(.horizontal, 20)
+                // .padding(.top, 20) // 상단 여백(Spacer)이 충분하므로 중복 패딩 제거
 
-                // 1. 과목 및 목적 선택 영역
-                HStack(spacing: 15) {
-                    VStack(spacing: 8) {
-                        Text("공부 과목").font(.caption).foregroundColor(.gray)
+                // 2. 과목 및 목적 선택 영역
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("공부 과목").font(.caption2).foregroundColor(.gray).padding(.leading, 4)
                         
                         Menu {
                             ForEach(settingsManager.favoriteSubjects) { subject in
@@ -135,25 +161,25 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
-                                    .font(.headline) // [Fix] title3 -> headline 축소
+                                    .font(.subheadline)
                                     .fontWeight(.bold)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
+                                    .minimumScaleFactor(0.8)
                                     .foregroundColor(SubjectName.color(for: viewModel.selectedSubject))
                                 Spacer()
-                                Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
+                                Image(systemName: "chevron.down").font(.caption).foregroundColor(.gray)
                             }
-                            .padding(.vertical, 12) // [Fix] 16 -> 12 축소
-                            .padding(.horizontal, 16) // [Fix] 20 -> 16 축소
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity)
                             .background(Color.white)
-                            .cornerRadius(16)
-                            .shadow(color: .black.opacity(0.05), radius: 5)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.05), radius: 3)
                         }
                     }
                     
-                    VStack(spacing: 8) {
-                        Text("공부 목적").font(.caption).foregroundColor(.gray)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("공부 목적").font(.caption2).foregroundColor(.gray).padding(.leading, 4)
                         Menu {
                             ForEach(StudyPurpose.orderedCases, id: \.self) { purpose in
                                 Button(purpose.localizedName) { viewModel.selectedPurpose = purpose }
@@ -161,93 +187,74 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedPurpose.localizedName)
-                                    .font(.headline) // [Fix] title3 -> headline 축소
+                                    .font(.subheadline)
                                     .fontWeight(.bold)
-                                    .lineLimit(1).minimumScaleFactor(0.5)
+                                    .lineLimit(1).minimumScaleFactor(0.8)
                                     .foregroundColor(.primary)
                                 Spacer()
-                                Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
+                                Image(systemName: "chevron.down").font(.caption).foregroundColor(.gray)
                             }
-                            .padding(.vertical, 12) // [Fix] 16 -> 12 축소
-                            .padding(.horizontal, 16) // [Fix] 20 -> 16 축소
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity)
-                            .background(Color.white).cornerRadius(16)
-                            .shadow(color: .black.opacity(0.05), radius: 5)
+                            .background(Color.white).cornerRadius(12)
+                            .shadow(color: .black.opacity(0.05), radius: 3)
                         }
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 30) // ⚙️상단 타이틀과 과목/공부목적 버튼 사이의 간격 수정 부분
                 .disabled(viewModel.isRunning)
                 .opacity(viewModel.isRunning ? 0.6 : 1.0)
                 
-                Spacer()
+                Spacer(minLength: 10)
                 
-                // 2. 타이머 시간 표시
-                VStack(spacing: 20) {
+                // 3. 타이머 시간 표시
+                VStack(spacing: 5) {
                     if viewModel.isSpeakingMode {
-                        // 🗣️ 말하기 모드: 말한 시간 메인 표시
-                        VStack(spacing: 5) {
-                            Text("말한 시간")
-                                .font(.headline)
-                                .foregroundColor(.green)
-                            
-                            Text(viewModel.formatTime(seconds: viewModel.speakingTime))
-                                .font(.system(size: 60, weight: .medium, design: .monospaced)) // [Fix] 70 -> 60 축소
-                                .foregroundColor(.green)
-                                .lineLimit(1).minimumScaleFactor(0.5)
-                        }
+                        Text("말한 시간")
+                            .font(.headline)
+                            .foregroundColor(.green)
+                        
+                        Text(viewModel.formatTime(seconds: viewModel.speakingTime))
+                            .font(.system(size: 48, weight: .medium, design: .monospaced)) // [Fix] 56 -> 48 축소
+                            .foregroundColor(.green)
+                            .lineLimit(1).minimumScaleFactor(0.5)
                         
                         // 비주얼라이저
                         if viewModel.isRunning {
                             AudioVisualizerView(audioLevel: viewModel.audioLevel)
-                                .frame(height: 60)
+                                .frame(height: 50)
                                 .padding(.horizontal, 40)
                         } else {
-                            // [Fix] 멈춤 문구 삭제 요청 반영
-                            // Text("타이머가 멈췄습니다")
-                            //    .font(.caption)
-                            //    .foregroundColor(.gray)
-                            //    .padding(.vertical, 20)
-                             Spacer().frame(height: 20) // 공간만 유지
+                             Spacer().frame(height: 50)
                         }
-                        
-                        // 전체 공부 시간 (작게 표시) -> [Fix] 삭제 요청 반영
-                        // HStack {
-                        //     Text("총 공부 시간:")
-                        //     Text(viewModel.timeString)
-                        // }
-                        // .font(.subheadline)
-                        // .foregroundColor(.gray)
-                        
                     } else {
-                        // 🤫 집중 모드: 기존 공부 시간 표시
+                        // 🤫 집중 모드
                         Text(viewModel.timeString)
-                            .font(.system(size: 60, weight: .medium, design: .monospaced)) // [Fix] 70 -> 60 축소
+                            .font(.system(size: 54, weight: .medium, design: .monospaced)) // [Fix] 64 -> 54 축소
                             .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                             .lineLimit(1).minimumScaleFactor(0.5)
-                        
-                        // 말하기 모드가 아닐 때는 비주얼라이저 공간 확보하지 않음 (깔끔하게)
+                            .padding(.bottom, 20) // 시각적 균형
                     }
                 }
-                .frame(height: 300) // [Fix] 타이머 영역 높이 고정하여 위아래 흔들림 방지
+                .frame(height: 160) // [Fix] 180 -> 160 축소
                 
-                Spacer()
+                Spacer().frame(height: 5) // 시작 버튼을 위로 더 올리기 위해 30 -> 10 축소
                 
-                // 3. 컨트롤 버튼
-                HStack(spacing: 40) {
+                // 4. 컨트롤 버튼
+                HStack(spacing: 30) {
                     if viewModel.isRunning {
                         Button(action: { viewModel.stopTimer() }) {
-                            VStack {
-                                Image(systemName: "pause.circle.fill").resizable().frame(width: 80, height: 80)
-                                Text("일시정지").font(.caption).padding(.top, 5)
+                            VStack(spacing: 4) {
+                                Image(systemName: "pause.circle.fill").resizable().frame(width: 72, height: 72)
+                                Text("일시정지").font(.caption2)
                             }
                         }.foregroundColor(.orange)
                     } else {
                         Button(action: { viewModel.startTimer() }) {
-                            VStack {
-                                Image(systemName: "play.circle.fill").resizable().frame(width: 80, height: 80)
-                                Text(viewModel.displayTime > 0 ? "계속하기" : "시작").font(.caption).padding(.top, 5)
+                            VStack(spacing: 4) {
+                                Image(systemName: "play.circle.fill").resizable().frame(width: 72, height: 72)
+                                Text(viewModel.displayTime > 0 ? "계속하기" : "시작").font(.caption2)
                             }
                         }.foregroundColor(brandColor)
                     }
@@ -257,36 +264,24 @@ struct TimerView: View {
                             let primaryGoal = goals.first { $0.isPrimaryGoal } ?? goals.first
                             viewModel.saveRecord(context: modelContext, ownerID: currentUserId, primaryGoal: primaryGoal)
                         }) {
-                            VStack {
-                                Image(systemName: "checkmark.circle.fill").resizable().frame(width: 80, height: 80)
-                                Text("저장하기").font(.caption).padding(.top, 5)
+                            VStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill").resizable().frame(width: 72, height: 72)
+                                Text("저장하기").font(.caption2)
                             }
                         }.foregroundColor(.green)
                     }
                 }
-                .padding(.bottom, 20)
+
+                // .padding(.bottom, 20) 제거하여 중앙 정렬 유도
                 
-                // ✅ [오류 해결] 1. RecentRecordsView를 하단에 정의 / 2. .bottom으로 마침표 추가
-                RecentRecordsView(userId: currentUserId).padding(.bottom, 10)
+                Spacer().frame(height: 20) // 하단 고정 높이 20으로 설정하여 최근 기록을 위로 당김
+                
+                // 5. 최근 기록
+                RecentRecordsView(userId: currentUserId).padding(.bottom, 5)
             }
             .background(Color(.systemGray6))
-            .navigationTitle("집중 타이머") // ✨ [Fix] 표준 네비게이션 타이틀 사용 (Planner와 높이 통일)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showShieldingPicker = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "hand.raised.fill")
-                            Text("허용 앱")
-                        }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(brandColor) // 툴바에서는 텍스트 컬러만 사용
-                    }
-                }
-            }
-            // ... (나머지 modifier들은 그대로 유지)
-            // 1. 과목 및 목적 선택 영역
+            .navigationTitle("집중 타이머")
+            // .toolbar { ... } 제거 (허용 앱 버튼 이동됨)
             .onAppear {
                 if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
@@ -296,15 +291,12 @@ struct TimerView: View {
                     navManager.clearTarget()
                 }
                 
-                // ✨ 온보딩 체크
                 if !hasCompletedOnboarding {
                     showOnboarding = true
                 }
                 
-                // ✨ [New] 강제 종료 등으로 저장되지 못한 기록 복구
                 viewModel.checkAndSavePendingRecord(context: modelContext, ownerID: currentUserId)
             }
-            // ✨ [추가] 이미 타이머 탭에 있을 때 딥링크로 데이터가 들어오면 즉시 반영
             .onChange(of: navManager.targetSchedule) { newSchedule in
                 if let schedule = newSchedule {
                     viewModel.applySchedule(schedule)
@@ -605,7 +597,7 @@ struct RecentRecordsView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden) // Remove default list background
-                .frame(height: 250) // Adjust height for List
+                .frame(height: 400) // [Fix] 250 -> 400 확대
             }
         }
     }
