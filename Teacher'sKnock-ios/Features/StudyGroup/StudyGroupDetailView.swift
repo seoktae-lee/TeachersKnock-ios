@@ -328,15 +328,7 @@ struct MemberRow: View {
                     .fontWeight(.bold)
                     .foregroundColor(user.isStudying ? .blue : .gray)
                 
-                // ✨ [New] 말하기 시간 표시
-                if user.todaySpeakingTime > 0 {
-                    HStack(spacing: 2) {
-                        Text("🗣️")
-                        Text(formatTime(user.todaySpeakingTime))
-                    }
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                }
+                // ✨ [Modified] 말하기 시간 표시 제거 (순공시간에 합산됨)
             }
         }
         .padding()

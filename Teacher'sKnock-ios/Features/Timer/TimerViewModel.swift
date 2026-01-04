@@ -141,11 +141,13 @@ class TimerViewModel: ObservableObject {
             
             // 어제 공부한 시간 (= 자정 - 시작시간 + 기존 누적시간)
             let durationUntilMidnight = startOfToday.timeIntervalSince(start)
+            // ✨ [수정] 말하기 모드일 경우 말하기 시간만 기록
             let totalYesterdaySeconds = Int(durationUntilMidnight + accumulatedTime)
+            let durationToRecord = isSpeakingMode ? Int(accumulatedSpeakingTime) : totalYesterdaySeconds
             
-            if totalYesterdaySeconds >= minimumStudyTime {
+            if durationToRecord >= minimumStudyTime {
                 let yesterdayRecord = StudyRecord(
-                    durationSeconds: totalYesterdaySeconds,
+                    durationSeconds: durationToRecord,
                     areaName: selectedSubject,
                     date: start, // 시작 날짜 기준
                     ownerID: Auth.auth().currentUser?.uid ?? "",
@@ -245,6 +247,7 @@ class TimerViewModel: ObservableObject {
     private static let kSubject = "timer_subject"
     private static let kPurpose = "timer_purpose"
     private static let kAccumulatedSpeaking = "timer_accumulated_speaking" // ✨ [New]
+    private static let kIsSpeakingMode = "timer_isSpeakingMode" // ✨ [New]
     
     // ✨ [추가] 강제 종료 시 저장을 위한 임시 키
     private static let kPendingRecordDuration = "pending_record_duration"
@@ -262,6 +265,7 @@ class TimerViewModel: ObservableObject {
         UserDefaults.standard.set(selectedSubject, forKey: Self.kSubject)
         UserDefaults.standard.set(selectedPurpose.rawValue, forKey: Self.kPurpose)
         UserDefaults.standard.set(accumulatedSpeakingTime, forKey: Self.kAccumulatedSpeaking) // ✨ [New]
+        UserDefaults.standard.set(isSpeakingMode, forKey: Self.kIsSpeakingMode) // ✨ [New]
     }
     
     private func clearTimerState() {
@@ -339,7 +343,8 @@ class TimerViewModel: ObservableObject {
     func saveRecord(context: ModelContext, ownerID: String, primaryGoal: Goal?) {
             stopTimer()
             // 저장 로직 실행 시 accumulatedTime/displayTime 초기화
-            let finalTime = displayTime
+            // ✨ [수정] 말하기 모드라면 보여지는 시간이 아닌 실제 말한 시간을 기록합니다.
+            let finalTime = isSpeakingMode ? Int(accumulatedSpeakingTime) : displayTime
             let finalSpeakingTime = Int(accumulatedSpeakingTime) // ✨ [New]
             
             guard finalTime >= minimumStudyTime else {
@@ -534,8 +539,12 @@ class TimerViewModel: ObservableObject {
                 UserDefaults.standard.set(finalAccumulated, forKey: Self.kAccumulated)
                 
                 // ✨ 저장 데이터 생성 (다음 실행 시 DB 저장용)
-                let finalDuration = Int(finalAccumulated)
+                // ✨ [수정] 종료 시점의 모드 확인
+                let wasSpeakingMode = UserDefaults.standard.bool(forKey: Self.kIsSpeakingMode)
                 let finalSpeakingDuration = Int(finalSpeaking) // ✨ [New]
+                
+                // 말하기 모드였다면 말한 시간, 아니면 경과 시간 사용
+                let finalDuration = wasSpeakingMode ? finalSpeakingDuration : Int(finalAccumulated)
                 
                 if finalDuration >= 5 { // 최소 시간 조건
                     UserDefaults.standard.set(finalDuration, forKey: Self.kPendingRecordDuration)

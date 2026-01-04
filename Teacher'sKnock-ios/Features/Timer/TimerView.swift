@@ -31,7 +31,7 @@ struct AudioVisualizerView: View {
         // 인덱스별로 약간 다르게 반응하게 하여 파형 느낌 주기
         let randomFactor = CGFloat.random(in: 0.8...1.2) // 약간의 랜덤성
         let baseHeight: CGFloat = 10
-        let maxHeight: CGFloat = 50
+        let maxHeight: CGFloat = 30 // Compact height for new layout
         
         // 중앙(index 2)이 가장 크게 움직이고 양옆이 작게
         let positionFactor: CGFloat
@@ -67,7 +67,7 @@ struct TimerView: View {
         NavigationStack {
             VStack(spacing: 12) {
                 // 0. 네비게이션 타이틀과의 겹침 방지 여백 (다시 겹침 해결을 위해 140pt로 확대)
-                Spacer().frame(height: 300)
+                Spacer().frame(height: 350)
                 
                 // 1. 상단 컨트롤 영역 (토글 & 허용 앱)
                 HStack(alignment: .center) {
@@ -208,36 +208,40 @@ struct TimerView: View {
                 
                 Spacer(minLength: 10)
                 
-                // 3. 타이머 시간 표시
-                VStack(spacing: 5) {
+                // 3. 타이머 시간 표시 (고정 높이)
+                VStack(spacing: 0) {
                     if viewModel.isSpeakingMode {
-                        Text("말한 시간")
-                            .font(.headline)
-                            .foregroundColor(.green)
-                        
+                        // 말하기 모드: 타이머 + 비주얼라이저 (Compact)
                         Text(viewModel.formatTime(seconds: viewModel.speakingTime))
-                            .font(.system(size: 48, weight: .medium, design: .monospaced)) // [Fix] 56 -> 48 축소
+                            .font(.system(size: 54, weight: .medium, design: .monospaced))
                             .foregroundColor(.green)
                             .lineLimit(1).minimumScaleFactor(0.5)
                         
-                        // 비주얼라이저
+                        // 비주얼라이저 (공간 확보)
                         if viewModel.isRunning {
                             AudioVisualizerView(audioLevel: viewModel.audioLevel)
-                                .frame(height: 50)
+                                .frame(height: 36) // Compact height
                                 .padding(.horizontal, 40)
+                                .padding(.top, 4)
                         } else {
-                             Spacer().frame(height: 50)
+                            // 실행 중 아닐 때는 대기 텍스트나 빈 공간
+                             Text("말하기 감지 대기")
+                                .font(.caption)
+                                .foregroundColor(.gray.opacity(0.8))
+                                .frame(height: 36)
+                                .padding(.top, 4)
                         }
                     } else {
-                        // 🤫 집중 모드
+                        // 🤫 집중 모드: 타이머 중앙 정렬
                         Text(viewModel.timeString)
-                            .font(.system(size: 54, weight: .medium, design: .monospaced)) // [Fix] 64 -> 54 축소
+                            .font(.system(size: 54, weight: .medium, design: .monospaced))
                             .foregroundColor(viewModel.isRunning ? brandColor : .primary)
                             .lineLimit(1).minimumScaleFactor(0.5)
-                            .padding(.bottom, 20) // 시각적 균형
+                            .padding(.bottom, 10) // 중앙 정렬 보정
                     }
                 }
-                .frame(height: 160) // [Fix] 180 -> 160 축소
+                .frame(height: 120) // ✨ [Fix] 고정 높이로 흔들림 방지
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isSpeakingMode)
                 
                 Spacer().frame(height: 5) // 시작 버튼을 위로 더 올리기 위해 30 -> 10 축소
                 
