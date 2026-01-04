@@ -12,9 +12,10 @@ struct AddFriendView: View {
     @State private var searchID = ""
     @State private var searchResult: User?
     @State private var isSearching = false
-    @State private var searchError: String?
-    @State private var showSuccessAlert = false
-    
+    @State private var searchError: String? // ✨ [Restored]
+    @State private var showSuccessAlert = false // ✨ [Restored]
+    @State private var isSending = false // ✨ [New] 신청 보내기 로딩 상태
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -59,7 +60,7 @@ struct AddFriendView: View {
                         if let univ = user.university {
                             Text(univ)
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                            .foregroundColor(.gray)
                         }
                             
                         Text("ID: \(user.teacherKnockID ?? "없음")")
@@ -69,14 +70,20 @@ struct AddFriendView: View {
                             .cornerRadius(4)
                         
                         Button(action: { sendFriendRequest(user: user) }) {
-                            Text("친구 신청") // Changed
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color(red: 0.35, green: 0.65, blue: 0.95))
-                                .cornerRadius(10)
+                            if isSending {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Text("친구 신청")
+                                    .fontWeight(.bold)
+                            }
                         }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                        .cornerRadius(10)
+                        .disabled(isSending)
                     }
                     .padding()
                     .background(Color.white)
@@ -146,12 +153,16 @@ struct AddFriendView: View {
     
     // 친구 신청 보내기
     func sendFriendRequest(user: User) {
+        isSending = true // 로딩 시작
+        
         // 내 닉네임 가져오기 (간단히 비동기 처리)
         let db = Firestore.firestore()
         db.collection("users").document(myUID).getDocument { snapshot, error in
             let myName = (snapshot?.data()?["nickname"] as? String) ?? "알 수 없음"
             
             requestManager.sendRequest(senderID: myUID, senderName: myName, receiverID: user.id) { success, message in
+                isSending = false // 로딩 종료
+                
                 if success {
                     showSuccessAlert = true
                 } else {

@@ -41,13 +41,14 @@ class FirestoreSyncManager {
             "areaName": record.areaName,
             "date": Timestamp(date: record.date),
             "ownerID": record.ownerID,
-            "studyPurpose": record.studyPurpose
+            "studyPurpose": record.studyPurpose,
+            "speakingSeconds": record.speakingSeconds // ✨ [New]
         ]
         
         db.collection("users").document(record.ownerID).collection("study_records").addDocument(data: data)
         
-        // ✨ [New] 공부 시간 누적 업데이트
-        updateUserStudyTime(uid: record.ownerID, isStudying: false, duration: record.durationSeconds)
+        // ✨ [New] 공부 시간 + 말하기 시간 누적 업데이트
+        updateUserStudyTime(uid: record.ownerID, isStudying: false, duration: record.durationSeconds, speakingDuration: record.speakingSeconds)
     }
     
     // MARK: - 2. 데이터 복구 (로그인 시 호출)
@@ -142,10 +143,12 @@ class FirestoreSyncManager {
                     let areaName = data["areaName"] as? String ?? "기타"
                     let date = (data["date"] as? Timestamp)?.dateValue() ?? Date()
                     let purpose = data["studyPurpose"] as? String ?? "자습"
+                    let speakingSeconds = data["speakingSeconds"] as? Int ?? 0 // ✨ [New]
                     
                     let newRecord = StudyRecord(
                         durationSeconds: duration, areaName: areaName, date: date,
-                        ownerID: uid, studyPurpose: purpose
+                        ownerID: uid, studyPurpose: purpose,
+                        speakingSeconds: speakingSeconds
                     )
                     context.insert(newRecord)
                 }
@@ -161,7 +164,7 @@ class FirestoreSyncManager {
     
     // MARK: - 3. 실시간 유저 정보 업데이트 (타이머 관련)
     
-    func updateUserStudyTime(uid: String, isStudying: Bool, duration: Int? = 0) {
+    func updateUserStudyTime(uid: String, isStudying: Bool, duration: Int? = 0, speakingDuration: Int? = 0) {
         var data: [String: Any] = [
             "isStudying": isStudying
         ]
@@ -184,20 +187,27 @@ class FirestoreSyncManager {
                 
                 let lastDate = (dataSnapshot["lastStudyDate"] as? Timestamp)?.dateValue() ?? Date.distantPast
                 let currentTodayTime = dataSnapshot["todayStudyTime"] as? Int ?? 0
+                let currentSpeakingTime = dataSnapshot["todaySpeakingTime"] as? Int ?? 0 // ✨ [New]
                 
                 var newTodayTime = currentTodayTime
+                var newSpeakingTime = currentSpeakingTime // ✨ [New]
                 
                 // 날짜 비교 (년, 월, 일)
                 if calendar.isDate(lastDate, inSameDayAs: now) {
                     // 같은 날이면 누적
                     newTodayTime += duration
+                    if let speaking = speakingDuration {
+                        newSpeakingTime += speaking
+                    }
                 } else {
                     // 다른 날이면 리셋 후 이번 시간만
                     newTodayTime = duration
+                    newSpeakingTime = speakingDuration ?? 0
                 }
                 
                 // 업데이트할 필드 추가
                 data["todayStudyTime"] = newTodayTime
+                data["todaySpeakingTime"] = newSpeakingTime // ✨ [New]
                 data["lastStudyDate"] = Timestamp(date: now)
                 
                 // 최종 업데이트
@@ -205,7 +215,7 @@ class FirestoreSyncManager {
                     if let error = error {
                         print("❌ Error updating study status (end study): \(error)")
                     } else {
-                        print("✅ FirestoreSync: Study Status Updated & Time Accumulated (+ \(duration))")
+                        print("✅ FirestoreSync: Study Status Updated & Time Accumulated (+ \(duration)s, Speaking: +\(speakingDuration ?? 0)s)")
                     }
                 }
             }

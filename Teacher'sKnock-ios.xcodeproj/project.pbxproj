@@ -86,6 +86,7 @@
 		54A40FF22F0A648200A0474F /* StudyInvitation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF12F0A648200A0474F /* StudyInvitation.swift */; };
 		54A40FF42F0A6C4E00A0474F /* FriendRequestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */; };
 		54A40FF62F0A6C5700A0474F /* FriendRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF52F0A6C5700A0474F /* FriendRequest.swift */; };
+		54A40FF82F0A99A400A0474F /* AudioLevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */; };
 		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
 		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
 		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
@@ -210,6 +211,7 @@
 		54A40FF12F0A648200A0474F /* StudyInvitation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyInvitation.swift; sourceTree = "<group>"; };
 		54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequestManager.swift; sourceTree = "<group>"; };
 		54A40FF52F0A6C5700A0474F /* FriendRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequest.swift; sourceTree = "<group>"; };
+		54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelManager.swift; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
@@ -320,6 +322,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */,
 				54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */,
 				54A40FEF2F0A646300A0474F /* InvitationManager.swift */,
 				54A40FE92F0A1B5E00A0474F /* FriendManager.swift */,
@@ -649,6 +652,7 @@
 				5459AE432EE19535008EE0E4 /* StatisticsView.swift in Sources */,
 				54F81CDE2EE1D5C7002226B4 /* MonthlyReportDetailView.swift in Sources */,
 				5459AE442EE19535008EE0E4 /* StudyPurpose.swift in Sources */,
+				54A40FF82F0A99A400A0474F /* AudioLevelManager.swift in Sources */,
 				5459AE452EE19535008EE0E4 /* StudyRecord.swift in Sources */,
 				54A40FE72F0A1B4500A0474F /* AddFriendView.swift in Sources */,
 				54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */,

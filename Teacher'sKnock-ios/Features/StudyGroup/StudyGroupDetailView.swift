@@ -327,6 +327,16 @@ struct MemberRow: View {
                     .font(.system(.body, design: .monospaced)) // 숫자 등폭 폰트 사용
                     .fontWeight(.bold)
                     .foregroundColor(user.isStudying ? .blue : .gray)
+                
+                // ✨ [New] 말하기 시간 표시
+                if user.todaySpeakingTime > 0 {
+                    HStack(spacing: 2) {
+                        Text("🗣️")
+                        Text(formatTime(user.todaySpeakingTime))
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                }
             }
         }
         .padding()

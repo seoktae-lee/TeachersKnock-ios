@@ -3,6 +3,48 @@ import SwiftData
 import FirebaseAuth
 import FamilyControls
 
+// ✨ [New] 오디오 비주얼라이저 뷰
+struct AudioVisualizerView: View {
+    var audioLevel: Float
+    
+    // 5개의 바를 사용
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<5) { index in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color(red: 0.35, green: 0.65, blue: 0.95))
+                    .frame(width: 8, height: height(for: index))
+                    .animation(.easeInOut(duration: 0.1), value: audioLevel)
+            }
+        }
+        .frame(height: 50)
+    }
+    
+    private func height(for index: Int) -> CGFloat {
+        // -160 ~ 0 dB -> 0 ~ 1 normalized
+        // 보통 -60dB 이상이면 소리 감지
+        // Linear scale로 변환
+        let minDb: Float = -60
+        let level = max(audioLevel, minDb)
+        let normalized = CGFloat((level - minDb) / (0 - minDb)) // 0.0 ~ 1.0
+        
+        // 인덱스별로 약간 다르게 반응하게 하여 파형 느낌 주기
+        let randomFactor = CGFloat.random(in: 0.8...1.2) // 약간의 랜덤성
+        let baseHeight: CGFloat = 10
+        let maxHeight: CGFloat = 50
+        
+        // 중앙(index 2)이 가장 크게 움직이고 양옆이 작게
+        let positionFactor: CGFloat
+        switch index {
+        case 0, 4: positionFactor = 0.5
+        case 1, 3: positionFactor = 0.8
+        default: positionFactor = 1.0
+        }
+        
+        return baseHeight + (maxHeight - baseHeight) * normalized * positionFactor
+    }
+}
+
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
@@ -23,33 +65,50 @@ struct TimerView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                // ✨ 커스텀 헤더 (타이틀과 허용 앱 설정 버튼)
-                HStack(alignment: .center) {
-                    Text("집중 타이머")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showShieldingPicker = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "hand.raised.fill")
-                            Text("허용 앱 설정")
+            VStack(spacing: 20) {
+                Spacer().frame(height: 20) // 상단 여백 추가
+
+                // 0. 말하기 모드 토글 (상단 배치)
+                if !viewModel.isRunning {
+                    HStack {
+                        Spacer()
+                        Toggle(isOn: Binding(
+                             get: { viewModel.isSpeakingMode },
+                             set: { _ in viewModel.toggleSpeakingMode() }
+                        )) {
+                            HStack {
+                                if viewModel.isSpeakingMode {
+                                    Text("🗣️ 말하기(인출) 모드 ON")
+                                        .foregroundColor(.green)
+                                        .fontWeight(.bold)
+                                } else {
+                                    Text("🤫 집중(침묵) 모드")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .font(.caption)
                         }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .background(brandColor)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.1), radius: 3)
+                        .toggleStyle(SwitchToggleStyle(tint: .green))
+                        .frame(width: 200)
+                        Spacer()
                     }
+                    .padding(.top, 10)
+                } else {
+                     // 실행 중일 때는 상태만 표시
+                     if viewModel.isSpeakingMode {
+                         HStack {
+                             Spacer()
+                             Label("말하기 인출 모드", systemImage: "mic.fill")
+                                 .font(.caption)
+                                 .padding(6)
+                                 .background(Color.green.opacity(0.1))
+                                 .foregroundColor(.green)
+                                 .cornerRadius(8)
+                             Spacer()
+                         }
+                         .padding(.top, 10)
+                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 200) // ⚙️'집중타이머' 상단 타이틀 글씨 높이 수정 부분
 
                 // 1. 과목 및 목적 선택 영역
                 HStack(spacing: 15) {
@@ -76,7 +135,7 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedSubject)
-                                    .font(.title3)
+                                    .font(.headline) // [Fix] title3 -> headline 축소
                                     .fontWeight(.bold)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.5)
@@ -84,8 +143,8 @@ struct TimerView: View {
                                 Spacer()
                                 Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
                             }
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12) // [Fix] 16 -> 12 축소
+                            .padding(.horizontal, 16) // [Fix] 20 -> 16 축소
                             .frame(maxWidth: .infinity)
                             .background(Color.white)
                             .cornerRadius(16)
@@ -102,13 +161,15 @@ struct TimerView: View {
                         } label: {
                             HStack {
                                 Text(viewModel.selectedPurpose.localizedName)
-                                    .font(.title3).fontWeight(.bold)
+                                    .font(.headline) // [Fix] title3 -> headline 축소
+                                    .fontWeight(.bold)
                                     .lineLimit(1).minimumScaleFactor(0.5)
                                     .foregroundColor(.primary)
                                 Spacer()
                                 Image(systemName: "chevron.down").font(.body).foregroundColor(.gray)
                             }
-                            .padding(.vertical, 16).padding(.horizontal, 20)
+                            .padding(.vertical, 12) // [Fix] 16 -> 12 축소
+                            .padding(.horizontal, 16) // [Fix] 20 -> 16 축소
                             .frame(maxWidth: .infinity)
                             .background(Color.white).cornerRadius(16)
                             .shadow(color: .black.opacity(0.05), radius: 5)
@@ -123,10 +184,53 @@ struct TimerView: View {
                 Spacer()
                 
                 // 2. 타이머 시간 표시
-                Text(viewModel.timeString)
-                    .font(.system(size: 90, weight: .medium, design: .monospaced))
-                    .foregroundColor(viewModel.isRunning ? brandColor : .primary)
-                    .lineLimit(1).minimumScaleFactor(0.5)
+                VStack(spacing: 20) {
+                    if viewModel.isSpeakingMode {
+                        // 🗣️ 말하기 모드: 말한 시간 메인 표시
+                        VStack(spacing: 5) {
+                            Text("말한 시간")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            
+                            Text(viewModel.formatTime(seconds: viewModel.speakingTime))
+                                .font(.system(size: 60, weight: .medium, design: .monospaced)) // [Fix] 70 -> 60 축소
+                                .foregroundColor(.green)
+                                .lineLimit(1).minimumScaleFactor(0.5)
+                        }
+                        
+                        // 비주얼라이저
+                        if viewModel.isRunning {
+                            AudioVisualizerView(audioLevel: viewModel.audioLevel)
+                                .frame(height: 60)
+                                .padding(.horizontal, 40)
+                        } else {
+                            // [Fix] 멈춤 문구 삭제 요청 반영
+                            // Text("타이머가 멈췄습니다")
+                            //    .font(.caption)
+                            //    .foregroundColor(.gray)
+                            //    .padding(.vertical, 20)
+                             Spacer().frame(height: 20) // 공간만 유지
+                        }
+                        
+                        // 전체 공부 시간 (작게 표시) -> [Fix] 삭제 요청 반영
+                        // HStack {
+                        //     Text("총 공부 시간:")
+                        //     Text(viewModel.timeString)
+                        // }
+                        // .font(.subheadline)
+                        // .foregroundColor(.gray)
+                        
+                    } else {
+                        // 🤫 집중 모드: 기존 공부 시간 표시
+                        Text(viewModel.timeString)
+                            .font(.system(size: 60, weight: .medium, design: .monospaced)) // [Fix] 70 -> 60 축소
+                            .foregroundColor(viewModel.isRunning ? brandColor : .primary)
+                            .lineLimit(1).minimumScaleFactor(0.5)
+                        
+                        // 말하기 모드가 아닐 때는 비주얼라이저 공간 확보하지 않음 (깔끔하게)
+                    }
+                }
+                .frame(height: 300) // [Fix] 타이머 영역 높이 고정하여 위아래 흔들림 방지
                 
                 Spacer()
                 
@@ -166,8 +270,23 @@ struct TimerView: View {
                 RecentRecordsView(userId: currentUserId).padding(.bottom, 10)
             }
             .background(Color(.systemGray6))
-            .toolbar(.hidden, for: .navigationBar) // ✨ [추가] 커스텀 헤더 사용을 위해 시스템 네비게이션 바 숨김
-                // 1. 과목 및 목적 선택 영역
+            .navigationTitle("집중 타이머") // ✨ [Fix] 표준 네비게이션 타이틀 사용 (Planner와 높이 통일)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showShieldingPicker = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hand.raised.fill")
+                            Text("허용 앱")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(brandColor) // 툴바에서는 텍스트 컬러만 사용
+                    }
+                }
+            }
+            // ... (나머지 modifier들은 그대로 유지)
+            // 1. 과목 및 목적 선택 영역
             .onAppear {
                 if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
@@ -212,7 +331,6 @@ struct TimerView: View {
                 OnboardingView(isPresented: $showOnboarding)
             }
         }
-
     }
 }
 

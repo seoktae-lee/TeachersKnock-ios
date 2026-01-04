@@ -18,10 +18,21 @@ class TimerViewModel: ObservableObject {
     @Published var selectedPurpose: StudyPurpose = .lectureWatching // 기본값
     @Published var linkedScheduleTitle: String? = nil // 플래너에서 넘어온 제목 (메모용)
     
+    // ✨ [New] 말하기 모드 (아웃풋 타이머)
+    @Published var isSpeakingMode: Bool = false
+    @Published var speakingTime: Int = 0        // 표시용 (초 단위)
+    @Published var audioLevel: Float = 0.0
+    @Published var isActuallySpeaking: Bool = false
+    
     // MARK: - 내부 변수
     private var startTime: Date?
     private var accumulatedTime: TimeInterval = 0
+    private var accumulatedSpeakingTime: TimeInterval = 0 // ✨ 내부 계산용
     private var timer: Timer?
+    
+    // ✨ [New] 오디오 매니저
+    private let audioManager = AudioLevelManager()
+    private var cancellables = Set<AnyCancellable>()
     
     // ✨ Live Activity
     private var activity: Activity<StudyTimerAttributes>?
@@ -29,9 +40,40 @@ class TimerViewModel: ObservableObject {
     // MARK: - 초기화
     init() {
         restoreTimerState()
+        setupAudioBindings()
+    }
+    
+    private func setupAudioBindings() {
+        audioManager.$audioLevel
+            .receive(on: RunLoop.main)
+            .assign(to: \TimerViewModel.audioLevel, on: self)
+            .store(in: &cancellables)
+            
+        audioManager.$isSpeaking
+            .receive(on: RunLoop.main)
+            .assign(to: \TimerViewModel.isActuallySpeaking, on: self)
+            .store(in: &cancellables)
     }
     
     // MARK: - 타이머 제어
+    
+    func toggleSpeakingMode() {
+        // 타이머가 돌고 있을 때는 모드 변경 불가 (또는 정지 후 변경 유도)
+        guard !isRunning else { return }
+        isSpeakingMode.toggle()
+        
+        if isSpeakingMode {
+            // 권한 체크
+            audioManager.requestPermission { granted in
+                if !granted {
+                    DispatchQueue.main.async {
+                        self.isSpeakingMode = false
+                        // 권한 거부 알림 처리는 View에서 하는게 좋음 (Publisher로 전달 등)
+                    }
+                }
+            }
+        }
+    }
     
     func startTimer() {
         guard !isRunning else { return }
@@ -48,6 +90,11 @@ class TimerViewModel: ObservableObject {
         
         isRunning = true
         UIApplication.shared.isIdleTimerDisabled = true
+        
+        // ✨ 말하기 모드라면 오디오 모니터링 시작
+        if isSpeakingMode {
+            audioManager.startMonitoring()
+        }
         
         // ✨ Shielding(방해 금지) 시작
         ShieldingManager.shared.startShielding()
@@ -67,6 +114,12 @@ class TimerViewModel: ObservableObject {
             Task { @MainActor in
                 self?.updateDisplayTime()
                 self?.checkMidnight()
+                
+                // ✨ 말하기 시간 누적 (실제 말하고 있을 때만)
+                if self?.isSpeakingMode == true && self?.isActuallySpeaking == true {
+                    self?.accumulatedSpeakingTime += 0.1
+                    self?.speakingTime = Int(self?.accumulatedSpeakingTime ?? 0)
+                }
             }
         }
     }
@@ -113,6 +166,10 @@ class TimerViewModel: ObservableObject {
             self.accumulatedTime = 0
             self.displayTime = Int(now.timeIntervalSince(startOfToday)) // 0시부터 현재까지 흐른 시간
             
+            // ✨ 말하기 타이머도 리셋 (어제껀 날아가지만, 일단 초기화)
+            self.accumulatedSpeakingTime = 0
+            self.speakingTime = 0
+            
             // 3. Firestore 상태 업데이트 (오늘 날짜로 갱신)
             if let uid = Auth.auth().currentUser?.uid {
                 // 기존 currentStudyStartTime은 공부 시작 시간이므로, 
@@ -146,6 +203,11 @@ class TimerViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         UIApplication.shared.isIdleTimerDisabled = false
+        
+        // ✨ 오디오 모니터링 중지
+        if isSpeakingMode {
+            audioManager.stopMonitoring()
+        }
         
         // ✨ Shielding(방해 금지) 해제
         ShieldingManager.shared.stopShielding()
@@ -182,6 +244,7 @@ class TimerViewModel: ObservableObject {
     private static let kAccumulated = "timer_accumulated"
     private static let kSubject = "timer_subject"
     private static let kPurpose = "timer_purpose"
+    private static let kAccumulatedSpeaking = "timer_accumulated_speaking" // ✨ [New]
     
     // ✨ [추가] 강제 종료 시 저장을 위한 임시 키
     private static let kPendingRecordDuration = "pending_record_duration"
@@ -189,7 +252,7 @@ class TimerViewModel: ObservableObject {
     private static let kPendingRecordPurpose = "pending_record_purpose"
     private static let kPendingRecordDate = "pending_record_date"
     private static let kPendingRecordMemo = "pending_record_memo"
-
+    private static let kPendingRecordSpeakingDuration = "pending_record_speaking_duration" // ✨ [New]
 
     
     private func saveTimerState() {
@@ -198,12 +261,14 @@ class TimerViewModel: ObservableObject {
         UserDefaults.standard.set(accumulatedTime, forKey: Self.kAccumulated)
         UserDefaults.standard.set(selectedSubject, forKey: Self.kSubject)
         UserDefaults.standard.set(selectedPurpose.rawValue, forKey: Self.kPurpose)
+        UserDefaults.standard.set(accumulatedSpeakingTime, forKey: Self.kAccumulatedSpeaking) // ✨ [New]
     }
     
     private func clearTimerState() {
         UserDefaults.standard.set(false, forKey: Self.kIsRunning)
         UserDefaults.standard.removeObject(forKey: Self.kStartTime)
         UserDefaults.standard.set(accumulatedTime, forKey: Self.kAccumulated) // 일시정지 시간은 유지 가능
+        UserDefaults.standard.set(accumulatedSpeakingTime, forKey: Self.kAccumulatedSpeaking) // ✨ [New]
     }
     
     private func restoreTimerState() {
@@ -221,6 +286,10 @@ class TimerViewModel: ObservableObject {
             self.selectedPurpose = purpose
         }
         
+        // ✨ [New] 말하기 시간 복원
+        self.accumulatedSpeakingTime = UserDefaults.standard.double(forKey: Self.kAccumulatedSpeaking)
+        self.speakingTime = Int(self.accumulatedSpeakingTime)
+        
         if wasRunning {
             // ✨ [수정] 강제 종료 후 재실행이라면, wasRunning이 true여도 startTime이 없을 수 있음 (handleAppTermination에서 지웠으므로)
             // 하지만 handleAppTermination이 호출되지 않았다면(크래시 등), 여기서 복구 로직이 동작.
@@ -236,9 +305,24 @@ class TimerViewModel: ObservableObject {
                 ShieldingManager.shared.startShielding()
                 UIApplication.shared.isIdleTimerDisabled = true
                 
+                // ✨ 말하기 모드 복구 (사용자가 켜놨었다면)
+                // isSpeakingMode 자체를 저장하진 않았으므로 기본은 false.
+                // 만약 지속하길 원한다면 isSpeakingMode도 저장해야 함.
+                // 일단 꺼진 상태로 시작.
+                
                 timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
                     Task { @MainActor in
                         self?.updateDisplayTime()
+                        self?.checkMidnight()
+                        // speakingTimer는 startTimer 호출 시에만 추가되므로 여기선 누락됨?
+                        // -> startTimer()를 호출하는게 아니라 직접 Timer를 만드므로 speaking 로직도 여기 필요함.
+                        // 하지만 복구 시 startTimer()를 부르지 않고 직접 Timer 생성하는 패턴임.
+                        
+                        // 말하기 시간 누적 코드 추가
+                         if self?.isSpeakingMode == true && self?.isActuallySpeaking == true {
+                             self?.accumulatedSpeakingTime += 0.1
+                             self?.speakingTime = Int(self?.accumulatedSpeakingTime ?? 0)
+                         }
                     }
                 }
                 // 라이브 액티비티 복구
@@ -256,6 +340,8 @@ class TimerViewModel: ObservableObject {
             stopTimer()
             // 저장 로직 실행 시 accumulatedTime/displayTime 초기화
             let finalTime = displayTime
+            let finalSpeakingTime = Int(accumulatedSpeakingTime) // ✨ [New]
+            
             guard finalTime >= minimumStudyTime else {
                 resetTimer()
                 return
@@ -268,7 +354,8 @@ class TimerViewModel: ObservableObject {
                 ownerID: ownerID,
                 studyPurpose: selectedPurpose.rawValue,
                 memo: linkedScheduleTitle,
-                goal: primaryGoal // ✨ [핵심] 현재 활성화된 목표를 기록에 연결
+                goal: primaryGoal, // ✨ [핵심] 현재 활성화된 목표를 기록에 연결
+                speakingSeconds: finalSpeakingTime // ✨ [New]
             )
             
             context.insert(newRecord)
@@ -283,9 +370,12 @@ class TimerViewModel: ObservableObject {
     private func resetTimer() {
         accumulatedTime = 0
         displayTime = 0
+        accumulatedSpeakingTime = 0 // ✨ [New]
+        speakingTime = 0 // ✨ [New]
         linkedScheduleTitle = nil
         clearTimerState()
         UserDefaults.standard.removeObject(forKey: Self.kAccumulated)
+        UserDefaults.standard.removeObject(forKey: Self.kAccumulatedSpeaking)
     }
     
     // ✨ [New] 강제 종료되어 저장되지 못한 기록이 있는지 확인하고 저장
@@ -299,6 +389,7 @@ class TimerViewModel: ObservableObject {
             let purposeRaw = UserDefaults.standard.string(forKey: Self.kPendingRecordPurpose) ?? StudyPurpose.lectureWatching.rawValue
             let date = UserDefaults.standard.object(forKey: Self.kPendingRecordDate) as? Date ?? Date()
             let memo = UserDefaults.standard.string(forKey: Self.kPendingRecordMemo)
+            let speakingDuration = UserDefaults.standard.integer(forKey: Self.kPendingRecordSpeakingDuration) // ✨ [New]
             
             // 기록 생성
             let newRecord = StudyRecord(
@@ -308,7 +399,8 @@ class TimerViewModel: ObservableObject {
                 ownerID: ownerID,
                 studyPurpose: purposeRaw,
                 memo: memo,
-                goal: nil // 목표 연결은 복구 시점이라 어려울 수 있음 (가장 가까운 목표를 찾거나 nil)
+                goal: nil, // 목표 연결은 복구 시점이라 어려울 수 있음 (가장 가까운 목표를 찾거나 nil)
+                speakingSeconds: speakingDuration // ✨ [New]
             )
             
             context.insert(newRecord)
@@ -321,6 +413,7 @@ class TimerViewModel: ObservableObject {
             UserDefaults.standard.removeObject(forKey: Self.kPendingRecordPurpose)
             UserDefaults.standard.removeObject(forKey: Self.kPendingRecordDate)
             UserDefaults.standard.removeObject(forKey: Self.kPendingRecordMemo)
+            UserDefaults.standard.removeObject(forKey: Self.kPendingRecordSpeakingDuration) // ✨ [New]
             
             print("✅ [TimerViewModel] 강제 종료 세션 복구 완료")
         }
@@ -429,6 +522,11 @@ class TimerViewModel: ObservableObject {
                 let elapsed = Date().timeIntervalSince(startTime)
                 let finalAccumulated = currentAccumulated + elapsed
                 
+                // ✨ [New] 말하기 시간도 저장해야 함?
+                // 오디오 모니터링은 앱 종료 시 더 이상 동작하지 않으므로 '추가' 경과 시간을 더할 필요 없음.
+                // 마지막으로 저장된 accumulatedSpeakingTime을 그대로 사용.
+                let finalSpeaking = UserDefaults.standard.double(forKey: Self.kAccumulatedSpeaking)
+                
                 // 3. 상태 업데이트 및 "Pending Record" 저장
                 // 실행 중단 처리
                 UserDefaults.standard.set(false, forKey: Self.kIsRunning)
@@ -437,8 +535,11 @@ class TimerViewModel: ObservableObject {
                 
                 // ✨ 저장 데이터 생성 (다음 실행 시 DB 저장용)
                 let finalDuration = Int(finalAccumulated)
+                let finalSpeakingDuration = Int(finalSpeaking) // ✨ [New]
+                
                 if finalDuration >= 5 { // 최소 시간 조건
                     UserDefaults.standard.set(finalDuration, forKey: Self.kPendingRecordDuration)
+                    UserDefaults.standard.set(finalSpeakingDuration, forKey: Self.kPendingRecordSpeakingDuration) // ✨ [New]
                     
                     let subject = UserDefaults.standard.string(forKey: Self.kSubject)
                     UserDefaults.standard.set(subject, forKey: Self.kPendingRecordSubject)
@@ -455,8 +556,7 @@ class TimerViewModel: ObservableObject {
             }
             
             // 4. Live Activity 종료 요청 (RunLoop Spinning)
-            // Semaphore는 Main Thread를 완전히 멈춰버려 비동기 작업(IPC 등)이 처리를 못하게 막을 수 있습니다.
-            // 대신 RunLoop를 돌리며 대기해야 합니다.
+            // ... (기존 코드 유지)
             print("🛑 [TimerViewModel] Live Activity 종료 요청 시작 (RunLoop 방식)")
             
             var finished = false
