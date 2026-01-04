@@ -38,6 +38,7 @@ enum OfficeOfEducation: String, CaseIterable, Identifiable, Codable {
     var logoImageName: String {
         return "OfficeLogo_\(self.rawValue)" // 다시 한글 이름 사용 (파일이 한글로 되어있음)
     }
+    
 }
 
 // 2. ✨ [수정됨] 대학교 데이터 (전국 교대 및 초등교육과)
