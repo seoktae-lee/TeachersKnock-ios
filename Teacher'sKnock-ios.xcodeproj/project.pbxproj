@@ -82,6 +82,10 @@
 		54A40FEA2F0A1B5E00A0474F /* FriendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE92F0A1B5E00A0474F /* FriendManager.swift */; };
 		54A40FEC2F0A1B6600A0474F /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FEB2F0A1B6600A0474F /* User.swift */; };
 		54A40FEE2F0A57A200A0474F /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FED2F0A57A200A0474F /* ProfileImageView.swift */; };
+		54A40FF02F0A646300A0474F /* InvitationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FEF2F0A646300A0474F /* InvitationManager.swift */; };
+		54A40FF22F0A648200A0474F /* StudyInvitation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF12F0A648200A0474F /* StudyInvitation.swift */; };
+		54A40FF42F0A6C4E00A0474F /* FriendRequestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */; };
+		54A40FF62F0A6C5700A0474F /* FriendRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF52F0A6C5700A0474F /* FriendRequest.swift */; };
 		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
 		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
 		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
@@ -202,6 +206,10 @@
 		54A40FE92F0A1B5E00A0474F /* FriendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendManager.swift; sourceTree = "<group>"; };
 		54A40FEB2F0A1B6600A0474F /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		54A40FED2F0A57A200A0474F /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
+		54A40FEF2F0A646300A0474F /* InvitationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationManager.swift; sourceTree = "<group>"; };
+		54A40FF12F0A648200A0474F /* StudyInvitation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyInvitation.swift; sourceTree = "<group>"; };
+		54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequestManager.swift; sourceTree = "<group>"; };
+		54A40FF52F0A6C5700A0474F /* FriendRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequest.swift; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
@@ -296,6 +304,8 @@
 		5459AE532EE19E41008EE0E4 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FF52F0A6C5700A0474F /* FriendRequest.swift */,
+				54A40FF12F0A648200A0474F /* StudyInvitation.swift */,
 				54A40FEB2F0A1B6600A0474F /* User.swift */,
 				54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */,
 				5459AE202EE19535008EE0E4 /* ScheduleItem.swift */,
@@ -310,6 +320,8 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */,
+				54A40FEF2F0A646300A0474F /* InvitationManager.swift */,
 				54A40FE92F0A1B5E00A0474F /* FriendManager.swift */,
 				5435A2192F0807E3002A37D4 /* CharacterManager.swift */,
 				54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */,
@@ -604,6 +616,7 @@
 				54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */,
 				5459AE332EE19535008EE0E4 /* DailyTimelineView.swift in Sources */,
 				5459AE342EE19535008EE0E4 /* EditScheduleView.swift in Sources */,
+				54A40FF22F0A648200A0474F /* StudyInvitation.swift in Sources */,
 				5459AE352EE19535008EE0E4 /* FirestoreSyncManager.swift in Sources */,
 				5459AE362EE19535008EE0E4 /* Goal.swift in Sources */,
 				5459AE372EE19535008EE0E4 /* GoalListView.swift in Sources */,
@@ -623,6 +636,7 @@
 				5459AE5C2EE1A10E008EE0E4 /* PlannerViewModel.swift in Sources */,
 				54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */,
 				5432C75E2EE3FF69005B4221 /* SafariView.swift in Sources */,
+				54A40FF62F0A6C5700A0474F /* FriendRequest.swift in Sources */,
 				54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */,
 				54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */,
 				5459AE3F2EE19535008EE0E4 /* SettingsManager.swift in Sources */,
@@ -640,6 +654,7 @@
 				54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */,
 				544E3A042EE5E6F800551E30 /* TimeTableView.swift in Sources */,
 				5459AE462EE19535008EE0E4 /* SubjectDetailView.swift in Sources */,
+				54A40FF42F0A6C4E00A0474F /* FriendRequestManager.swift in Sources */,
 				5435A21A2F0807E3002A37D4 /* CharacterManager.swift in Sources */,
 				5459AE472EE19535008EE0E4 /* SubjectName.swift in Sources */,
 				544E3A082EE5E95B00551E30 /* DDayWidget.swift in Sources */,
@@ -668,6 +683,7 @@
 				54DBCD1A2F011C2100B43C2B /* StudyTimerView.swift in Sources */,
 				5459AE4A2EE19535008EE0E4 /* TimerView.swift in Sources */,
 				546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */,
+				54A40FF02F0A646300A0474F /* InvitationManager.swift in Sources */,
 				54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

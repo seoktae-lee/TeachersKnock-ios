@@ -7,6 +7,11 @@ struct MainTabView: View {
     
     // ✨ 1. 네비게이션 매니저 생성 (싱글톤 공유 인스턴스 사용)
     @StateObject private var navigationManager = StudyNavigationManager.shared
+    // ✨ [New] 초대장 배지 관리를 위한 매니저 (최상위에서 관리)
+    @StateObject private var invitationManager = InvitationManager()
+    // ✨ [New] 친구 신청 매니저
+    @StateObject private var friendRequestManager = FriendRequestManager()
+    
     @Environment(\.modelContext) private var modelContext // DB 접근용
     
     var body: some View {
@@ -25,9 +30,11 @@ struct MainTabView: View {
                 .tag(2) // StudyNavigationManager의 triggerStudy에서 이 번호로 이동
             
             // ✨ [New] 스터디 그룹 탭
-            StudyGroupListView()
+            StudyGroupListView(invitationManager: invitationManager, friendRequestManager: friendRequestManager) // 매니저 주입
                 .tabItem { Label("스터디", systemImage: "person.3.fill") }
                 .tag(3)
+                // ✨ [New] 배지 표시 (초대장 + 친구신청 합산)
+                .badge(badgeCount > 0 ? "\(badgeCount)" : nil)
             
             SettingsView()
                 .tabItem { Label("설정", systemImage: "gearshape.fill") }
@@ -52,7 +59,17 @@ struct MainTabView: View {
             if let pendingID = navigationManager.pendingScheduleID {
                 handleDeepLink(idString: pendingID)
             }
+            // ✨ [New] 초대장 & 친구신청 리스닝 시작
+            if Auth.auth().currentUser != nil {
+                invitationManager.listenReceivedInvitations()
+                friendRequestManager.listenReceivedRequests()
+            }
         }
+    }
+    
+    // 배지 숫자 계산
+    var badgeCount: Int {
+        return invitationManager.receivedInvitations.count + friendRequestManager.receivedRequests.count
     }
     
     private func handleDeepLink(idString: String?) {

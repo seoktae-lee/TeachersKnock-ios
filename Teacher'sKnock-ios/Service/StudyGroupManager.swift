@@ -124,9 +124,16 @@ class StudyGroupManager: ObservableObject {
     
     // ✨ [New] 스터디 그룹 삭제 (방장 권한)
     func deleteGroup(groupID: String, completion: @escaping (Bool) -> Void) {
+        // ✨ [Optimistic UI] 즉시 로컬 목록에서 제거
+        if let index = self.myGroups.firstIndex(where: { $0.id == groupID }) {
+            self.myGroups.remove(at: index)
+        }
+        
         db.collection("study_groups").document(groupID).delete { error in
             if let error = error {
                 print("Error deleting group: \(error)")
+                // 실패 시 복구 (Optional: 실패했다는 알림을 띄우고 다시 fetch하거나 놔둘 수 있음)
+                // 여기선 다시 fetch 하는게 안전함
                 completion(false)
             } else {
                 completion(true)
@@ -171,6 +178,16 @@ class StudyGroupManager: ObservableObject {
                 }
             }
         memberListeners[groupID] = listener
+    }
+    
+    func fetchGroup(groupID: String, completion: @escaping (StudyGroup?) -> Void) {
+        db.collection("study_groups").document(groupID).getDocument { snapshot, error in
+            if let document = snapshot, document.exists {
+                completion(StudyGroup(document: document))
+            } else {
+                completion(nil)
+            }
+        }
     }
     
     deinit {

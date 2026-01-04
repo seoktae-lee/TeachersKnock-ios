@@ -3,6 +3,11 @@ import FirebaseAuth
 
 struct StudyGroupListView: View {
     @StateObject private var studyManager = StudyGroupManager()
+    // ✨ [Modified] MainTabView로부터 주입받음 (Badge 연동을 위해 상위에서 관리)
+    @ObservedObject var invitationManager: InvitationManager
+    // ✨ [New] 친구 신청 매니저 주입
+    @ObservedObject var friendRequestManager: FriendRequestManager
+    
     @EnvironmentObject var authManager: AuthManager
     
     @State private var showingCreateSheet = false
@@ -30,10 +35,10 @@ struct StudyGroupListView: View {
                 if selectedTab == .group {
                     groupListView
                 } else {
-                    FriendListView()
+                    FriendListView(requestManager: friendRequestManager)
                 }
             }
-            .navigationTitle("스터디") // Title Changed
+            .navigationTitle("스터디")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -43,20 +48,51 @@ struct StudyGroupListView: View {
             Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
             
-            if studyManager.myGroups.isEmpty {
-                emptyStateView
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 15) {
-                        ForEach(studyManager.myGroups) { group in
-                            NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
-                                StudyGroupRow(group: group)
+            ScrollView {
+                LazyVStack(spacing: 15) {
+                    // ✨ [New] 받은 초대 목록 섹션
+                    if !invitationManager.receivedInvitations.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("받은 초대")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+                            
+                            ForEach(invitationManager.receivedInvitations) { invitation in
+                                InvitationRow(invitation: invitation, invitationManager: invitationManager, studyManager: studyManager)
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
+                        .padding()
                     }
-                    .padding()
+                    
+                    // 내 스터디 그룹 목록
+                    if studyManager.myGroups.isEmpty {
+                         // 초대가 있을 때는 빈 화면 문구를 조금 다르게 보여주거나, 초대만 보여줘도 됨.
+                         // 여기서는 그룹이 없고 초대도 없을 때만 EmptyState를 보여주는게 자연스라울듯 하다만,
+                         // 일단 studyManager.myGroups isEmpty 기준으로 처리하고, 초대가 있으면 위에 뜨게 둠.
+                         // 만약 초대가 있는데 그룹이 없으면? -> 초대 목록 + EmptyView(그룹없음) 뜸. 괜찮음.
+                         if invitationManager.receivedInvitations.isEmpty {
+                             emptyStateView
+                                 .padding(.top, 50)
+                         }
+                    } else {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("내 스터디")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+                            
+                            ForEach(studyManager.myGroups) { group in
+                                NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
+                                    StudyGroupRow(group: group)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding()
+                    }
                 }
+                .padding(.bottom, 100) // FAB 공간 확보
             }
             
             // Floating Action Button
@@ -80,7 +116,13 @@ struct StudyGroupListView: View {
         .onAppear {
             if let uid = Auth.auth().currentUser?.uid {
                 studyManager.fetchMyGroups(uid: uid)
+                // ✨ [Modified] 상위(MainTabView)에서 리스닝 중이므로 여기서는 호출 안해도 됨.
+                // 만약 뷰 진입시에만 리프래시하고 싶다면 유지할 수 있으나, 배지를 위해선 상시 리스닝이 좋음.
             }
+        }
+        .onDisappear {
+            // 뷰가 사라질 때 리스너 해제 여부는 앱 구조에 따라 결정.
+            // 탭바 이동시 유지하고 싶으면 여기서 해제 안함.
         }
         .sheet(isPresented: $showingCreateSheet) {
             StudyGroupCreationView(studyManager: studyManager)
@@ -113,6 +155,81 @@ struct StudyGroupListView: View {
                     .cornerRadius(20)
             }
         }
+    }
+}
+
+// ✨ [New] 초대 행 UI Component
+struct InvitationRow: View {
+    let invitation: StudyInvitation
+    @ObservedObject var invitationManager: InvitationManager
+    @ObservedObject var studyManager: StudyGroupManager
+    
+    @State private var isProcessing = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "envelope.fill")
+                    .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
+                
+                Text("스터디 초대장")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                Spacer()
+                
+                Text(timeString(from: invitation.createdAt))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            
+            Text("\(invitation.inviterName)님이 '\(invitation.groupName)' 스터디에 초대했어요!")
+                .font(.body.bold())
+                .fixedSize(horizontal: false, vertical: true)
+            
+            HStack(spacing: 10) {
+                Button(action: {
+                    isProcessing = true
+                    invitationManager.declineInvitation(invitation)
+                }) {
+                    Text("거절")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                }
+                .disabled(isProcessing)
+                
+                Button(action: {
+                    isProcessing = true
+                    invitationManager.acceptInvitation(invitation, studyManager: studyManager) { success in
+                        isProcessing = false
+                        // 성공 시 리스트에서 자동 사라짐 (Firestore 리스너가 업데이트 해줌)
+                    }
+                }) {
+                    Text("수락")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                        .cornerRadius(8)
+                }
+                .disabled(isProcessing)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+    }
+    
+    func timeString(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

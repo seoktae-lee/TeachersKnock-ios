@@ -9,11 +9,24 @@ class FriendManager: ObservableObject {
     
     // 친구 목록 실시간 리스너
     func observeFriends(myUID: String) {
+        isLoading = true // ✨ Start loading
+        
         // 1. 내 정보에서 friends 배열을 먼저 가져옴 (실시간)
         db.collection("users").document(myUID)
             .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self, let snapshot = snapshot, snapshot.exists,
-                      let data = snapshot.data() else { return }
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("Error observing friends: \(error)")
+                    self.isLoading = false
+                    return
+                }
+                
+                guard let snapshot = snapshot, snapshot.exists,
+                      let data = snapshot.data() else {
+                    self.isLoading = false
+                    return
+                }
                 
                 let friendUIDs = data["friends"] as? [String] ?? []
                 self.fetchFriendDetails(uids: friendUIDs)
@@ -24,6 +37,7 @@ class FriendManager: ObservableObject {
     private func fetchFriendDetails(uids: [String]) {
         guard !uids.isEmpty else {
             self.friends = []
+            self.isLoading = false // ✨ Stop loading if no friends
             return
         }
         
@@ -52,6 +66,7 @@ class FriendManager: ObservableObject {
         
         group.notify(queue: .main) {
             self.friends = newFriends.sorted(by: { $0.nickname < $1.nickname })
+            self.isLoading = false // ✨ Stop loading
         }
     }
     
@@ -96,11 +111,31 @@ class FriendManager: ObservableObject {
             }
     }
     
-    // 친구 삭제
-    func removeFriend(myUID: String, friendUID: String) {
-        db.collection("users").document(myUID).updateData([
-            "friends": FieldValue.arrayRemove([friendUID])
-        ])
+    // 친구 삭제 (양방향)
+    func removeFriend(myUID: String, friendUID: String, completion: @escaping (Bool) -> Void) {
+        let myRef = db.collection("users").document(myUID)
+        let friendRef = db.collection("users").document(friendUID)
+        
+        db.runTransaction({ (transaction, errorPointer) -> Any? in
+            // 1. 내 친구 목록에서 삭제
+            transaction.updateData(["friends": FieldValue.arrayRemove([friendUID])], forDocument: myRef)
+            
+            // 2. 상대방 친구 목록에서 삭제
+            transaction.updateData(["friends": FieldValue.arrayRemove([myUID])], forDocument: friendRef)
+            
+            return nil
+        }) { [weak self] (object, error) in
+            if let error = error {
+                print("Error removing friend: \(error)")
+                completion(false)
+            } else {
+                // ✨ [Optimistic UI] 로컬 목록에서 즉시 제거
+                DispatchQueue.main.async {
+                    self?.friends.removeAll { $0.id == friendUID }
+                }
+                completion(true)
+            }
+        }
     }
 }
 

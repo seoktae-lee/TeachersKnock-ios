@@ -5,6 +5,8 @@ import FirebaseAuth
 struct AddFriendView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var friendManager: FriendManager
+    // ✨ [New]
+    @StateObject private var requestManager = FriendRequestManager()
     let myUID: String
     
     @State private var searchID = ""
@@ -66,8 +68,8 @@ struct AddFriendView: View {
                             .background(Color.gray.opacity(0.1))
                             .cornerRadius(4)
                         
-                        Button(action: { addFriend(user: user) }) {
-                            Text("친구 추가")
+                        Button(action: { sendFriendRequest(user: user) }) {
+                            Text("친구 신청") // Changed
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -92,18 +94,14 @@ struct AddFriendView: View {
                     Button("닫기") { dismiss() }
                 }
             }
-            .alert("친구 추가 완료", isPresented: $showSuccessAlert) {
+            .alert("친구 신청 완료", isPresented: $showSuccessAlert) {
                 Button("확인") { dismiss() }
             } message: {
-                Text("\(searchResult?.nickname ?? "")님을 친구로 추가했습니다.")
+                Text("\(searchResult?.nickname ?? "")님에게 친구 신청을 보냈습니다.")
             }
         }
     }
     
-    // 유저 검색 (FriendManager에는 없는 단순 조회 로직이라 여기서 구현 혹은 Manager로 이동)
-    // FriendManager에 searchUser 추가하는 것이 깔끔함. 하지만 우선 여기서 Firestore 직접 호출 (기존 패턴 유지)
-    // or better, use FriendManager to search? No, Manager is for managing friends list.
-    // Let's adapt to use Firestore directly here for simplicity as per previous MemberInviteView pattern.
     func searchUser() {
         guard !searchID.isEmpty else { return }
         isSearching = true
@@ -135,10 +133,6 @@ struct AddFriendView: View {
                 // 이미 친구인지 확인 (FriendManager의 목록에서 확인)
                 if friendManager.friends.contains(where: { $0.id == document.documentID }) {
                     searchError = "이미 친구로 등록된 사용자입니다."
-                    
-                    // 그래도 결과는 보여주되 버튼을 비활성화? 
-                    // 로직상 검색 결과 보여주고 버튼 누르면 '이미 친구입니다' 해도 됨.
-                    // 여기선 Error 띄우고 결과 안 보여줌.
                     return
                 }
                 
@@ -150,12 +144,19 @@ struct AddFriendView: View {
             }
     }
     
-    func addFriend(user: User) {
-        friendManager.addFriend(myUID: myUID, friendTKID: user.teacherKnockID ?? "") { success, message in
-            if success {
-                showSuccessAlert = true
-            } else {
-                searchError = message ?? "친구 추가 실패"
+    // 친구 신청 보내기
+    func sendFriendRequest(user: User) {
+        // 내 닉네임 가져오기 (간단히 비동기 처리)
+        let db = Firestore.firestore()
+        db.collection("users").document(myUID).getDocument { snapshot, error in
+            let myName = (snapshot?.data()?["nickname"] as? String) ?? "알 수 없음"
+            
+            requestManager.sendRequest(senderID: myUID, senderName: myName, receiverID: user.id) { success, message in
+                if success {
+                    showSuccessAlert = true
+                } else {
+                    searchError = message ?? "신청 실패"
+                }
             }
         }
     }

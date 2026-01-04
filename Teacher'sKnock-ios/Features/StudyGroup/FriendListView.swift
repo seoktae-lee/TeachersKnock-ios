@@ -4,6 +4,11 @@ import FirebaseAuth
 struct FriendListView: View {
     @StateObject private var friendManager = FriendManager()
     @EnvironmentObject var authManager: AuthManager
+    // ✨ [New] 친구 신청 매니저 (MainTabView에서 주입받거나, 여기서 생성 후 상위 연결)
+    // 친구 목록 내에서만 쓰이므로 여기서 생성해도 되지만, 뱃지 연동을 위해선 MainTabView에서 받아야 함.
+    // 하지만 현재 구조상 StudyGroupListView -> Segmented Control -> FriendListView로 이어지므로
+    // depth가 깊어질 수 있음. 우선 MainTabView에서 주입받는 구조로 변경.
+    @ObservedObject var requestManager: FriendRequestManager
     
     @State private var showingAddFriendSheet = false
     
@@ -12,13 +17,35 @@ struct FriendListView: View {
             Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
             
-            if friendManager.friends.isEmpty {
+            // ✨ [Modified] 로딩 상태 처리
+            if friendManager.isLoading {
+                ProgressView()
+                    .scaleEffect(1.5)
+            } else if friendManager.friends.isEmpty && requestManager.receivedRequests.isEmpty {
                 emptyStateView
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
+                        // ✨ [New] 받은 친구 신청 섹션
+                        if !requestManager.receivedRequests.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("받은 친구 신청")
+                                    .font(.headline)
+                                    .foregroundColor(.green) // 초록색으로 구분
+                                    .padding(.leading, 5)
+                                
+                                ForEach(requestManager.receivedRequests) { request in
+                                    FriendRequestRow(request: request, requestManager: requestManager, friendManager: friendManager)
+                                }
+                            }
+                            .padding(.bottom, 10)
+                        }
+                        
+                        // 친구 목록
                         ForEach(friendManager.friends) { friend in
-                            FriendRow(friend: friend)
+                            FriendRow(friend: friend) {
+                                deleteFriend(friend)
+                            }
                         }
                     }
                     .padding()
@@ -46,6 +73,7 @@ struct FriendListView: View {
         .onAppear {
             if let uid = Auth.auth().currentUser?.uid {
                 friendManager.observeFriends(myUID: uid)
+                // requestManager는 MainTabView에서 듣고 있을 것이므로 여기서 listen 호출 X
             }
         }
         .sheet(isPresented: $showingAddFriendSheet) {
@@ -82,10 +110,93 @@ struct FriendListView: View {
             }
         }
     }
+    // ✨ [New] 친구 삭제 로직
+    func deleteFriend(_ friend: User) {
+        guard let myUID = Auth.auth().currentUser?.uid else { return }
+        friendManager.removeFriend(myUID: myUID, friendUID: friend.id) { success in
+            // 성공 시 UI 자동 업데이트 됨 (FriendManager의 리스너 및 removeFriend 내부 로직)
+        }
+    }
+}
+
+// ✨ [New] 친구 신청 Row
+struct FriendRequestRow: View {
+    let request: FriendRequest
+    @ObservedObject var requestManager: FriendRequestManager
+    @ObservedObject var friendManager: FriendManager
+    
+    @State private var isProcessing = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .foregroundColor(.green)
+                
+                Text("친구 신청")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                Spacer()
+                
+                Text(timeString(from: request.createdAt))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            
+            Text("\(request.senderName)님이 친구 신청을 보냈어요!")
+                .font(.body.bold())
+            
+            HStack(spacing: 10) {
+                Button(action: {
+                    isProcessing = true
+                    requestManager.declineRequest(request)
+                }) {
+                    Text("거절")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                }
+                .disabled(isProcessing)
+                
+                Button(action: {
+                    isProcessing = true
+                    requestManager.acceptRequest(request, friendManager: friendManager) { success in
+                        isProcessing = false
+                    }
+                }) {
+                    Text("수락")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.green) // 초록색 버튼
+                        .cornerRadius(8)
+                }
+                .disabled(isProcessing)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+    }
+    
+    func timeString(from date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }
 
 struct FriendRow: View {
     let friend: User
+    let onRemoveFriend: () -> Void // ✨ [New] 삭제 액션 전달
+    
+    @State private var showDeleteAlert = false
     
     var body: some View {
         HStack(spacing: 15) {
@@ -140,5 +251,21 @@ struct FriendRow: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        // ✨ [New] 친구 끊기 메뉴
+        .contextMenu {
+            Button(role: .destructive) {
+                showDeleteAlert = true
+            } label: {
+                Label("친구 끊기", systemImage: "person.fill.xmark")
+            }
+        }
+        .alert("친구 끊기", isPresented: $showDeleteAlert) {
+            Button("취소", role: .cancel) { }
+            Button("끊기", role: .destructive) {
+                onRemoveFriend()
+            }
+        } message: {
+            Text("'\(friend.nickname)'님과 친구를 끊으시겠습니까?\n서로의 친구 목록에서 사라집니다.")
+        }
     }
 }

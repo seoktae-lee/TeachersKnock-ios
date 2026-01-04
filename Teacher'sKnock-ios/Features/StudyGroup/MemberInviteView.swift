@@ -5,7 +5,8 @@ import FirebaseAuth
 struct MemberInviteView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var studyManager: StudyGroupManager
-    // ✨ [New] 친구 목록 관리자
+    // ✨ [New] 초대 관리자
+    @StateObject private var invitationManager = InvitationManager()
     @StateObject private var friendManager = FriendManager()
     
     let group: StudyGroup
@@ -148,8 +149,16 @@ struct MemberInviteView: View {
                     friendManager.observeFriends(myUID: uid)
                 }
             }
+            // ✨ [New] 알림 표시
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("알림"), message: Text(alertMessage), dismissButton: .default(Text("확인")))
+            }
         }
     }
+    
+    // Alert State
+    @State private var showAlert = false
+    @State private var alertMessage = ""
     
     // UI Component: Search Result Card
     func searchResultCard(user: UserProfile) -> some View {
@@ -200,9 +209,8 @@ struct MemberInviteView: View {
                 
                 // 이미 멤버인지 확인
                 if group.members.contains(uid) {
-                    // searchError = "이미 스터디에 참여 중인 멤버입니다." 
-                    // 검색 결과는 보여주되 버튼을 비활성화하거나 알림을 주는게 나을 수 있음.
-                    // 기존 로직 유지
+                    searchError = "이미 스터디에 참여 중인 멤버입니다."
+                    return
                 }
                 
                 self.searchResult = UserProfile(
@@ -215,23 +223,70 @@ struct MemberInviteView: View {
     }
     
     func inviteUser(user: UserProfile) {
-        studyManager.addMember(groupID: group.id, newMemberUID: user.id) { success, message in
-            if success {
-                dismiss()
-            } else {
-                searchError = message ?? "초대에 실패했습니다."
+        guard let myUID = Auth.auth().currentUser?.uid else { return }
+        
+        // 내 정보(초대자 이름) 가져오기 위함인데, 간단히 현재 Auth display name 사용하거나
+        // 여기선 닉네임을 따로 fetch 안했으니 "초대자" 정도로 하거나, 이전 화면에서 넘겨받아야 좋음.
+        // FriendManager나 AuthManager에서 내 닉네임을 알 수 있으면 좋음.
+        // 현재 코드 문맥상 내 닉네임을 알기 어려우므로 일단 "익명" 처리 혹은 UserDefault 등 확인 필요.
+        // 개선: StudyGroupDetailView -> MemberInviteView로 내 닉네임 전달 받는게 좋음.
+        // 일단은 Firestore에서 내 정보를 잠깐 읽거나, MyPageViewModel 등을 활용해야 함.
+        // 여기서는 빠르게 구현하기 위해 내 닉네임을 "스터디장" 등으로 하거나, 비동기로 내 정보 fetch.
+        
+        // 간단한 해결책: 초대자 이름을 "초대"로 하거나, 받는 사람이 누군지 알 수 있게...
+        // FriendManager에 내 프로필 정보가 있다면 베스트.
+        // 일단 비동기로 내 정보 가져와서 보냄.
+        
+        fetchMyNickname(uid: myUID) { myNickname in
+            invitationManager.sendInvitation(
+                groupID: group.id,
+                groupName: group.name,
+                inviterID: myUID,
+                inviterName: myNickname,
+                receiverID: user.id
+            ) { success, message in
+                if success {
+                    alertMessage = "초대장을 보냈습니다!"
+                    showAlert = true
+                    searchResult = nil // 검색 결과 초기화
+                    searchID = ""
+                } else {
+                    alertMessage = message ?? "초대 실패"
+                    showAlert = true
+                }
             }
         }
     }
     
     func inviteFriend(friend: User) {
-        studyManager.addMember(groupID: group.id, newMemberUID: friend.id) { success, message in
-            if success {
-                // 성공하면 토스트 메시지나 알림을 띄우고 창을 닫을 수도 있음
-                // 여기선 간단히 닫기
-                dismiss()
+        guard let myUID = Auth.auth().currentUser?.uid else { return }
+        
+        fetchMyNickname(uid: myUID) { myNickname in
+            invitationManager.sendInvitation(
+                groupID: group.id,
+                groupName: group.name,
+                inviterID: myUID,
+                inviterName: myNickname,
+                receiverID: friend.id
+            ) { success, message in
+                if success {
+                    alertMessage = "\(friend.nickname)님에게 초대장을 보냈습니다!"
+                    showAlert = true
+                } else {
+                    alertMessage = message ?? "초대 실패"
+                    showAlert = true
+                }
+            }
+        }
+    }
+    
+    // Helper to get my nickname
+    func fetchMyNickname(uid: String, completion: @escaping (String) -> Void) {
+        Firestore.firestore().collection("users").document(uid).getDocument { snapshot, error in
+            if let data = snapshot?.data(), let nickname = data["nickname"] as? String {
+                completion(nickname)
             } else {
-                searchError = message ?? "초대에 실패했습니다."
+                completion("알 수 없음")
             }
         }
     }
