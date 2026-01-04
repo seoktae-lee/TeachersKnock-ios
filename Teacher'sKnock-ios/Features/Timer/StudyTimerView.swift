@@ -18,6 +18,8 @@ struct StudyTimerView: View {
     
     // 종료 알림
     @State private var showStopAlert = false
+    // 중복 저장 방지 플래그
+    @State private var isSaved = false
     
     var subjectColor: Color {
         SubjectName.color(for: schedule.subject)
@@ -107,11 +109,13 @@ struct StudyTimerView: View {
         .onAppear {
             // 화면 켜지면 바로 시작
             isRunning = true
-            updateStudyStatus(isStudying: true)
+            updateStudyStatus(isStudying: true, duration: 0)
         }
         .onDisappear {
-            // 혹시라도 그냥 닫히면 상태 해제 (안전장치)
-            updateStudyStatus(isStudying: false)
+            // 혹시라도 그냥 닫히면 상태 해제 (안전장치 - saveRecord가 호출되지 않은 경우만)
+            if !isSaved {
+                updateStudyStatus(isStudying: false, duration: 0)
+            }
         }
         .alert("공부를 종료할까요?", isPresented: $showStopAlert) {
             Button("취소", role: .cancel) { isRunning = true } // 다시 시작
@@ -125,13 +129,17 @@ struct StudyTimerView: View {
     
     // 기록 저장 로직
     func saveRecord() {
-        // 공부 상태 종료
-        updateStudyStatus(isStudying: false)
-        
         guard elapsedSeconds > 0 else {
+            // 시간 0이면 그냥 닫기
+            isSaved = true
+            updateStudyStatus(isStudying: false, duration: 0)
             dismiss()
             return
         }
+        
+        // 공부 상태 종료 (시간 저장 포함)
+        isSaved = true
+        updateStudyStatus(isStudying: false, duration: elapsedSeconds)
         
         // 1. StudyRecord 생성
         let newRecord = StudyRecord(
@@ -152,15 +160,11 @@ struct StudyTimerView: View {
         dismiss()
     }
     
-    // ✨ [New] 공부 상태 업데이트
-    func updateStudyStatus(isStudying: Bool) {
+    // Firestore 상태 업데이트
+    func updateStudyStatus(isStudying: Bool, duration: Int? = 0) {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        Firestore.firestore().collection("users").document(uid).updateData([
-            "isStudying": isStudying
-        ]) { error in
-            if let error = error {
-                print("Error updating study status: \(error)")
-            }
-        }
+        
+        // View가 사라져도 싱글톤이 책임지고 업데이트 수행
+        FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: isStudying, duration: duration)
     }
 }

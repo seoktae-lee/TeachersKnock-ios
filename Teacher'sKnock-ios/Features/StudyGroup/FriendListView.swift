@@ -91,16 +91,16 @@ struct FriendRow: View {
         HStack(spacing: 15) {
             // Profile Icon
             ZStack(alignment: .bottomTrailing) {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 50, height: 50)
-                    .foregroundColor(.gray)
+                // ✨ [New] 공통 컴포넌트 사용
+                ProfileImageView(user: friend, size: 50)
                 
+                // 4. 공부 중 뱃지 (Overlay)
                 if friend.isStudying {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 14, height: 14)
                         .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                        .offset(x: 2, y: 2)
                 }
             }
             

@@ -81,6 +81,7 @@
 		54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE62F0A1B4500A0474F /* FriendListView.swift */; };
 		54A40FEA2F0A1B5E00A0474F /* FriendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FE92F0A1B5E00A0474F /* FriendManager.swift */; };
 		54A40FEC2F0A1B6600A0474F /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FEB2F0A1B6600A0474F /* User.swift */; };
+		54A40FEE2F0A57A200A0474F /* ProfileImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FED2F0A57A200A0474F /* ProfileImageView.swift */; };
 		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
 		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
 		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
@@ -200,6 +201,7 @@
 		54A40FE62F0A1B4500A0474F /* FriendListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendListView.swift; sourceTree = "<group>"; };
 		54A40FE92F0A1B5E00A0474F /* FriendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendManager.swift; sourceTree = "<group>"; };
 		54A40FEB2F0A1B6600A0474F /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		54A40FED2F0A57A200A0474F /* ProfileImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileImageView.swift; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
@@ -452,6 +454,7 @@
 		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
 			isa = PBXGroup;
 			children = (
+				54A40FED2F0A57A200A0474F /* ProfileImageView.swift */,
 				54A40FE52F0A1B4500A0474F /* AddFriendView.swift */,
 				54A40FE62F0A1B4500A0474F /* FriendListView.swift */,
 				54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */,
@@ -660,6 +663,7 @@
 				54BE67FD2F07C3B700E6EC64 /* StudyGroupListView.swift in Sources */,
 				54BE67FE2F07C3B700E6EC64 /* StudyGroupDetailView.swift in Sources */,
 				544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */,
+				54A40FEE2F0A57A200A0474F /* ProfileImageView.swift in Sources */,
 				54F81CDA2EE1D13B002226B4 /* ReportListView.swift in Sources */,
 				54DBCD1A2F011C2100B43C2B /* StudyTimerView.swift in Sources */,
 				5459AE4A2EE19535008EE0E4 /* TimerView.swift in Sources */,

@@ -3,7 +3,11 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct StudyGroupDetailView: View {
-    let group: StudyGroup
+    // Initial static group data passed from the list
+    let initialGroup: StudyGroup
+    // ✨ [New] Real-time group data
+    @State private var liveGroup: StudyGroup
+    
     @ObservedObject var studyManager: StudyGroupManager
     // ✨ [New] 화면 닫기용
     @Environment(\.dismiss) var dismiss
@@ -11,10 +15,20 @@ struct StudyGroupDetailView: View {
     @State private var showingInviteSheet = false
     @State private var showDeleteConfirmAlert = false
     @State private var showDeletedNoticeAlert = false
+    // ✨ [New] 공지사항 수정용
+    @State private var showNoticeEditAlert = false
+    @State private var noticeText = ""
+    
+    // Custom Init to initialize State
+    init(group: StudyGroup, studyManager: StudyGroupManager) {
+        self.initialGroup = group
+        self._liveGroup = State(initialValue: group)
+        self.studyManager = studyManager
+    }
     
     // Check if current user is leader
     var isLeader: Bool {
-        group.leaderID == Auth.auth().currentUser?.uid
+        liveGroup.leaderID == Auth.auth().currentUser?.uid
     }
     
     var body: some View {
@@ -22,17 +36,42 @@ struct StudyGroupDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // Header
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(group.name)
+                    Text(liveGroup.name)
                         .font(.largeTitle.bold())
                     
-                    if !group.description.isEmpty {
-                        Text(group.description)
+                    if !liveGroup.description.isEmpty {
+                        Text(liveGroup.description)
                             .font(.body)
                             .foregroundColor(.secondary)
                             .padding(.top, 5)
                     }
                 }
                 .padding()
+                
+                // Notice Board
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("공지사항", systemImage: "megaphone.fill")
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        Spacer()
+                        if isLeader {
+                            Button("수정") {
+                                noticeText = liveGroup.notice // 불러오기
+                                showNoticeEditAlert = true
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    
+                    Text(liveGroup.notice.isEmpty ? "등록된 공지사항이 없습니다." : liveGroup.notice)
+                        .font(.body)
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
                 
                 Divider()
                 
@@ -41,60 +80,80 @@ struct StudyGroupDetailView: View {
                     Text("멤버")
                         .font(.headline)
                         .padding(.leading)
+                    
                     Spacer()
-                    Text("\(group.memberCount)/\(group.maxMembers)명")
+                    
+                    if isLeader {
+                        Button(action: { showingInviteSheet = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("초대")
+                            }
+                            .font(.caption.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(liveGroup.memberCount >= liveGroup.maxMembers ? Color.gray : Color.blue)
+                            .clipShape(Capsule())
+                        }
+                        .disabled(liveGroup.memberCount >= liveGroup.maxMembers)
+                    }
+                    
+                    Text("\(liveGroup.memberCount)/\(liveGroup.maxMembers)명")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .padding(.trailing)
                 }
                 
                 VStack(spacing: 0) {
-                    ForEach(group.members, id: \.self) { memberID in
-                        MemberRow(
-                            uid: memberID,
-                            isLeader: memberID == group.leaderID,
-                            isViewerLeader: isLeader,
-                            groupID: group.id,
-                            studyManager: studyManager
-                        )
-                        Divider()
-                            .padding(.leading, 60)
+                VStack(spacing: 0) {
+                    if let membersData = studyManager.groupMembersData[liveGroup.id] {
+                        ForEach(sortMembers(members: membersData)) { user in
+                            MemberRow(
+                                user: user,
+                                isLeader: user.id == liveGroup.leaderID,
+                                isViewerLeader: isLeader,
+                                groupID: liveGroup.id,
+                                studyManager: studyManager
+                            )
+                            Divider()
+                                .padding(.leading, 60)
+                        }
+                    } else {
+                        // 로딩 중 or 데이터 없음 -> 기존 방식 fallback
+                         ForEach(liveGroup.members, id: \.self) { memberID in
+                             Text("멤버 정보 로딩 중...") 
+                                .padding()
+                                .onAppear {
+                                    studyManager.fetchGroupMembers(groupID: liveGroup.id, memberUIDs: liveGroup.members)
+                                }
+                         }
                     }
+                }
                 }
                 .background(Color.white)
                 .cornerRadius(12)
                 .padding(.horizontal)
                 
                 if isLeader {
-                    Button(action: { showingInviteSheet = true }) {
-                        Label("멤버 초대하기", systemImage: "person.badge.plus")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(group.memberCount >= group.maxMembers ? Color.gray : Color(red: 0.35, green: 0.65, blue: 0.95))
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                    // ✨ [New] 그룹 삭제 버튼 (심플한 텍스트 버튼으로 변경)
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showDeleteConfirmAlert = true
+                        }) {
+                            Text("스터디 그룹 삭제하기")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .underline()
+                        }
+                        Spacer()
                     }
-                    .padding(.horizontal)
-                    .disabled(group.memberCount >= group.maxMembers)
-                    
-                    // ✨ [New] 그룹 삭제 버튼
-                    Button(action: {
-                        showDeleteConfirmAlert = true
-                    }) {
-                        Text("스터디 그룹 삭제하기")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red.opacity(0.8))
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
+                    .padding(.top, 20)
                     
                 } else {
                     Button(action: {
-                        // Leave group logic (To be implemented)
+                        // Leave group logic
                     }) {
                         Text("스터디 나가기")
                             .foregroundColor(.red)
@@ -109,7 +168,7 @@ struct StudyGroupDetailView: View {
         .navigationTitle("스터디 상세")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingInviteSheet) {
-             MemberInviteView(studyManager: studyManager, group: group)
+             MemberInviteView(studyManager: studyManager, group: liveGroup)
                 .presentationDetents([.medium, .large])
         }
         // ✨ [New] 삭제 확인 Alert (방장용)
@@ -129,80 +188,146 @@ struct StudyGroupDetailView: View {
         } message: {
             Text("방장에 의해 스터디 그룹이 삭제되었습니다.")
         }
-        .onAppear {
-            observeGroupDeletion()
+        // ✨ [New] 공지사항 수정 Alert
+        .alert("공지사항 수정", isPresented: $showNoticeEditAlert) {
+            TextField("공지 내용", text: $noticeText)
+            Button("취소", role: .cancel) { }
+            Button("저장") {
+                updateNotice()
+            }
+        } message: {
+            Text("새로운 공지사항을 입력해주세요.")
         }
+        .onAppear {
+            observeGroupUpdates()
+            // ✨ [New] 멤버 정보 실시간 구독
+            studyManager.fetchGroupMembers(groupID: liveGroup.id, memberUIDs: liveGroup.members)
+        }
+    }
+    
+    // 공지사항 업데이트
+    func updateNotice() {
+        studyManager.updateNotice(groupID: liveGroup.id, notice: noticeText)
+        // 로컬 업데이트 (Optimistic update)
+        var newGroup = liveGroup
+        newGroup.notice = noticeText
+        liveGroup = newGroup
     }
     
     // 그룹 삭제 (방장)
     func deleteGroup() {
-        studyManager.deleteGroup(groupID: group.id) { success in
+        studyManager.deleteGroup(groupID: liveGroup.id) { success in
             if success {
                 dismiss()
             }
         }
     }
     
-    // 실시간 삭제 감지 (리스너)
-    func observeGroupDeletion() {
-        Firestore.firestore().collection("study_groups").document(group.id)
+    // ✨ [New] 실시간 업데이트 및 삭제 감지
+    func observeGroupUpdates() {
+        Firestore.firestore().collection("study_groups").document(liveGroup.id)
             .addSnapshotListener { snapshot, error in
                 guard let snapshot = snapshot else { return }
                 
-                // 문서가 존재하지 않음 == 삭제됨
                 if !snapshot.exists {
-                    // 내가 방장이 아닌 경우(또는 방장이더라도 이미 삭제 후 dismiss가 안된 경우) 알림 띄움
-                    // 방장의 경우 deleteGroup() 성공 시 dismiss() 하므로 이 알림을 볼 확률은 낮으나 안전장치
-                     if !showDeleteConfirmAlert { // 삭제 버튼 누른 상태가 아닐 때만
+                    // 삭제됨
+                     if !showDeleteConfirmAlert {
                          showDeletedNoticeAlert = true
                      }
+                } else {
+                    // 변경됨 (공지사항, 위임, 멤버 변경 등)
+                    if let updatedGroup = StudyGroup(document: snapshot) {
+                        self.liveGroup = updatedGroup
+                        // 멤버 구성이 바뀐 경우 다시 fetch
+                        // (단순 이름 변경은 위임X, 멤버 배열 변경 시)
+                        // 여기서는 간단히 리스너 다시 연결 (StudyManager 내부에서 중복 처리 함)
+                        studyManager.fetchGroupMembers(groupID: updatedGroup.id, memberUIDs: updatedGroup.members)
+                    }
                 }
             }
+    }
+    
+    // Helper: 멤버 정렬
+    func sortMembers(members: [User]) -> [User] {
+        return members.sorted { (u1, u2) -> Bool in
+            if u1.isStudying != u2.isStudying {
+                return u1.isStudying && !u2.isStudying // 공부중 우선
+            }
+            if u1.todayStudyTime != u2.todayStudyTime {
+                return u1.todayStudyTime > u2.todayStudyTime // 공부시간 내림차순
+            }
+            return u1.nickname < u2.nickname
+        }
     }
 }
 
 struct MemberRow: View {
-    let uid: String
+    let user: User // ✨ [New] User 객체를 직접 받음 (정렬된 데이터)
     let isLeader: Bool
-    // ✨ [New] 위임 기능용
     let isViewerLeader: Bool // 현재 보고 있는 사람이 리더인가?
     let groupID: String
     @ObservedObject var studyManager: StudyGroupManager
-    // 성공 시 dismiss 위한 클로저나 바인딩이 있으면 좋겠지만, 여기선 NotificationCenter나 상위 뷰 리프레시 유도
-    // 간단히 Alert & Action 처리
     
-    @State private var nickname: String = "로딩 중..."
-    @State private var university: String = ""
     @State private var showDelegateAlert = false
     
     var body: some View {
         HStack(spacing: 15) {
-            Image(systemName: "person.circle.fill")
-                .font(.system(size: 40))
-                .foregroundColor(.gray.opacity(0.5))
+            ZStack(alignment: .bottomTrailing) {
+                // ✨ [New] 공통 컴포넌트 사용 (프로필 이미지)
+                ProfileImageView(user: user, size: 40)
+                
+                if user.isStudying {
+                    Image(systemName: "flame.fill")
+                        .font(.caption2)
+                        .padding(4)
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .clipShape(Circle())
+                        .offset(x: 5, y: 5)
+                }
+            }
             
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(nickname)
+                    Text(user.nickname)
                         .font(.body.bold())
                     if isLeader {
                         Image(systemName: "crown.fill")
                             .foregroundColor(.yellow)
                             .font(.caption)
                     }
+                    
+                    if user.isStudying {
+                        Text("🔥 공부 중")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.2))
+                            .foregroundColor(.orange)
+                            .cornerRadius(4)
+                    }
                 }
                 
-                if !university.isEmpty {
-                    Text(university)
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    if let uni = user.university, !uni.isEmpty {
+                        Text(uni)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    // ✨ [Modified] 오늘 공부 시간 표시 (항상 표시하되 0초는 회색)
+                    Text("오늘 \(formatTime(user.todayStudyTime))")
+                        .font(.caption.bold())
+                        .foregroundColor(user.todayStudyTime > 0 ? .blue : .gray.opacity(0.6))
                 }
             }
             
             Spacer()
         }
         .padding()
-        // ✨ [New] Context Menu for Leader Delegation
+        // ✨ [New] 내 자신은 배경색 살짝 다르게 표시 (선택사항)
+        .background(user.id == Auth.auth().currentUser?.uid ? Color.blue.opacity(0.05) : Color.clear)
+        .cornerRadius(10)
         .contextMenu {
             if isViewerLeader && !isLeader { // 내가 리더인데 상대방이 리더가 아닌 경우
                 Button(role: .destructive) {
@@ -218,35 +343,22 @@ struct MemberRow: View {
                 delegateLeader()
             }
         } message: {
-            Text("'\(nickname)' 님에게 방장 권한을 넘기시겠습니까?\n방장은 스터디 관리 권한을 갖으며, 이 작업은 되돌릴 수 없습니다.")
-        }
-        .onAppear {
-            fetchUserProfile()
-        }
-    }
-    
-    func fetchUserProfile() {
-        Firestore.firestore().collection("users").document(uid).getDocument { doc, error in
-            if let data = doc?.data() {
-                self.nickname = data["nickname"] as? String ?? "알 수 없음"
-                self.university = data["university"] as? String ?? ""
-            }
+            Text("'\(user.nickname)' 님에게 방장 권한을 넘기시겠습니까?\n방장은 스터디 관리 권한을 갖으며, 이 작업은 되돌릴 수 없습니다.")
         }
     }
     
     func delegateLeader() {
-        studyManager.delegateLeader(groupID: groupID, newLeaderUID: uid) { success in
+        studyManager.delegateLeader(groupID: groupID, newLeaderUID: user.id) { success in
             if success {
-                // UI 갱신 (상위 뷰에서 리스너가 동작하므로 자동 갱신 기대, 
-                // 하지만 DetailView는 static group을 들고 있어서 바로 반영 안될 수 있음.
-                // UX: 토스트 띄우고 Back or Reload)
-                // 현재 구조상 가장 깔끔한 건 Pop 하는 것.
-                // 여기서는 일단 로그 찍고, 상위 뷰가 닫히게 하거나 해야 함.
-                // SwiftUI 뷰 계층 구조 이슈로 dismiss를 직접 호출하긴 복잡하므로 
-                // NotificationCenter로 'LeaderChanged' 노티를 보내 뷰를 닫거나 할 수 있음.
-                // 우선은 성공 메시지만 콘솔에.
                 print("방장 위임 성공")
             }
         }
+    }
+    
+    func formatTime(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d:%02d", h, m, s)
     }
 }

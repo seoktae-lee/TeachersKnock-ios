@@ -133,4 +133,48 @@ class StudyGroupManager: ObservableObject {
             }
         }
     }
+    
+    // ✨ [New] 공지사항 업데이트
+    func updateNotice(groupID: String, notice: String) {
+        db.collection("study_groups").document(groupID).updateData([
+            "notice": notice
+        ])
+    }
+    
+    // ✨ [New] 멤버 정보 관리 (GroupID -> [User])
+    @Published var groupMembersData: [String: [User]] = [:]
+    private var memberListeners: [String: ListenerRegistration] = [:]
+    
+    func fetchGroupMembers(groupID: String, memberUIDs: [String]) {
+        guard !memberUIDs.isEmpty else { return }
+        
+        // 기존 리스너 제거 (중복 방지)
+        memberListeners[groupID]?.remove()
+        
+        // 실시간 멤버 정보 리스닝
+        // Firestore 'in' query supports up to 10 items.
+        let listener = db.collection("users")
+            .whereField(FieldPath.documentID(), in: memberUIDs)
+            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                guard let self = self else { return }
+                if let error = error {
+                    print("❌ Error fetching group members: \(error)")
+                    return
+                }
+                guard let documents = snapshot?.documents else { return }
+                
+                let users = documents.compactMap { User(document: $0) }
+                print("🔄 Group Members Updated for \(groupID): \(users.count) members")
+                
+                DispatchQueue.main.async {
+                    self.groupMembersData[groupID] = users
+                }
+            }
+        memberListeners[groupID] = listener
+    }
+    
+    deinit {
+        listener?.remove()
+        memberListeners.values.forEach { $0.remove() }
+    }
 }

@@ -5,6 +5,7 @@ struct StudyGroup: Identifiable, Codable {
     var id: String
     var name: String
     var description: String
+    var notice: String // ✨ [New] 공지사항
     var leaderID: String
     var members: [String] // List of member UIDs
     var maxMembers: Int
@@ -18,6 +19,7 @@ struct StudyGroup: Identifiable, Codable {
         self.id = id
         self.name = name
         self.description = description
+        self.notice = ""  // 초기값 없음
         self.leaderID = leaderID
         self.members = members.isEmpty ? [leaderID] : members // Leader is always a member
         self.maxMembers = 6 // Fixed constraint
@@ -26,36 +28,29 @@ struct StudyGroup: Identifiable, Codable {
     
     // Init from Firestore
     init?(document: DocumentSnapshot) {
-        guard let data = document.data(),
-              let name = data["name"] as? String,
-              let leaderID = data["leaderID"] as? String,
-              let members = data["members"] as? [String]
-        else { return nil }
+        let data = document.data()
+        guard let data = data else { return nil }
         
         self.id = document.documentID
-        self.name = name
+        self.name = data["name"] as? String ?? ""
         self.description = data["description"] as? String ?? ""
-        self.leaderID = leaderID
-        self.members = members
+        self.notice = data["notice"] as? String ?? ""
+        self.leaderID = data["leaderID"] as? String ?? ""
+        self.members = data["members"] as? [String] ?? []
         self.maxMembers = data["maxMembers"] as? Int ?? 6
-        
-        if let timestamp = data["createdAt"] as? Timestamp {
-            self.createdAt = timestamp.dateValue()
-        } else {
-            self.createdAt = Date()
-        }
+        self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
     }
     
-    // To Firestore Dictionary
+    // Convert to Dictionary for Firestore
     func toDictionary() -> [String: Any] {
         return [
-            "id": id,
             "name": name,
             "description": description,
+            "notice": notice,
             "leaderID": leaderID,
             "members": members,
             "maxMembers": maxMembers,
-            "createdAt": Timestamp(date: createdAt)
+            "createdAt": createdAt
         ]
     }
 }

@@ -155,4 +155,63 @@ class FirestoreSyncManager {
             completion()
         }
     }
+    
+    // MARK: - 3. 실시간 유저 정보 업데이트 (타이머 관련)
+    
+    func updateUserStudyTime(uid: String, isStudying: Bool, duration: Int? = 0) {
+        var data: [String: Any] = [
+            "isStudying": isStudying
+        ]
+        
+        // 공부 종료 시 시간 업데이트
+        if !isStudying, let duration = duration, duration > 0 {
+            let now = Date()
+            let calendar = Calendar.current
+            
+            // 기존 데이터 가져와서 날짜 비교 및 시간 누적
+            let userRef = db.collection("users").document(uid)
+            userRef.getDocument { snapshot, error in
+                guard let dataSnapshot = snapshot?.data() else {
+                    print("❌ Error getting user document: \(error?.localizedDescription ?? "Unknown error")")
+                    return
+                }
+                
+                let lastDate = (dataSnapshot["lastStudyDate"] as? Timestamp)?.dateValue() ?? Date.distantPast
+                let currentTodayTime = dataSnapshot["todayStudyTime"] as? Int ?? 0
+                
+                var newTodayTime = currentTodayTime
+                
+                // 날짜 비교 (년, 월, 일)
+                if calendar.isDate(lastDate, inSameDayAs: now) {
+                    // 같은 날이면 누적
+                    newTodayTime += duration
+                } else {
+                    // 다른 날이면 리셋 후 이번 시간만
+                    newTodayTime = duration
+                }
+                
+                // 업데이트할 필드 추가
+                data["todayStudyTime"] = newTodayTime
+                data["lastStudyDate"] = Timestamp(date: now)
+                
+                // 최종 업데이트
+                userRef.updateData(data) { error in
+                    if let error = error {
+                        print("❌ Error updating study status (end study): \(error)")
+                    } else {
+                        print("✅ FirestoreSync: Study Status Updated & Time Accumulated (+ \(duration))")
+                    }
+                }
+            }
+        } else {
+            // 공부 시작 시 또는 시간 없는 종료
+            db.collection("users").document(uid).updateData(data) { error in
+                if let error = error {
+                    print("❌ Error updating study status (start study): \(error)")
+                } else {
+                    print("✅ FirestoreSync: Study Status Updated (isStudying = \(isStudying))")
+                }
+            }
+        }
+    }
 }
