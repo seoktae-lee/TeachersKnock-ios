@@ -14,6 +14,10 @@ struct StudyGroup: Identifiable, Codable {
     var noticeUpdatedAt: Date? // ✨ [New] 공지사항 마지막 업데이트 시간 (알림 배지용)
     var latestCheerAt: Date? // ✨ [New] 마지막 응원 등록 시간 (알림 배지용)
     
+    // ✨ [New] 짝 스터디 매칭 정보
+    var lastPairingDate: Date? // 마지막 매칭 생성 날짜
+    var pairs: [[String]]? // 매칭된 짝 (User ID 배열의 배열) e.g. [["uid1", "uid2"], ["uid3", "uid4"]]
+    
     // UI convenience
     var memberCount: Int { members.count }
     
@@ -30,6 +34,8 @@ struct StudyGroup: Identifiable, Codable {
         self.updatedAt = Date() // 생성 시점
         self.noticeUpdatedAt = nil
         self.latestCheerAt = nil
+        self.lastPairingDate = nil
+        self.pairs = nil
     }
     
     // Init from Firestore
@@ -48,6 +54,8 @@ struct StudyGroup: Identifiable, Codable {
         self.updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue() ?? (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.noticeUpdatedAt = (data["noticeUpdatedAt"] as? Timestamp)?.dateValue()
         self.latestCheerAt = (data["latestCheerAt"] as? Timestamp)?.dateValue()
+        self.lastPairingDate = (data["lastPairingDate"] as? Timestamp)?.dateValue()
+        self.pairs = data["pairs"] as? [[String]]
     }
     
     // Convert to Dictionary for Firestore
@@ -62,7 +70,9 @@ struct StudyGroup: Identifiable, Codable {
             "createdAt": createdAt,
             "updatedAt": updatedAt,
             "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp(), // nil이면 생성시점? or just ignore
-            "latestCheerAt": latestCheerAt /// nil okay
+            "latestCheerAt": latestCheerAt, /// nil okay
+            "lastPairingDate": lastPairingDate,
+            "pairs": pairs
         ]
     }
 }

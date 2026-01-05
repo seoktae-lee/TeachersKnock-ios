@@ -188,8 +188,6 @@ class StudyGroupManager: ObservableObject {
             ])
         }
     }
-    
-    // ✨ [New] 읽음 처리 및 확인
     // ✨ [New] 읽음 처리 및 확인
     func markAsRead(groupID: String) {
         let key = "lastReadTime_\(groupID)"
@@ -445,5 +443,69 @@ class StudyGroupManager: ObservableObject {
     func removeCheerListener(groupID: String) {
         cheerListeners[groupID]?.remove()
         cheerListeners[groupID] = nil
+    }
+    
+    // ✨ [New] 짝 스터디 매칭 로직
+    enum PairSplitType {
+        case twoTwoTwo // 6명: 2/2/2
+        case threeThree // 6명: 3/3
+        case standard // 나머지 (자동 룰)
+    }
+    
+    func generatePairs(members: [String], splitType: PairSplitType = .standard) -> [[String]] {
+        var shuffled = members.shuffled()
+        let count = shuffled.count
+        var result: [[String]] = []
+        
+        switch count {
+        case 6:
+            if splitType == .threeThree {
+                // 3명 / 3명
+                let group1 = Array(shuffled.prefix(3))
+                let group2 = Array(shuffled.suffix(3))
+                result = [group1, group2]
+            } else {
+                // 2명 / 2명 / 2명 (기본값)
+                let group1 = Array(shuffled[0..<2])
+                let group2 = Array(shuffled[2..<4])
+                let group3 = Array(shuffled[4..<6])
+                result = [group1, group2, group3]
+            }
+        case 5:
+            // 2명 / 3명
+            let group1 = Array(shuffled.prefix(2))
+            let group2 = Array(shuffled.suffix(3))
+            result = [group1, group2]
+        case 4:
+            // 2명 / 2명
+            let group1 = Array(shuffled.prefix(2))
+            let group2 = Array(shuffled.suffix(2))
+            result = [group1, group2]
+        case 3:
+            // 1명 / 2명
+            let group1 = Array(shuffled.prefix(1)) // 혼자 하는 사람
+            let group2 = Array(shuffled.suffix(2)) // 짝
+            result = [group1, group2]
+        default:
+            // 2명 이하 or 7명 이상 (현재 룰 없음, 그냥 1팀으로)
+            result = [shuffled]
+        }
+        
+        return result
+    }
+    
+    func updatePairs(groupID: String, pairs: [[String]], completion: @escaping (Bool) -> Void) {
+        db.collection("study_groups").document(groupID).updateData([
+            "pairs": pairs,
+            "lastPairingDate": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ]) { error in
+            if let error = error {
+                print("Error updating pairs: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
     }
 }

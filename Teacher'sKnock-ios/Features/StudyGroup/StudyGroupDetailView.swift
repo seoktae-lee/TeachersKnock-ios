@@ -20,6 +20,8 @@ struct StudyGroupDetailView: View {
     // ✨ [New] 공지사항 접기/펼치기 -> 삭제
     @State private var showNoticeSheet = false
     @State private var showCheerSheet = false
+    @State private var showPairingSheet = false // ✨ [New] 짝 스터디 시트
+    @State private var showTimerAlert = false // ✨ [New] 타이머 준비중 알림
     
     // Custom Init to initialize State
     init(group: StudyGroup, studyManager: StudyGroupManager) {
@@ -34,110 +36,33 @@ struct StudyGroupDetailView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                headerSection
-                
-                // Participation (Attendance)
-                if let membersData = studyManager.groupMembersData[liveGroup.id] {
-                    ParticipationView(members: membersData)
-                        .padding(.horizontal)
-                }
-                
-                Divider()
-                
-                rankingSection
-                
-                memberListSection
-                
-                footerSection
-            }
-            .padding(.bottom, 30)
-        }
-        .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("스터디 상세")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingInviteSheet) {
-             MemberInviteView(studyManager: studyManager, group: liveGroup)
-                .presentationDetents([.medium, .large])
-        }
-        // ✨ [New] 삭제 확인 Alert (방장용)
-        .alert("스터디 삭제", isPresented: $showDeleteConfirmAlert) {
-            Button("취소", role: .cancel) { }
-            Button("삭제", role: .destructive) {
-                deleteGroup()
-            }
-        } message: {
-            Text("정말 스터디를 삭제하시겠습니까?\n모든 멤버가 탈퇴 처리되며, 이 작업은 되돌릴 수 없습니다.")
-        }
-        // ✨ [New] 삭제 알림 Alert (멤버용)
-        .alert("스터디 종료", isPresented: $showDeletedNoticeAlert) {
-            Button("확인") {
-                dismiss() // 확인 누르면 목록으로
-            }
-        } message: {
-            Text("방장에 의해 스터디 그룹이 삭제되었습니다.")
-        }
-        // ✨ [New] 공지사항 수정 Alert
-        // ✨ [New] 공지사항 수정 Alert -> 삭제 (Sheet에서 처리)
-        .sheet(isPresented: $showNoticeSheet) {
-            NoticeSheet(group: liveGroup, isLeader: isLeader, studyManager: studyManager)
-                .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showCheerSheet) {
-            NavigationStack {
-                CheerBoardView(groupID: liveGroup.id, studyManager: studyManager)
-                    .navigationTitle("한줄 응원")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button("닫기") {
-                                showCheerSheet = false
-                            }
-                            .foregroundColor(.primary)
-                        }
-                    }
-            }
-            .presentationDetents([.medium, .large])
-            .onAppear {
-                studyManager.markCheersAsRead(groupID: liveGroup.id)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    // 공지사항 아이콘
-                    Button(action: { showNoticeSheet = true }) {
-                        ZStack(alignment: .topTrailing) {
-                            Image(systemName: "megaphone.fill")
-                                .foregroundColor(.orange)
-                            
-                            if studyManager.hasUnreadNotice(group: liveGroup) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 2, y: -2)
-                            }
-                        }
+        applyModallyPresentedViews(to:
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    headerSection
+                    
+                    // Participation (Attendance)
+                    if let membersData = studyManager.groupMembersData[liveGroup.id] {
+                        ParticipationView(members: membersData)
+                            .padding(.horizontal)
                     }
                     
-                    // 한줄 응원 아이콘
-                    Button(action: { showCheerSheet = true }) {
-                        ZStack(alignment: .topTrailing) {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .foregroundColor(.blue)
-                            
-                            // 응원 안 읽음 확인
-                            if studyManager.hasUnreadCheers(group: liveGroup) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 2, y: -2)
-                            }
-                        }
-                    }
+                    Divider()
+                    
+                    rankingSection
+                    
+                    memberListSection
+                    
+                    footerSection
                 }
+                .padding(.bottom, 30)
             }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("스터디 상세")
+            .navigationBarTitleDisplayMode(.inline)
+        )
+        .toolbar {
+            // 기존 아이콘 영역 삭제 (헤더로 이동)
         }
         .onAppear {
             observeGroupUpdates()
@@ -204,15 +129,42 @@ struct StudyGroupDetailView: View {
 extension StudyGroupDetailView {
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(liveGroup.name)
-                .font(.largeTitle.bold())
-            
-            if !liveGroup.description.isEmpty {
-                Text(liveGroup.description)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(liveGroup.name)
+                    .font(.largeTitle.bold())
+                
+                if !liveGroup.description.isEmpty {
+                    Text(liveGroup.description)
                     .font(.body)
                     .foregroundColor(.secondary)
                     .padding(.top, 5)
+                }
+            }
+            
+            Spacer()
+            
+            // ✨ [Moved] 네비게이션 바 클리핑 방지를 위해 헤더 영역으로 이동
+            VStack(spacing: 8) { // 2행 (간격 조금 넓힘)
+                HStack(spacing: 8) { // 1행: 공지, 응원
+                    Button(action: { showNoticeSheet = true }) {
+                        headerIconButton(icon: "megaphone.fill", color: .orange, hasBadge: studyManager.hasUnreadNotice(group: liveGroup))
+                    }
+                    
+                    Button(action: { showCheerSheet = true }) {
+                        headerIconButton(icon: "bubble.left.and.bubble.right.fill", color: .blue, hasBadge: studyManager.hasUnreadCheers(group: liveGroup))
+                    }
+                }
+                
+                HStack(spacing: 8) { // 2행: 짝, 타이머
+                    Button(action: { showPairingSheet = true }) {
+                        headerIconButton(icon: "arrow.triangle.2.circlepath", color: .green, hasBadge: false)
+                    }
+                    
+                    Button(action: { showTimerAlert = true }) {
+                        headerIconButton(icon: "timer", color: .purple, hasBadge: false)
+                    }
+                }
             }
         }
         .padding()
@@ -319,6 +271,82 @@ extension StudyGroupDetailView {
                 .frame(maxWidth: .infinity)
             }
         }
+    }
+    
+    // ✨ [New] 헤더 아이콘 버튼 스타일 (둥근 사각형)
+    private func headerIconButton(icon: String, color: Color, hasBadge: Bool) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold)) // 아이콘 크기 조정
+                .foregroundColor(color)
+                .frame(width: 34, height: 34) // 터치 영역 및 배경 크기
+                .background(color.opacity(0.1)) // 연한 배경색
+                .cornerRadius(8) // 둥근 사각형 (Rounded Square)
+            
+            if hasBadge {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 8, height: 8)
+                    .offset(x: 2, y: -2)
+            }
+        }
+    }
+    
+    // ✨ [New] 시트 및 알림 모디파이어 분리 (컴파일러 과부하 방지)
+    @ViewBuilder
+    func applyModallyPresentedViews<Content: View>(to content: Content) -> some View {
+        content
+            .sheet(isPresented: $showingInviteSheet) {
+                 MemberInviteView(studyManager: studyManager, group: liveGroup)
+                    .presentationDetents([.medium, .large])
+            }
+            .alert("스터디 삭제", isPresented: $showDeleteConfirmAlert) {
+                Button("취소", role: .cancel) { }
+                Button("삭제", role: .destructive) {
+                    deleteGroup()
+                }
+            } message: {
+                Text("정말 스터디를 삭제하시겠습니까?\n모든 멤버가 탈퇴 처리되며, 이 작업은 되돌릴 수 없습니다.")
+            }
+            .alert("스터디 종료", isPresented: $showDeletedNoticeAlert) {
+                Button("확인") {
+                    dismiss() // 확인 누르면 목록으로
+                }
+            } message: {
+                Text("방장에 의해 스터디 그룹이 삭제되었습니다.")
+            }
+            .sheet(isPresented: $showNoticeSheet) {
+                NoticeSheet(group: liveGroup, isLeader: isLeader, studyManager: studyManager)
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showCheerSheet) {
+                NavigationStack {
+                    CheerBoardView(groupID: liveGroup.id, studyManager: studyManager)
+                        .navigationTitle("한줄 응원")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("닫기") {
+                                    showCheerSheet = false
+                                }
+                                .foregroundColor(.primary)
+                            }
+                        }
+                }
+                .presentationDetents([.medium, .large])
+                .onAppear {
+                    studyManager.markCheersAsRead(groupID: liveGroup.id)
+                }
+            }
+            .sheet(isPresented: $showPairingSheet) {
+                PairingSheet(group: liveGroup, isLeader: isLeader, studyManager: studyManager)
+                    .presentationDetents([.medium, .large])
+            }
+            .alert("준비 중", isPresented: $showTimerAlert) {
+                Button("확인") {}
+            } message: {
+                Text("공통 타이머 기능은 추후 업데이트 예정입니다.")
+            }
     }
 }
 
