@@ -66,8 +66,8 @@ struct TimerView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                // 0. 네비게이션 타이틀과의 겹침 방지 여백 (다시 겹침 해결을 위해 140pt로 확대)
-                Spacer().frame(height: 350)
+                // 0. 네비게이션 타이틀과의 겹침 방지 여백 (겹침 문제 해결을 위해 다시 확대)
+                Spacer().frame(height: 140)
                 
                 // 1. 상단 컨트롤 영역 (토글 & 허용 앱)
                 HStack(alignment: .center) {
@@ -206,7 +206,8 @@ struct TimerView: View {
                 .disabled(viewModel.isRunning)
                 .opacity(viewModel.isRunning ? 0.6 : 1.0)
                 
-                Spacer(minLength: 10)
+                // 3. 타이머 시간 표시 영역과의 간격 줄이기 (고정값)
+                Spacer().frame(height: 10)
                 
                 // 3. 타이머 시간 표시 (고정 높이)
                 VStack(spacing: 0) {
@@ -282,6 +283,9 @@ struct TimerView: View {
                 
                 // 5. 최근 기록
                 RecentRecordsView(userId: currentUserId).padding(.bottom, 5)
+                
+                // 6. 하단 여백 확보 (내용을 위로 밀어올림)
+                Spacer()
             }
             .background(Color(.systemGray6))
             .navigationTitle("집중 타이머")
@@ -577,32 +581,42 @@ struct RecentRecordsView: View {
             }
             .padding(.horizontal)
             
-            if records.isEmpty {
-                Text("아직 기록이 없습니다.")
-                    .font(.caption).foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity).padding()
-            } else {
-                List {
-                    ForEach(records.prefix(5)) { record in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(record.areaName).font(.subheadline).bold()
-                                Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
-                            }
-                            Spacer()
-                            Text(formatDuration(record.durationSeconds)).font(.subheadline).bold()
-                        }
-                        // List row styling to match the previous look as much as possible within a List
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.white)
-                        .padding(.vertical, 4)
+            Group {
+                if records.isEmpty {
+                    VStack {
+                        Text("최근 학습 기록이 없습니다.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(color: .black.opacity(0.05), radius: 3)
+                        Spacer()
                     }
-                    .onDelete(perform: deleteRecord)
+                } else {
+                    List {
+                        ForEach(records.prefix(5)) { record in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(record.areaName).font(.subheadline).bold()
+                                    Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Text(formatDuration(record.durationSeconds)).font(.subheadline).bold()
+                            }
+                            // List row styling to match the previous look as much as possible within a List
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.white)
+                            .padding(.vertical, 4)
+                        }
+                        .onDelete(perform: deleteRecord)
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden) // Remove default list background
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden) // Remove default list background
-                .frame(height: 400) // [Fix] 250 -> 400 확대
             }
+            .frame(height: 280) // [Fix] 높이를 항상 고정하여 상단 UI가 움직이지 않도록 함
         }
     }
     
