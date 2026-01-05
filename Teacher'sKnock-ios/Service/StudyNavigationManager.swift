@@ -9,8 +9,11 @@ class StudyNavigationManager: ObservableObject {
     // 0: 홈, 1: 플래너, 2: 타이머, 3: 설정
     @Published var tabSelection: Int = 0
     
-    // 타이머로 전달할 일정 데이터
+    // ✨ [추가] 타이머로 전달할 일정 데이터
     @Published var targetSchedule: ScheduleItem?
+    
+    // ✨ [New] 공통 타이머 이동을 위한 그룹 ID
+    @Published var targetGroupID: String?
     
     // ✨ [추가] 딥링크로 타이머 이동이 필요한지 여부 (Cold Start 대응)
     @Published var shouldNavigateToTimer: Bool = false
@@ -20,12 +23,20 @@ class StudyNavigationManager: ObservableObject {
     
     // 이 함수를 호출하면 타이머 탭으로 이동하며 데이터를 세팅합니다.
     func triggerStudy(for schedule: ScheduleItem) {
-        self.targetSchedule = schedule
-        self.tabSelection = 2 // 타이머로 이동할 때는 2번 유지
+        if schedule.isCommonTimer, let groupID = schedule.targetGroupID {
+            // 공통 타이머인 경우 스터디 탭(3)으로 이동
+            self.targetGroupID = groupID
+            self.tabSelection = 3
+        } else {
+            // 개인 타이머인 경우 타이머 탭(2)으로 이동
+            self.targetSchedule = schedule
+            self.tabSelection = 2
+        }
     }
     
     // 타이머에서 데이터를 소비한 후 초기화할 때 사용
     func clearTarget() {
         self.targetSchedule = nil
+        self.targetGroupID = nil
     }
 }

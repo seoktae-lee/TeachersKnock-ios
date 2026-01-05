@@ -73,6 +73,8 @@
 		548AFAA02F0BBB73003EA411 /* NoticeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */; };
 		548AFAA22F0BBB8D003EA411 /* StudyGroupListView_Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */; };
 		548AFAA42F0BCAC8003EA411 /* PairingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFAA32F0BCAC8003EA411 /* PairingSheet.swift */; };
+		548AFAA72F0BD6F6003EA411 /* CommonTimerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFAA52F0BD6F6003EA411 /* CommonTimerSetupView.swift */; };
+		548AFAA82F0BD6F6003EA411 /* CommonTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFAA62F0BD6F6003EA411 /* CommonTimerView.swift */; };
 		5498D8ED2F062DE800BAB26B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EC2F062DE800BAB26B /* WidgetKit.framework */; };
 		5498D8EF2F062DE800BAB26B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EE2F062DE800BAB26B /* SwiftUI.framework */; };
 		5498D8FE2F062DE900BAB26B /* Teacher'sKnockWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -203,6 +205,8 @@
 		548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeSheet.swift; sourceTree = "<group>"; };
 		548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupListView_Preview.swift; sourceTree = "<group>"; };
 		548AFAA32F0BCAC8003EA411 /* PairingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingSheet.swift; sourceTree = "<group>"; };
+		548AFAA52F0BD6F6003EA411 /* CommonTimerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonTimerSetupView.swift; sourceTree = "<group>"; };
+		548AFAA62F0BD6F6003EA411 /* CommonTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonTimerView.swift; sourceTree = "<group>"; };
 		5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Teacher'sKnockWidgetExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5498D8EC2F062DE800BAB26B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		5498D8EE2F062DE800BAB26B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -485,6 +489,8 @@
 		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
 			isa = PBXGroup;
 			children = (
+				548AFAA52F0BD6F6003EA411 /* CommonTimerSetupView.swift */,
+				548AFAA62F0BD6F6003EA411 /* CommonTimerView.swift */,
 				548AFAA32F0BCAC8003EA411 /* PairingSheet.swift */,
 				548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */,
 				548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */,
@@ -642,6 +648,8 @@
 				5459AE332EE19535008EE0E4 /* DailyTimelineView.swift in Sources */,
 				548AFAA02F0BBB73003EA411 /* NoticeSheet.swift in Sources */,
 				5459AE342EE19535008EE0E4 /* EditScheduleView.swift in Sources */,
+				548AFAA72F0BD6F6003EA411 /* CommonTimerSetupView.swift in Sources */,
+				548AFAA82F0BD6F6003EA411 /* CommonTimerView.swift in Sources */,
 				54A40FF22F0A648200A0474F /* StudyInvitation.swift in Sources */,
 				548AFA9B2F0BADFA003EA411 /* ParticipationView.swift in Sources */,
 				548AFA9C2F0BADFA003EA411 /* CheerBoardView.swift in Sources */,

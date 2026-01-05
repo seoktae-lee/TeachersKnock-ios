@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 import Combine
+import FirebaseFirestore
 
 // 루틴 데이터 구조체
 struct RoutineItem: Identifiable {
@@ -37,6 +38,11 @@ class AddScheduleViewModel: ObservableObject {
     
     // ✨ [추가] 공부 목적 선택용 프로퍼티 (기본값: 인강시청)
     @Published var selectedPurpose: StudyPurpose = .lectureWatching
+    
+    // ✨ [New] 공통 타이머 설정
+    @Published var isCommonTimer: Bool = false
+    @Published var targetGroupID: String = "" // 선택된 스터디 그룹
+    @Published var myStudyGroups: [StudyGroup] = [] // 선택 가능한 스터디 그룹 목록
     
     @Published var startDate: Date
     @Published var endDate: Date
@@ -140,6 +146,11 @@ class AddScheduleViewModel: ObservableObject {
             if let purpose = StudyPurpose.flexibleMatch(item.studyPurpose) {
                 self.selectedPurpose = purpose
             }
+            
+            // 공통 타이머 복원
+            self.isCommonTimer = item.isCommonTimer
+            self.targetGroupID = item.targetGroupID ?? ""
+            
             return
         }
         
@@ -251,6 +262,8 @@ class AddScheduleViewModel: ObservableObject {
             existingItem.subject = selectedSubject
             existingItem.hasReminder = hasReminder
             existingItem.studyPurpose = selectedPurpose.rawValue
+            existingItem.isCommonTimer = isCommonTimer
+            existingItem.targetGroupID = isCommonTimer ? targetGroupID : nil
             
             ScheduleManager.shared.saveSchedule(existingItem)
             
@@ -269,7 +282,9 @@ class AddScheduleViewModel: ObservableObject {
                 hasReminder: hasReminder,
                 ownerID: userId,
                 isPostponed: false,
-                studyPurpose: selectedPurpose.rawValue
+                studyPurpose: selectedPurpose.rawValue,
+                isCommonTimer: isCommonTimer,
+                targetGroupID: isCommonTimer ? targetGroupID : nil
             )
             
             context.insert(newItem)
@@ -291,5 +306,24 @@ class AddScheduleViewModel: ObservableObject {
     
     func validateTime() {
         if endDate <= startDate { endDate = startDate.addingTimeInterval(3600) }
+    }
+    
+    // ✨ [New] 스터디 그룹 목록 가져오기
+    func fetchMyStudyGroups() {
+        Firestore.firestore().collection("study_groups")
+            .whereField("members", arrayContains: userId)
+            .getDocuments { [weak self] snapshot, error in
+                guard let self = self else { return }
+                guard let documents = snapshot?.documents else { return }
+                
+                DispatchQueue.main.async {
+                    self.myStudyGroups = documents.compactMap { StudyGroup(document: $0) }
+                    
+                    // 만약 이미 선택된 그룹이 없는데 목록이 있으면 첫번째 자동 선택
+                    if self.targetGroupID.isEmpty, let first = self.myStudyGroups.first {
+                        self.targetGroupID = first.id
+                    }
+                }
+            }
     }
 }

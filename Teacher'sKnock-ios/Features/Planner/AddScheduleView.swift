@@ -28,6 +28,9 @@ struct AddScheduleView: View {
                     // MARK: - 1. 어떤 일정인가요? (공부 목적 UI 개선됨 ✨)
                     SelectionSection(viewModel: viewModel)
                     
+                    // ✨ [New] 공통 타이머 설정
+                    CommonTimerSection(viewModel: viewModel)
+                    
                     // MARK: - 2. 제목 입력
                     TitleSection(viewModel: viewModel)
                     
@@ -488,5 +491,72 @@ struct SingleDayTimePicker: View {
             Spacer()
         }
         .background(Color.white)
+    }
+}
+
+// ✨ [New] 공통 타이머 섹션
+struct CommonTimerSection: View {
+    @ObservedObject var viewModel: AddScheduleViewModel
+    @State private var showingGroupSelection = false
+    
+    var body: some View {
+        // 공부 스케줄인 경우에만 표시
+        if viewModel.isStudySubject {
+            VStack(alignment: .leading, spacing: 15) {
+                HStack {
+                    Image(systemName: "timer.square").foregroundColor(.blue)
+                    Text("공통 타이머 사용").font(.headline)
+                    Spacer()
+                    Toggle("", isOn: $viewModel.isCommonTimer)
+                        .labelsHidden()
+                        .onChange(of: viewModel.isCommonTimer) { newValue in
+                            if newValue {
+                                // 켜면 그룹 목록 로드
+                                viewModel.fetchMyStudyGroups()
+                            }
+                        }
+                }
+                .padding(.horizontal)
+                
+                if viewModel.isCommonTimer {
+                    if viewModel.myStudyGroups.isEmpty {
+                        Text("가입된 스터디 그룹이 없습니다.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.horizontal)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(viewModel.myStudyGroups) { group in
+                                    Button(action: {
+                                        withAnimation { viewModel.targetGroupID = group.id }
+                                    }) {
+                                        VStack(spacing: 6) {
+                                            Image(systemName: "person.3.fill")
+                                                .font(.headline)
+                                            Text(group.name)
+                                                .font(.caption2)
+                                                .multilineTextAlignment(.center)
+                                                .lineLimit(1)
+                                        }
+                                        .frame(width: 80, height: 80)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(viewModel.targetGroupID == group.id ? Color.blue.opacity(0.1) : Color.white)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(viewModel.targetGroupID == group.id ? Color.blue : Color.gray.opacity(0.3), lineWidth: 2)
+                                        )
+                                        .foregroundColor(viewModel.targetGroupID == group.id ? .blue : .gray)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseFirestore
 
-struct StudyGroup: Identifiable, Codable {
+struct StudyGroup: Identifiable, Codable, Hashable {
     var id: String
     var name: String
     var description: String
@@ -17,6 +17,28 @@ struct StudyGroup: Identifiable, Codable {
     // ✨ [New] 짝 스터디 매칭 정보
     var lastPairingDate: Date? // 마지막 매칭 생성 날짜
     var pairs: [[String]]? // 매칭된 짝 (User ID 배열의 배열) e.g. [["uid1", "uid2"], ["uid3", "uid4"]]
+    
+    // ✨ [New] 공통 타이머 상태
+    struct CommonTimerState: Codable, Hashable {
+        var goal: String
+        var startTime: Date
+        var endTime: Date
+        var subject: String
+        var purpose: String
+        var isActive: Bool
+        
+        func toDictionary() -> [String: Any] {
+            return [
+                "goal": goal,
+                "startTime": startTime,
+                "endTime": endTime,
+                "subject": subject,
+                "purpose": purpose,
+                "isActive": isActive
+            ]
+        }
+    }
+    var commonTimer: CommonTimerState?
     
     // UI convenience
     var memberCount: Int { members.count }
@@ -36,6 +58,7 @@ struct StudyGroup: Identifiable, Codable {
         self.latestCheerAt = nil
         self.lastPairingDate = nil
         self.pairs = nil
+        self.commonTimer = nil
     }
     
     // Init from Firestore
@@ -56,6 +79,18 @@ struct StudyGroup: Identifiable, Codable {
         self.latestCheerAt = (data["latestCheerAt"] as? Timestamp)?.dateValue()
         self.lastPairingDate = (data["lastPairingDate"] as? Timestamp)?.dateValue()
         self.pairs = data["pairs"] as? [[String]]
+        
+        if let timerData = data["commonTimer"] as? [String: Any],
+           let goal = timerData["goal"] as? String,
+           let start = (timerData["startTime"] as? Timestamp)?.dateValue(),
+           let end = (timerData["endTime"] as? Timestamp)?.dateValue(),
+           let subject = timerData["subject"] as? String,
+           let purpose = timerData["purpose"] as? String,
+           let isActive = timerData["isActive"] as? Bool {
+            self.commonTimer = CommonTimerState(goal: goal, startTime: start, endTime: end, subject: subject, purpose: purpose, isActive: isActive)
+        } else {
+            self.commonTimer = nil
+        }
     }
     
     // Convert to Dictionary for Firestore
@@ -72,7 +107,15 @@ struct StudyGroup: Identifiable, Codable {
             "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp(), // nil이면 생성시점? or just ignore
             "latestCheerAt": latestCheerAt, /// nil okay
             "lastPairingDate": lastPairingDate,
-            "pairs": pairs
+            "pairs": pairs,
+            "commonTimer": commonTimer.map { [
+                "goal": $0.goal,
+                "startTime": $0.startTime,
+                "endTime": $0.endTime,
+                "subject": $0.subject,
+                "purpose": $0.purpose,
+                "isActive": $0.isActive
+            ] } ?? FieldValue.delete()
         ]
     }
 }

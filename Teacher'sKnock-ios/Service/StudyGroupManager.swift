@@ -508,4 +508,19 @@ class StudyGroupManager: ObservableObject {
             }
         }
     }
+    
+    // ✨ [New] 공통 타이머 상태 업데이트
+    func updateCommonTimer(groupID: String, state: StudyGroup.CommonTimerState, completion: @escaping (Bool) -> Void) {
+        db.collection("study_groups").document(groupID).updateData([
+            "commonTimer": state.toDictionary(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ]) { error in
+            if let error = error {
+                print("Error updating common timer: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
 }

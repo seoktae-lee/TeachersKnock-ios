@@ -16,6 +16,10 @@ final class ScheduleItem: Identifiable {
     // ✨ [추가] 공부 목적 저장 필드
     var studyPurpose: String
     
+    // ✨ [New] 공통 타이머 연동
+    var isCommonTimer: Bool
+    var targetGroupID: String?
+    
     init(
         id: UUID = UUID(),
         title: String,
@@ -28,7 +32,10 @@ final class ScheduleItem: Identifiable {
         ownerID: String,
         isPostponed: Bool = false,
         // ✨ [추가] 기본값은 '인강시청' 등으로 설정
-        studyPurpose: String = StudyPurpose.lectureWatching.rawValue
+        // ✨ [추가] 기본값은 '인강시청' 등으로 설정
+        studyPurpose: String = StudyPurpose.lectureWatching.rawValue,
+        isCommonTimer: Bool = false,
+        targetGroupID: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -40,7 +47,10 @@ final class ScheduleItem: Identifiable {
         self.hasReminder = hasReminder
         self.ownerID = ownerID
         self.isPostponed = isPostponed
+        self.isPostponed = isPostponed
         self.studyPurpose = studyPurpose
+        self.isCommonTimer = isCommonTimer
+        self.targetGroupID = targetGroupID
     }
     
     var asDictionary: [String: Any] {
@@ -55,7 +65,9 @@ final class ScheduleItem: Identifiable {
             "hasReminder": hasReminder,
             "ownerID": ownerID,
             "isPostponed": isPostponed,
-            "studyPurpose": studyPurpose // ✨ 딕셔너리 변환에도 추가
+            "studyPurpose": studyPurpose, // ✨ 딕셔너리 변환에도 추가
+            "isCommonTimer": isCommonTimer,
+            "targetGroupID": targetGroupID
         ]
     }
 }

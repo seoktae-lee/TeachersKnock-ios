@@ -21,7 +21,9 @@ struct StudyGroupDetailView: View {
     @State private var showNoticeSheet = false
     @State private var showCheerSheet = false
     @State private var showPairingSheet = false // ✨ [New] 짝 스터디 시트
-    @State private var showTimerAlert = false // ✨ [New] 타이머 준비중 알림
+    @State private var showTimerAlert = false // ✨ [New] 타이머 준비중 알림 (사용 안함, 하위 호환 위해 남겨둠)
+    @State private var showCommonTimerSetup = false // ✨ [New] 공통 타이머 설정
+    @State private var showCommonTimer = false // ✨ [New] 공통 타이머 화면
     
     // Custom Init to initialize State
     init(group: StudyGroup, studyManager: StudyGroupManager) {
@@ -161,8 +163,26 @@ extension StudyGroupDetailView {
                         headerIconButton(icon: "arrow.triangle.2.circlepath", color: .green, hasBadge: false)
                     }
                     
-                    Button(action: { showTimerAlert = true }) {
-                        headerIconButton(icon: "timer", color: .purple, hasBadge: false)
+                    Button(action: {
+                        if isLeader {
+                            // 리더면 설정 화면 혹은 바로 타이머 (이미 활성 상태면)
+                            if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
+                                showCommonTimer = true
+                            } else {
+                                showCommonTimerSetup = true
+                            }
+                        } else {
+                            // 멤버면 타이머 화면 (활성 상태일 때만)
+                            if let timer = liveGroup.commonTimer, timer.isActive {
+                                showCommonTimer = true
+                            } else {
+                                // 비활성이면 알림
+                                showTimerAlert = true
+                            }
+                        }
+                    }) {
+                        let isActive = (liveGroup.commonTimer?.isActive ?? false) && (Date() < (liveGroup.commonTimer?.endTime ?? Date()))
+                        headerIconButton(icon: "timer", color: isActive ? .red : .purple, hasBadge: isActive)
                     }
                 }
             }
@@ -341,6 +361,12 @@ extension StudyGroupDetailView {
             .sheet(isPresented: $showPairingSheet) {
                 PairingSheet(group: liveGroup, isLeader: isLeader, studyManager: studyManager)
                     .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showCommonTimerSetup) {
+                CommonTimerSetupView(studyManager: studyManager, group: liveGroup, showCommonTimer: $showCommonTimer)
+            }
+            .fullScreenCover(isPresented: $showCommonTimer) { // 타이머는 몰입을 위해 풀스크린 추천
+                CommonTimerView(studyManager: studyManager, group: liveGroup)
             }
             .alert("준비 중", isPresented: $showTimerAlert) {
                 Button("확인") {}

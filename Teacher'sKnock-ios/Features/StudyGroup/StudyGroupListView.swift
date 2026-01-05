@@ -12,6 +12,10 @@ struct StudyGroupListView: View {
     
     @State private var showingCreateSheet = false
     @State private var selectedTab: StudyTabMode = .group
+    @State private var navigationPath = NavigationPath() // ✨ [New] 네비게이션 경로 관리
+    
+    // ✨ [New] 네비게이션 매니저 (경로 제어용) -> MainTabView와 공유된 인스턴스 사용
+    @ObservedObject var navManager = StudyNavigationManager.shared
     
     enum StudyTabMode: String, CaseIterable {
         case group = "스터디 그룹"
@@ -19,7 +23,7 @@ struct StudyGroupListView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 // Custom Segmented Control or Picker
                 Picker("모드", selection: $selectedTab) {
@@ -40,6 +44,36 @@ struct StudyGroupListView: View {
             }
             .navigationTitle("스터디")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: StudyGroup.self) { group in
+                StudyGroupDetailView(group: group, studyManager: studyManager)
+            }
+        }
+        // ✨ [New] 외부(일정 탭 등)에서 요청된 그룹으로 이동
+        .onChange(of: navManager.targetGroupID) { groupID in
+            guard let groupID = groupID else { return }
+            
+            // 그룹 찾기
+            if let group = studyManager.myGroups.first(where: { $0.id == groupID }) {
+                // 경로 초기화 및 이동
+                navigationPath = NavigationPath()
+                navigationPath.append(group)
+                
+                // 타겟 초기화
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                   navManager.clearTarget()
+                }
+            }
+        }
+        // ✨ [New] 그룹 목록 지연 로드 대응
+        .onChange(of: studyManager.myGroups) { groups in
+            guard let targetID = navManager.targetGroupID else { return }
+            if let group = groups.first(where: { $0.id == targetID }) {
+                 navigationPath = NavigationPath()
+                 navigationPath.append(group)
+                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    navManager.clearTarget()
+                 }
+            }
         }
     }
     
@@ -83,7 +117,7 @@ struct StudyGroupListView: View {
                                 .padding(.leading, 5)
                             
                             ForEach(studyManager.myGroups) { group in
-                                NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
+                                NavigationLink(value: group) {
                                     StudyGroupRow(group: group, studyManager: studyManager)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -124,6 +158,7 @@ struct StudyGroupListView: View {
             // 뷰가 사라질 때 리스너 해제 여부는 앱 구조에 따라 결정.
             // 탭바 이동시 유지하고 싶으면 여기서 해제 안함.
         }
+
         .sheet(isPresented: $showingCreateSheet) {
             StudyGroupCreationView(studyManager: studyManager)
                 .presentationDetents([.medium, .large])
