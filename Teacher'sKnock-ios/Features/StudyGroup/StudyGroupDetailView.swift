@@ -210,6 +210,10 @@ struct StudyGroupDetailView: View {
             observeGroupUpdates()
             // ✨ [New] 멤버 정보 실시간 구독
             studyManager.fetchGroupMembers(groupID: liveGroup.id, memberUIDs: liveGroup.members)
+            
+            // ✨ [New] 시스템 알림 정리 및 읽음 처리
+            studyManager.cleanupSystemNotice(groupID: liveGroup.id, notice: liveGroup.notice)
+            studyManager.markAsRead(groupID: liveGroup.id)
         }
     }
     

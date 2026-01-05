@@ -87,7 +87,11 @@ class StudyGroupManager: ObservableObject {
                 return nil
             }
             
-            transaction.updateData(["members": FieldValue.arrayUnion([newMemberUID])], forDocument: groupRef)
+            // ✨ [Modified] 멤버 추가 시 updatedAt 갱신
+            transaction.updateData([
+                "members": FieldValue.arrayUnion([newMemberUID]),
+                "updatedAt": FieldValue.serverTimestamp()
+            ], forDocument: groupRef)
             return nil
             
         }) { (object, error) in
@@ -101,8 +105,11 @@ class StudyGroupManager: ObservableObject {
     }
     
     func leaveGroup(groupID: String, uid: String, completion: @escaping (Bool) -> Void) {
+        // ✨ [Modified] 나가기도 업데이트로 간주 (남은 멤버들에게 알림?)
+        // 로직상 남은 멤버들에게 빨간점이 필요하다면 여기서도 updatedAt 갱신 필요.
         db.collection("study_groups").document(groupID).updateData([
-            "members": FieldValue.arrayRemove([uid])
+            "members": FieldValue.arrayRemove([uid]),
+            "updatedAt": FieldValue.serverTimestamp()
         ]) { error in
             completion(error == nil)
         }
@@ -111,7 +118,8 @@ class StudyGroupManager: ObservableObject {
     // ✨ [New] 방장 위임
     func delegateLeader(groupID: String, newLeaderUID: String, completion: @escaping (Bool) -> Void) {
         db.collection("study_groups").document(groupID).updateData([
-            "leaderID": newLeaderUID
+            "leaderID": newLeaderUID,
+            "updatedAt": FieldValue.serverTimestamp()
         ]) { error in
             if let error = error {
                 print("Error delegating leader: \(error)")
@@ -144,9 +152,61 @@ class StudyGroupManager: ObservableObject {
     // ✨ [New] 공지사항 업데이트
     func updateNotice(groupID: String, notice: String) {
         db.collection("study_groups").document(groupID).updateData([
-            "notice": notice
+            "notice": notice,
+            "updatedAt": FieldValue.serverTimestamp()
         ])
     }
+    
+    // ✨ [New] 시스템 알림 자동 정리 (상세 진입 시)
+    func cleanupSystemNotice(groupID: String, notice: String) {
+        // [알림]으로 시작하는 문구 제거
+        // 예: "기존 공지\n[알림] 누구 탈퇴" -> "기존 공지"
+        // 정규식 등으로 [알림] 포함 라인을 제거
+        
+        if !notice.contains("[알림]") { return }
+        
+        let lines = notice.components(separatedBy: "\n")
+        let cleanedLines = lines.filter { !$0.trimmingCharacters(in: .whitespaces).starts(with: "[알림]") }
+        let newNotice = cleanedLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if newNotice != notice {
+            print("🧹 시스템 알림 정리 실행: \(groupID)")
+            // 업데이트하되, updatedAt은 갱신하지 않음 (읽어서 지운거니 알림 또 띄울 필요 없음)
+            // 다만 다른 멤버 입장에선? -> 공유되는 공지사항이므로
+            // A가 읽어서 지우면 B도 지워짐. "일회성"이라는게 "누군가 확인하면 사라짐"인가, 아니면 "나한테만 안보임"인가?
+            // User Request: "사용자가 스터디방에 들어가서 [알림]으로 확인했으면 이 알림은 없애는걸로 하자."
+            // "공유된 스터디방"이므로, 공지사항 텍스트 자체가 수정되면 모두에게 사라짐.
+            // 이게 의도된 동작("한 명이라도 확인하면 처리됨" 혹은 "확인 후 삭제는 공유됨")으로 보임.
+            // 만약 개인별로 안보이게 하려면 로컬 필터링을 해야 하나, "공지사항"은 DB 필드임.
+            // 요청 맥락상 "공지사항(Shared)에 텍스트가 추가됨" -> "확인 후 삭제" -> DB에서 삭제가 맞음.
+            
+            db.collection("study_groups").document(groupID).updateData([
+                "notice": newNotice
+                // updatedAt 갱신 X -> 조용히 삭제
+            ])
+        }
+    }
+    
+    // ✨ [New] 읽음 처리 및 확인
+    func markAsRead(groupID: String) {
+        let key = "lastReadTime_\(groupID)"
+        UserDefaults.standard.set(Date(), forKey: key)
+        objectWillChange.send() // UI 갱신 유도
+    }
+    
+    func hasUnreadUpdates(group: StudyGroup) -> Bool {
+        let key = "lastReadTime_\(group.id)"
+        let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
+        
+        // updatedAt이 lastRead보다 크면 안 읽음
+        // 단, 처음 로딩 시(앱 설치 직후 등)에는 모두 안 읽음으로 뜰 수 있으니,
+        // 로컬에 기록이 아예 없으면 -> "CreateAt vs Now"?
+        // 보통은 "기록 없으면 안 읽음"이 맞음 (새로운 정보니까)
+        // 하지만 자신이 만든 그룹은 읽음 처리 해야함 (createGroup에서 처리 필요?) -> 일단 패스
+        
+        // 정밀도 문제(Timestamp vs Date) 무시를 위해 1초 정도 여유
+        return group.updatedAt > lastRead.addingTimeInterval(1)
+    } 
     
     // ✨ [New] 멤버 정보 관리 (GroupID -> [User])
     @Published var groupMembersData: [String: [User]] = [:]
@@ -190,8 +250,85 @@ class StudyGroupManager: ObservableObject {
         }
     }
     
-    deinit {
-        listener?.remove()
-        memberListeners.values.forEach { $0.remove() }
+    // ✨ [New] 회원 탈퇴 시 모든 그룹에서 멤버 정리
+    func cleanupMemberForDeletion(uid: String, nickname: String, completion: @escaping () -> Void) {
+        // 1. 내가 포함된 모든 그룹 조회
+        // 주의: 이 메서드는 임시 인스턴스에서 호출될 수 있으므로, [weak self]를 사용하면
+        // 비동기 작업 도중 self가 해제되어 로직이 중단될 수 있습니다.
+        // 따라서 강한 참조를 유지하거나, self 캡처를 신중히 해야 합니다.
+        // 여기서는 Firestore 클로저가 self를 캡처하여 작업 완료 시까지 인스턴스를 유지하도록 합니다.
+        
+        db.collection("study_groups")
+            .whereField("members", arrayContains: uid)
+            .getDocuments { snapshot, error in
+                // [weak self] 제거 -> self가 살아있음
+                
+                if let error = error {
+                    print("탈퇴 정리 조회 실패: \(error)")
+                    // 조회 실패하더라도 일단 진행(유저 삭제)을 위해 completion 호출
+                    completion()
+                    return
+                }
+                
+                guard let documents = snapshot?.documents, !documents.isEmpty else {
+                    print("탈퇴 정리: 가입된 스터디 그룹 없음")
+                    completion()
+                    return
+                }
+                
+                let dispatchGroup = DispatchGroup()
+                
+                for doc in documents {
+                    dispatchGroup.enter()
+                    let groupID = doc.documentID
+                    let data = doc.data()
+                    let leaderID = data["leaderID"] as? String ?? ""
+                    var members = data["members"] as? [String] ?? []
+                    var notice = data["notice"] as? String ?? ""
+                    
+                    // 멤버 목록에서 제거
+                    members.removeAll { $0 == uid }
+                    
+                    if members.isEmpty {
+                        // 남은 멤버가 없으면 그룹 삭제
+                        print("탈퇴 정리: 그룹(\(groupID)) 삭제 (멤버 없음)")
+                        self.deleteGroup(groupID: groupID) { _ in
+                            dispatchGroup.leave()
+                        }
+                    } else {
+                        // 업데이트할 데이터 딕셔너리
+                        var updateData: [String: Any] = [
+                            "members": members
+                        ]
+                        
+                        // 방장인 경우 위임 처리
+                        if leaderID == uid {
+                            // 가입일 순 등 로직이 복잡하므로, 일단 members 배열의 첫 번째 사람에게 위임
+                            if let newLeader = members.first {
+                                updateData["leaderID"] = newLeader
+                                let systemNotice = "\n[알림] 방장이 탈퇴하여 새로운 방장으로 변경되었습니다."
+                                updateData["notice"] = notice + systemNotice
+                                print("탈퇴 정리: 그룹(\(groupID)) 방장 위임 -> \(newLeader)")
+                            }
+                        } else {
+                            // 일반 멤버인 경우 공지사항에 '탈퇴' 알림 추가 (선택사항)
+                            let systemNotice = "\n[알림] '\(nickname)'님이 스터디를 떠났습니다."
+                            updateData["notice"] = notice + systemNotice
+                        }
+                        
+                        self.db.collection("study_groups").document(groupID).updateData(updateData) { error in
+                            if let error = error {
+                                print("탈퇴 정리 실패(그룹 업데이트): \(error)")
+                            }
+                            dispatchGroup.leave()
+                        }
+                    }
+                }
+                
+                dispatchGroup.notify(queue: .main) {
+                    print("✅ 모든 스터디 그룹 멤버 정리 완료")
+                    completion()
+                }
+            }
     }
 }

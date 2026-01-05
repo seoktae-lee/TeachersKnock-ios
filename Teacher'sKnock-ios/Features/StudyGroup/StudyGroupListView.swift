@@ -84,7 +84,7 @@ struct StudyGroupListView: View {
                             
                             ForEach(studyManager.myGroups) { group in
                                 NavigationLink(destination: StudyGroupDetailView(group: group, studyManager: studyManager)) {
-                                    StudyGroupRow(group: group)
+                                    StudyGroupRow(group: group, studyManager: studyManager)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -235,6 +235,8 @@ struct InvitationRow: View {
 
 struct StudyGroupRow: View {
     let group: StudyGroup
+    // ✨ [New] 읽지 않은 알림 확인용
+    @ObservedObject var studyManager: StudyGroupManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -242,6 +244,14 @@ struct StudyGroupRow: View {
                 Text(group.name)
                     .font(.headline)
                     .foregroundColor(.primary)
+                
+                // ✨ [New] 업데이트 알림 (빨간 점)
+                if studyManager.hasUnreadUpdates(group: group) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 8, height: 8)
+                }
+                
                 Spacer()
                 HStack(spacing: 4) {
                     Image(systemName: "person.2.fill")

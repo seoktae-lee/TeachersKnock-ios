@@ -584,7 +584,7 @@ struct RecentRecordsView: View {
             Group {
                 if records.isEmpty {
                     VStack {
-                        Text("최근 학습 기록이 없습니다.")
+                        Text("최근 공부 기록이 없습니다.")
                             .font(.caption)
                             .foregroundColor(.gray)
                             .frame(maxWidth: .infinity)

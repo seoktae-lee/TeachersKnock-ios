@@ -163,8 +163,35 @@ class AuthManager: ObservableObject {
     func deleteAccount(completion: @escaping (Bool, Error?) -> Void) {
         guard let user = Auth.auth().currentUser else { return }
         let uid = user.uid
-        Firestore.firestore().collection("users").document(uid).delete { _ in
-            user.delete { error in completion(error == nil, error) }
+        let nickname = self.userNickname
+        
+        print("🗑 계정 삭제 프로세스 시작: \(uid) (\(nickname))")
+        
+        // 1. 스터디 그룹 멤버 정리 (비동기 대기)
+        // 주의: StudyGroupManager 인스턴스가 필요함. shared 인스턴스가 없다면 새로 생성하거나 주입받아야 함.
+        // 현재 코드 구조상 싱글톤이 없으므로, 여기서 일회성으로 생성하여 처리.
+        let tempStudyManager = StudyGroupManager()
+        
+        tempStudyManager.cleanupMemberForDeletion(uid: uid, nickname: nickname) {
+            print("🗑 스터디 그룹 정리 완료 -> Firestore 유저 삭제 진행")
+            
+            // 2. Firestore 유저 삭제
+            Firestore.firestore().collection("users").document(uid).delete { error in
+                if let error = error {
+                    print("Firestore 삭제 실패: \(error)")
+                    completion(false, error)
+                    return
+                }
+                
+                // 3. Auth 계정 삭제
+                user.delete { error in
+                    if error == nil {
+                        print("✅ 계정 삭제 완료")
+                        self.signOut() // 상태 초기화
+                    }
+                    completion(error == nil, error)
+                }
+            }
         }
     }
     

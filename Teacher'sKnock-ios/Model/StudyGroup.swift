@@ -10,6 +10,7 @@ struct StudyGroup: Identifiable, Codable {
     var members: [String] // List of member UIDs
     var maxMembers: Int
     var createdAt: Date
+    var updatedAt: Date // ✨ [New] 마지막 수정 시간 (알림 배지용)
     
     // UI convenience
     var memberCount: Int { members.count }
@@ -24,6 +25,7 @@ struct StudyGroup: Identifiable, Codable {
         self.members = members.isEmpty ? [leaderID] : members // Leader is always a member
         self.maxMembers = 6 // Fixed constraint
         self.createdAt = Date()
+        self.updatedAt = Date() // 생성 시점
     }
     
     // Init from Firestore
@@ -39,6 +41,7 @@ struct StudyGroup: Identifiable, Codable {
         self.members = data["members"] as? [String] ?? []
         self.maxMembers = data["maxMembers"] as? Int ?? 6
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        self.updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue() ?? (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
     }
     
     // Convert to Dictionary for Firestore
@@ -50,7 +53,8 @@ struct StudyGroup: Identifiable, Codable {
             "leaderID": leaderID,
             "members": members,
             "maxMembers": maxMembers,
-            "createdAt": createdAt
+            "createdAt": createdAt,
+            "updatedAt": updatedAt
         ]
     }
 }
