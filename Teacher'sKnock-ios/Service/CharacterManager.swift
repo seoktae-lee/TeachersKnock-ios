@@ -89,46 +89,68 @@ class CharacterManager: ObservableObject {
     // ✨ [추가] 진화 애니메이션 제어용 상태
     @Published var showEvolutionAnimation = false
     
-    private let storageKey = "UserCharacters_v1"
-    private let equippedKey = "EquippedCharacterType_v1"
+    private let baseStorageKey = "UserCharacters_v1"
+    private let baseEquippedKey = "EquippedCharacterType_v1"
     
-    init() {
-        loadCharacters()
+    // 현재 로그인된 유저 ID 추적
+    private var currentUserID: String?
+    
+    private init() {
+        // 자동 로드 제거: 로그아웃/로그인 시 명시적으로 호출
     }
     
     var equippedCharacter: UserCharacter? {
         characters.first(where: { $0.type == equippedCharacterType })
     }
     
-    func loadCharacters() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
+    // ✨ [수정] 유저별 데이터 로드
+    func loadData(for uid: String) {
+        self.currentUserID = uid
+        let userStorageKey = "\(baseStorageKey)_\(uid)"
+        let userEquippedKey = "\(baseEquippedKey)_\(uid)"
+        
+        if let data = UserDefaults.standard.data(forKey: userStorageKey),
            let decoded = try? JSONDecoder().decode([UserCharacter].self, from: data) {
             self.characters = decoded
+        } else {
+            self.characters = []
         }
         
-        if let savedType = UserDefaults.standard.string(forKey: equippedKey) {
+        if let savedType = UserDefaults.standard.string(forKey: userEquippedKey) {
             self.equippedCharacterType = savedType
         } else {
             self.equippedCharacterType = "bird"
         }
+        
+        // 서버 동기화
+        fetchFromFirestore(uid: uid)
+    }
+    
+    // ✨ [추가] 데이터 초기화 (로그아웃 시)
+    func clearData() {
+        self.currentUserID = nil
+        self.characters = []
+        self.equippedCharacterType = "bird"
     }
     
     func saveCharacters() {
-        // 1. 로컬 저장 (UserDefaults)
-        if let encoded = try? JSONEncoder().encode(characters) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
-        }
-        UserDefaults.standard.set(equippedCharacterType, forKey: equippedKey)
+        guard let uid = currentUserID ?? Auth.auth().currentUser?.uid else { return }
         
-        // 2. 서버 저장 (Firestore) - 로그인한 유저만
-        // ✨ 앱 삭제 후 재설치 대비
-        saveToFirestore()
+        // 1. 로컬 저장 (UserDefaults) - 유저별 키 사용
+        let userStorageKey = "\(baseStorageKey)_\(uid)"
+        let userEquippedKey = "\(baseEquippedKey)_\(uid)"
+        
+        if let encoded = try? JSONEncoder().encode(characters) {
+            UserDefaults.standard.set(encoded, forKey: userStorageKey)
+        }
+        UserDefaults.standard.set(equippedCharacterType, forKey: userEquippedKey)
+        
+        // 2. 서버 저장 (Firestore)
+        saveToFirestore(uid: uid)
     }
     
     // ✨ [추가] Firestore에 데이터 저장
-    func saveToFirestore() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        
+    func saveToFirestore(uid: String) {
         let characterData = characters.map { $0.asDictionary }
         let data: [String: Any] = [
             "characters": characterData,
@@ -158,7 +180,6 @@ class CharacterManager: ObservableObject {
                     
                     // ✨ 로컬 데이터와 병합 (서버 데이터가 있으면 덮어씌움)
                     if !fetchedCharacters.isEmpty {
-                        // 기존 로컬보다 서버 데이터가 더 최신이거나 앱 재설치 상황이라고 가정
                         DispatchQueue.main.async {
                             self.characters = fetchedCharacters
                             print("✅ 서버에서 캐릭터 \(fetchedCharacters.count)개 복원 완료")
@@ -169,11 +190,7 @@ class CharacterManager: ObservableObject {
                             }
                             
                             // 로컬에도 최신화 저장
-                            self.saveCharacters() // 재귀 호출 주의: saveCharacters -> saveToFirestore. 
-                            // 하지만 saveToFirestore는 비동기이고 데이터 변화가 없으면 괜찮음. 
-                            // 무한 루프 방지를 위해 로컬 저장은 따로 빼는 것이 좋으나, 
-                            // 여기서는 편의상 saveCharacters() 호출하되, 
-                            // saveCharacters() 내부의 saveToFirestore는 어차피 동일 데이터를 덮어쓰므로 큰 문제 없음.
+                            self.saveCharacters()
                         }
                     }
                 }

@@ -54,6 +54,7 @@ class AuthManager: ObservableObject {
             self.userUniversityName = nil // 로그아웃 시 초기화
             self.userTeacherKnockID = nil
             self.settingsManager?.reset()
+            CharacterManager.shared.clearData()
         } catch {
             print("로그아웃 실패: \(error)")
         }
@@ -76,7 +77,8 @@ class AuthManager: ObservableObject {
                         }
                         
                         // ✨ [New] 캐릭터 데이터 복원 (앱 재설치 시)
-                        CharacterManager.shared.fetchFromFirestore(uid: user.uid)
+                        // ✨ [New] 캐릭터 데이터 로드 (로컬 + Firestore)
+                        CharacterManager.shared.loadData(for: user.uid)
                     } else {
                         self.isLoggedIn = false
                     }
@@ -87,6 +89,7 @@ class AuthManager: ObservableObject {
                 self.userUniversityName = nil
                 self.userTeacherKnockID = nil
                 self.settingsManager?.reset()
+                CharacterManager.shared.clearData()
             }
         }
     }

@@ -11,9 +11,9 @@ struct StartingCharacterSelectionView: View {
     @State private var isAnimateStart = false
     
     let options = [
-        (type: "bird", name: "열정의 티노", emoji: "🥚", color: Color.orange, desc: "뜨거운 열정으로\n알을 깨고 나오는 새"),
-        (type: "plant", name: "성실의 새싹", emoji: "🤎", color: Color.green, desc: "묵묵히 뿌리를 내리고\n꽃을 피우는 식물"),
-        (type: "sea", name: "지혜의 바다", emoji: "🧊", color: Color.blue, desc: "깊은 지혜를 품고\n세상을 품는 바다")
+        (type: "bird", name: "열정의 불꽃", emoji: "🥚", color: Color.orange, desc: "뜨거운 열정으로\n알을 깨고 나오는 불 속성 캐릭터"),
+        (type: "plant", name: "성실의 새싹", emoji: "🤎", color: Color.green, desc: "묵묵히 뿌리를 내리고\n꽃을 피우는 풀 속성 캐릭터"),
+        (type: "sea", name: "지혜의 바다", emoji: "🧊", color: Color.blue, desc: "깊은 지혜를 품고\n세상을 품는 물 속성 캐릭터")
     ]
     
     var body: some View {

@@ -236,6 +236,24 @@ struct MainCharacterView: View {
                         .padding(.horizontal, 25)
                         .padding(.bottom, 20)
                     }
+                } else {
+                    // ✨ [New] 캐릭터 미선택 시 안내 Empty State
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray.opacity(0.6))
+                        
+                        Text("아직 파트너가 없어요")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        
+                        Text("새 목표를 추가하여 나만의 캐릭터와\n목표 교육청을 설정해보세요!")
+                            .font(.caption)
+                            .foregroundColor(.gray.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(height: 220) // 높이를 조금 더 늘려서 하단 바 공간 확보
