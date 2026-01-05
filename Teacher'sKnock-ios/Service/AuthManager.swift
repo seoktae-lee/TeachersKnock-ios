@@ -55,6 +55,9 @@ class AuthManager: ObservableObject {
             self.userTeacherKnockID = nil
             self.settingsManager?.reset()
             CharacterManager.shared.clearData()
+            
+            // ✨ [New] 로그아웃 시 홈 탭(0번)으로 초기화하여 재로그인 시 홈 화면이 보이도록 함
+            StudyNavigationManager.shared.tabSelection = 0
         } catch {
             print("로그아웃 실패: \(error)")
         }
