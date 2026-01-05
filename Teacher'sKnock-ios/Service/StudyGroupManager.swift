@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import FirebaseAuth
 import Combine
 
 class StudyGroupManager: ObservableObject {
@@ -153,6 +154,7 @@ class StudyGroupManager: ObservableObject {
     func updateNotice(groupID: String, notice: String) {
         db.collection("study_groups").document(groupID).updateData([
             "notice": notice,
+            "noticeUpdatedAt": FieldValue.serverTimestamp(), // ✨ [New] 공지사항 수정 시간 별도 기록
             "updatedAt": FieldValue.serverTimestamp()
         ])
     }
@@ -188,24 +190,55 @@ class StudyGroupManager: ObservableObject {
     }
     
     // ✨ [New] 읽음 처리 및 확인
+    // ✨ [New] 읽음 처리 및 확인
     func markAsRead(groupID: String) {
         let key = "lastReadTime_\(groupID)"
         UserDefaults.standard.set(Date(), forKey: key)
         objectWillChange.send() // UI 갱신 유도
     }
     
+    // ✨ [New] 공지사항 읽음 처리
+    func markNoticeAsRead(groupID: String) {
+        let key = "lastReadNotice_\(groupID)"
+        UserDefaults.standard.set(Date(), forKey: key)
+        objectWillChange.send()
+    }
+    
+    // ✨ [New] 응원 읽음 처리
+    func markCheersAsRead(groupID: String) {
+        let key = "lastReadCheer_\(groupID)"
+        UserDefaults.standard.set(Date(), forKey: key)
+        objectWillChange.send()
+    }
+    
     func hasUnreadUpdates(group: StudyGroup) -> Bool {
         let key = "lastReadTime_\(group.id)"
         let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
         
-        // updatedAt이 lastRead보다 크면 안 읽음
-        // 단, 처음 로딩 시(앱 설치 직후 등)에는 모두 안 읽음으로 뜰 수 있으니,
-        // 로컬에 기록이 아예 없으면 -> "CreateAt vs Now"?
-        // 보통은 "기록 없으면 안 읽음"이 맞음 (새로운 정보니까)
-        // 하지만 자신이 만든 그룹은 읽음 처리 해야함 (createGroup에서 처리 필요?) -> 일단 패스
-        
         // 정밀도 문제(Timestamp vs Date) 무시를 위해 1초 정도 여유
         return group.updatedAt > lastRead.addingTimeInterval(1)
+    }
+    
+    // ✨ [New] 공지사항 안 읽음 확인
+    func hasUnreadNotice(group: StudyGroup) -> Bool {
+        guard let noticeUpdatedAt = group.noticeUpdatedAt else { return false }
+        let key = "lastReadNotice_\(group.id)"
+        let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
+        
+        // 내 로컬 시간보다 noticeUpdatedAt이 더 미래(최신)이면 안 읽음
+        // 단, 처음 생성시 nil이면 false.
+        return noticeUpdatedAt > lastRead.addingTimeInterval(1)
+    }
+    
+
+    
+    // ✨ [New] 응원 안 읽음 확인
+    func hasUnreadCheers(group: StudyGroup) -> Bool {
+        guard let latestDate = group.latestCheerAt else { return false }
+        let key = "lastReadCheer_\(group.id)"
+        let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
+        
+        return latestDate > lastRead.addingTimeInterval(1)
     } 
     
     // ✨ [New] 멤버 정보 관리 (GroupID -> [User])
@@ -330,5 +363,87 @@ class StudyGroupManager: ObservableObject {
                     completion()
                 }
             }
+    }
+    // ✨ [New] 노크하기 (Knock)
+    func sendKnock(fromNickname: String, to targetUID: String, toNickname: String, completion: @escaping (Bool) -> Void) {
+        // 1시간 쿨타임 체크는 서버사이드 룰이나 클라이언트 로컬 체크로 가능하지만
+        // 여기서는 클라이언트 로직으로 구현 (LocalStorage or simply firestore add)
+        // User request: 1 hour cooldown.
+        // 쿨타임 체크 로직은 UI레벨에서 UserDefaults로 관리하거나,
+        // Firestore 'sent_knocks' 컬렉션을 통해 관리 가능.
+        // 간단히 UI에서 체크하도록 하고 여기서는 전송 로직만 수행.
+        
+        let alertData: [String: Any] = [
+            "type": "knock",
+            "fromUID": Auth.auth().currentUser?.uid ?? "",
+            "fromNickname": fromNickname,
+            "toNickname": toNickname, // ✨ [New] 받는 사람 닉네임 추가 (알림 메시지용)
+            "timestamp": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("users").document(targetUID).collection("alerts").addDocument(data: alertData) { error in
+            completion(error == nil)
+        }
+    }
+    
+    // ✨ [New] 한줄 응원 (Cheer)
+    @Published var cheers: [String: [Cheer]] = [:] // GroupID -> Cheers
+    private var cheerListeners: [String: ListenerRegistration] = [:]
+    
+    func listenToCheers(groupID: String) {
+        if cheerListeners[groupID] != nil { return } // 이미 리스닝 중
+        
+        let listener = db.collection("study_groups").document(groupID)
+            .collection("cheers")
+            .order(by: "createdAt", descending: true)
+            .limit(to: 50)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                guard let documents = snapshot?.documents else { return }
+                
+                let cheersList = documents.compactMap { Cheer(document: $0) }
+                DispatchQueue.main.async {
+                    self.cheers[groupID] = cheersList
+                }
+            }
+        cheerListeners[groupID] = listener
+    }
+    
+    func addCheer(groupID: String, nickname: String, text: String, completion: @escaping (Bool) -> Void) {
+        let uid = Auth.auth().currentUser?.uid ?? ""
+        
+        let cheerRef = db.collection("study_groups").document(groupID).collection("cheers").document()
+        let cheer = Cheer(id: cheerRef.documentID, userID: uid, userNickname: nickname, text: text)
+        
+        // Optimistic Update
+        var current = cheers[groupID] ?? []
+        current.insert(cheer, at: 0)
+        cheers[groupID] = current
+        
+        let batch = db.batch()
+        let groupRef = db.collection("study_groups").document(groupID)
+        
+        // Add Cheer
+        batch.setData(cheer.toDictionary(), forDocument: cheerRef)
+        
+        // Update Group
+        batch.updateData([
+            "latestCheerAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ], forDocument: groupRef)
+        
+        batch.commit { error in
+            if let error = error {
+                print("Error adding cheer: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    
+    func removeCheerListener(groupID: String) {
+        cheerListeners[groupID]?.remove()
+        cheerListeners[groupID] = nil
     }
 }

@@ -66,6 +66,12 @@
 		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
 		54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */; };
 		547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */; };
+		548AFA972F0BADC7003EA411 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA962F0BADC7003EA411 /* AlertManager.swift */; };
+		548AFA9B2F0BADFA003EA411 /* ParticipationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA992F0BADFA003EA411 /* ParticipationView.swift */; };
+		548AFA9C2F0BADFA003EA411 /* CheerBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA982F0BADFA003EA411 /* CheerBoardView.swift */; };
+		548AFA9E2F0BAE23003EA411 /* Cheer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA9D2F0BAE23003EA411 /* Cheer.swift */; };
+		548AFAA02F0BBB73003EA411 /* NoticeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */; };
+		548AFAA22F0BBB8D003EA411 /* StudyGroupListView_Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */; };
 		5498D8ED2F062DE800BAB26B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EC2F062DE800BAB26B /* WidgetKit.framework */; };
 		5498D8EF2F062DE800BAB26B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5498D8EE2F062DE800BAB26B /* SwiftUI.framework */; };
 		5498D8FE2F062DE900BAB26B /* Teacher'sKnockWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -189,6 +195,12 @@
 		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
 		54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalColorHelper.swift; sourceTree = "<group>"; };
 		547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectColorManager.swift; sourceTree = "<group>"; };
+		548AFA962F0BADC7003EA411 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
+		548AFA982F0BADFA003EA411 /* CheerBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheerBoardView.swift; sourceTree = "<group>"; };
+		548AFA992F0BADFA003EA411 /* ParticipationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipationView.swift; sourceTree = "<group>"; };
+		548AFA9D2F0BAE23003EA411 /* Cheer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cheer.swift; sourceTree = "<group>"; };
+		548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoticeSheet.swift; sourceTree = "<group>"; };
+		548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupListView_Preview.swift; sourceTree = "<group>"; };
 		5498D8EB2F062DE800BAB26B /* Teacher'sKnockWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Teacher'sKnockWidgetExtension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5498D8EC2F062DE800BAB26B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		5498D8EE2F062DE800BAB26B /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -306,6 +318,7 @@
 		5459AE532EE19E41008EE0E4 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				548AFA9D2F0BAE23003EA411 /* Cheer.swift */,
 				54A40FF52F0A6C5700A0474F /* FriendRequest.swift */,
 				54A40FF12F0A648200A0474F /* StudyInvitation.swift */,
 				54A40FEB2F0A1B6600A0474F /* User.swift */,
@@ -322,6 +335,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				548AFA962F0BADC7003EA411 /* AlertManager.swift */,
 				54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */,
 				54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */,
 				54A40FEF2F0A646300A0474F /* InvitationManager.swift */,
@@ -469,6 +483,8 @@
 		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
 			isa = PBXGroup;
 			children = (
+				548AFAA12F0BBB8D003EA411 /* StudyGroupListView_Preview.swift */,
+				548AFA9F2F0BBB73003EA411 /* NoticeSheet.swift */,
 				54A40FED2F0A57A200A0474F /* ProfileImageView.swift */,
 				54A40FE52F0A1B4500A0474F /* AddFriendView.swift */,
 				54A40FE62F0A1B4500A0474F /* FriendListView.swift */,
@@ -476,6 +492,8 @@
 				54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */,
 				54BE67F82F07C3B700E6EC64 /* StudyGroupDetailView.swift */,
 				54BE67F92F07C3B700E6EC64 /* StudyGroupListView.swift */,
+				548AFA982F0BADFA003EA411 /* CheerBoardView.swift */,
+				548AFA992F0BADFA003EA411 /* ParticipationView.swift */,
 			);
 			path = StudyGroup;
 			sourceTree = "<group>";
@@ -618,8 +636,11 @@
 				5459AE322EE19535008EE0E4 /* DailyDetailView.swift in Sources */,
 				54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */,
 				5459AE332EE19535008EE0E4 /* DailyTimelineView.swift in Sources */,
+				548AFAA02F0BBB73003EA411 /* NoticeSheet.swift in Sources */,
 				5459AE342EE19535008EE0E4 /* EditScheduleView.swift in Sources */,
 				54A40FF22F0A648200A0474F /* StudyInvitation.swift in Sources */,
+				548AFA9B2F0BADFA003EA411 /* ParticipationView.swift in Sources */,
+				548AFA9C2F0BADFA003EA411 /* CheerBoardView.swift in Sources */,
 				5459AE352EE19535008EE0E4 /* FirestoreSyncManager.swift in Sources */,
 				5459AE362EE19535008EE0E4 /* Goal.swift in Sources */,
 				5459AE372EE19535008EE0E4 /* GoalListView.swift in Sources */,
@@ -646,6 +667,7 @@
 				5435A2172F0807C3002A37D4 /* MainCharacterView.swift in Sources */,
 				5435A2182F0807C3002A37D4 /* CharacterStorageView.swift in Sources */,
 				54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */,
+				548AFAA22F0BBB8D003EA411 /* StudyGroupListView_Preview.swift in Sources */,
 				5459AE402EE19535008EE0E4 /* SettingsView.swift in Sources */,
 				5459AE412EE19535008EE0E4 /* SignUpView.swift in Sources */,
 				5459AE422EE19535008EE0E4 /* SplashView.swift in Sources */,
@@ -658,12 +680,14 @@
 				54A40FE82F0A1B4500A0474F /* FriendListView.swift in Sources */,
 				544E3A042EE5E6F800551E30 /* TimeTableView.swift in Sources */,
 				5459AE462EE19535008EE0E4 /* SubjectDetailView.swift in Sources */,
+				548AFA9E2F0BAE23003EA411 /* Cheer.swift in Sources */,
 				54A40FF42F0A6C4E00A0474F /* FriendRequestManager.swift in Sources */,
 				5435A21A2F0807E3002A37D4 /* CharacterManager.swift in Sources */,
 				5459AE472EE19535008EE0E4 /* SubjectName.swift in Sources */,
 				544E3A082EE5E95B00551E30 /* DDayWidget.swift in Sources */,
 				5459AE482EE19535008EE0E4 /* SubjectSelectView.swift in Sources */,
 				5459AE492EE19535008EE0E4 /* TeachersKnock_iosApp.swift in Sources */,
+				548AFA972F0BADC7003EA411 /* AlertManager.swift in Sources */,
 				5432C7582EE3FCBF005B4221 /* NoticeData.swift in Sources */,
 				5459AE602EE1A2BF008EE0E4 /* GoalViewModel.swift in Sources */,
 				54A40FEA2F0A1B5E00A0474F /* FriendManager.swift in Sources */,

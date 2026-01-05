@@ -12,6 +12,7 @@ struct TeachersKnock_iosApp: App {
     // 앱 생명주기 동안 살아있는 매니저들
     @StateObject private var authManager = AuthManager()
     @StateObject private var settingsManager = SettingsManager()
+    @StateObject private var alertManager = AlertManager() // ✨ [New]
     
     init() {
         FirebaseApp.configure()
@@ -23,6 +24,7 @@ struct TeachersKnock_iosApp: App {
                 // 환경 객체 주입
                 .environmentObject(authManager)
                 .environmentObject(settingsManager)
+                .environmentObject(alertManager) // ✨ [New]
                 // ✨ [New] 앱 레벨에서 딥링크 처리 (Cold Start 대응 강화를 위해 위치 변경)
                 .onOpenURL { url in
                     if url.scheme == "com.seoktaedev.TeachersKnock-ios" && url.host == "timer" {

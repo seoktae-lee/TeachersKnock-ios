@@ -11,6 +11,8 @@ struct StudyGroup: Identifiable, Codable {
     var maxMembers: Int
     var createdAt: Date
     var updatedAt: Date // ✨ [New] 마지막 수정 시간 (알림 배지용)
+    var noticeUpdatedAt: Date? // ✨ [New] 공지사항 마지막 업데이트 시간 (알림 배지용)
+    var latestCheerAt: Date? // ✨ [New] 마지막 응원 등록 시간 (알림 배지용)
     
     // UI convenience
     var memberCount: Int { members.count }
@@ -26,6 +28,8 @@ struct StudyGroup: Identifiable, Codable {
         self.maxMembers = 6 // Fixed constraint
         self.createdAt = Date()
         self.updatedAt = Date() // 생성 시점
+        self.noticeUpdatedAt = nil
+        self.latestCheerAt = nil
     }
     
     // Init from Firestore
@@ -42,6 +46,8 @@ struct StudyGroup: Identifiable, Codable {
         self.maxMembers = data["maxMembers"] as? Int ?? 6
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue() ?? (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        self.noticeUpdatedAt = (data["noticeUpdatedAt"] as? Timestamp)?.dateValue()
+        self.latestCheerAt = (data["latestCheerAt"] as? Timestamp)?.dateValue()
     }
     
     // Convert to Dictionary for Firestore
@@ -54,7 +60,9 @@ struct StudyGroup: Identifiable, Codable {
             "members": members,
             "maxMembers": maxMembers,
             "createdAt": createdAt,
-            "updatedAt": updatedAt
+            "updatedAt": updatedAt,
+            "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp(), // nil이면 생성시점? or just ignore
+            "latestCheerAt": latestCheerAt /// nil okay
         ]
     }
 }
