@@ -191,6 +191,7 @@ class FirestoreSyncManager {
                 
                 var newTodayTime = currentTodayTime
                 var newSpeakingTime = currentSpeakingTime // ✨ [New]
+                var dailyRecords = dataSnapshot["dailyStudyRecords"] as? [String: Int] ?? [:] // ✨ [New]
                 
                 // 날짜 비교 (년, 월, 일)
                 if calendar.isDate(lastDate, inSameDayAs: now) {
@@ -205,10 +206,18 @@ class FirestoreSyncManager {
                     newSpeakingTime = speakingDuration ?? 0
                 }
                 
+                // ✨ [New] 일별 기록 업데이트 (YYYY-MM-DD)
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                let dateKey = dateFormatter.string(from: now)
+                
+                dailyRecords[dateKey, default: 0] += duration
+                
                 // 업데이트할 필드 추가
                 data["todayStudyTime"] = newTodayTime
                 data["todaySpeakingTime"] = newSpeakingTime // ✨ [New]
                 data["lastStudyDate"] = Timestamp(date: now)
+                data["dailyStudyRecords"] = dailyRecords // ✨ [New]
                 
                 // 최종 업데이트
                 userRef.updateData(data) { error in

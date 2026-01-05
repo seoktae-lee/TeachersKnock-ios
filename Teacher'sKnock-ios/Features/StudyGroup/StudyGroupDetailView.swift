@@ -76,6 +76,13 @@ struct StudyGroupDetailView: View {
                 
                 Divider()
                 
+                // ✨ [New] Weekly Ranking
+                if let membersData = studyManager.groupMembersData[liveGroup.id] {
+                    WeeklyRankingView(members: membersData)
+                        .padding(.horizontal)
+                    Divider()
+                }
+                
                 // Members
                 HStack {
                     Text("멤버")
@@ -262,6 +269,167 @@ struct StudyGroupDetailView: View {
     }
 }
 
+// ✨ [New] 주간 랭킹 뷰
+struct WeeklyRankingView: View {
+    let members: [User]
+    
+    // ✨ [New] 실시간 갱신을 위한 타이머 및 상태
+    @State private var tick = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    struct RankedMember: Identifiable {
+        let id: String
+        let user: User
+        let weeklySeconds: Int
+        let rank: Int
+    }
+    
+    // 로직 수정: 오늘 날짜 제외하고 합산 + 오늘 시간 + (공부중이라면) 현재 경과 시간
+    private func calculateWeeklyTime(user: User) -> Int {
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = dateFormatter.string(from: Date())
+        
+        // 이번 주 시작일 계산
+        let today = Date()
+        let weekInterval = calendar.dateInterval(of: .weekOfYear, for: today)
+        let startOfWeek = weekInterval?.start ?? today
+        
+        // 1. 과거 기록 합산 (이번 주 내 기록만, 오늘 제외)
+        let historicSum = user.dailyStudyRecords.filter { key, value in
+            guard key != todayStr else { return false } // 오늘은 제외 (중복 방지)
+            if let date = dateFormatter.date(from: key) {
+                return calendar.isDate(date, equalTo: startOfWeek, toGranularity: .weekOfYear)
+            }
+            return false
+        }.reduce(0) { $0 + $1.value }
+        
+        // 2. 오늘 저장된 시간
+        var total = historicSum + user.todayStudyTime
+        
+        // 3. ✨ [New] 공부 중이라면 현재 세션 경과 시간 추가
+        if user.isStudying, let startTime = user.currentStudyStartTime {
+            // 날짜가 바뀌었을 때 등을 고려해야 하지만, 
+            // 단순화를 위해 현재 시각에서 시작 시간을 뺀 값을 더함.
+            // (오늘자 todayStudyTime에는 아직 반영 안 된 시간이므로)
+            
+            // 단, 시작 시간이 어제인 경우? -> updateTime 로직과 유사하게 처리 필요
+            // 여기서는 '오늘 00시 이후' 흐른 시간만 더하는 것이 정확함
+            
+            let now = tick // 타이머에 의해 갱신되는 현재 시간
+            let isTodayStart = calendar.isDateInToday(startTime)
+            
+            if isTodayStart {
+                let elapsed = Int(now.timeIntervalSince(startTime))
+                total += max(0, elapsed)
+            } else {
+                // 어제 시작했으면 오늘 00시부터의 시간만
+                if calendar.isDateInToday(now) {
+                   let startOfToday = calendar.startOfDay(for: now)
+                   let elapsedSinceMidnight = Int(now.timeIntervalSince(startOfToday))
+                   total += max(0, elapsedSinceMidnight)
+                }
+            }
+        }
+        
+        return total
+    }
+    
+    var topMembers: [RankedMember] {
+        let sorted = members.map { user in
+            RankedMember(id: user.id, user: user, weeklySeconds: calculateWeeklyTime(user: user), rank: 0)
+        }.sorted { $0.weeklySeconds > $1.weeklySeconds }
+        
+        var result: [RankedMember] = []
+        for (index, item) in sorted.enumerated() {
+            if index < 3 {
+               result.append(RankedMember(id: item.id, user: item.user, weeklySeconds: item.weeklySeconds, rank: index + 1))
+            }
+        }
+        return result
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Label("이번 주 공부 랭킹 Top 3", systemImage: "trophy.fill")
+                .font(.headline)
+                .foregroundColor(.yellow) // 트로피 색상
+            
+            if topMembers.isEmpty || topMembers.allSatisfy({ $0.weeklySeconds == 0 }) {
+                Text("아직 이번 주 공부 기록이 없습니다.")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.vertical, 5)
+            } else {
+                // ✨ [Modified] 1등이 가운데 오도록 하거나, 애니메이션 적용 가능 (여기선 리스트 순서 유지하되 값은 실시간)
+                HStack(alignment: .bottom, spacing: 10) {
+                    ForEach(topMembers) { member in
+                        VStack {
+                            // 왕관 아이콘 (1등만)
+                            if member.rank == 1 {
+                                Image(systemName: "crown.fill")
+                                    .foregroundColor(.yellow)
+                                    .font(.title3)
+                                    // ✨ [New] 1등 강조 애니메이션 (선택)
+                                    .scaleEffect(member.user.isStudying ? 1.1 : 1.0)
+                                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: member.user.isStudying)
+                            }
+                            
+                            // 프로필
+                            ProfileImageView(user: member.user, size: member.rank == 1 ? 60 : 45)
+                                .overlay(
+                                    Circle()
+                                        .stroke(member.rank == 1 ? Color.yellow : Color.clear, lineWidth: 2)
+                                )
+                            
+                            // ✨ [New] 공부 중 표시
+                            if member.user.isStudying {
+                                Text("🔥")
+                                    .font(.caption2)
+                                    .offset(y: -5)
+                            }
+                            
+                            Text(member.user.nickname)
+                                .font(.caption.bold())
+                                .lineLimit(1)
+                            
+                            Text(formatTime(member.weeklySeconds))
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                                // ✨ [New] 숫자가 바뀔 때 살짝 깜빡이는 효과 (Monospaced라 덜 튐)
+                                .contentTransition(.numericText()) 
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.vertical, 10)
+                .background(Color.yellow.opacity(0.05))
+                .cornerRadius(12)
+                .animation(.default, value: topMembers.map { $0.id }) // 순위 바뀌면 애니메이션
+            }
+        }
+        .padding(.vertical, 5)
+        .onReceive(timer) { t in
+            self.tick = t // 시간 갱신 -> 뷰 리드로우 -> calculateWeeklyTime 재계산
+        }
+    }
+    
+    func formatTime(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        // ✨ [Modified] 초 단위가 너무 정신없으면 분까지만, 하지만 "실시간" 요청이므로 초 필요 없어도 됨?
+        // 사용자 요청: "생동감 있게" -> 초는 보여주는게 좋음. 랭킹용으로는 H:M만 있어도 되지만, 
+        // 일단 H:M 형식 유지하되 값은 변함. (분이 바뀔때마다 갱신)
+        // 만약 '초'단위 변화를 눈으로 보고 싶다면 포맷 변경 필요.
+        // H:M 만 있으면 1분마다 바뀜 -> 덜 생동감.
+        // H:M:S 로 변경 제안? 아니면 숫자만 내부적으론 변하고 UI는 분단위?
+        // 사용자가 "생동감"을 원했으니 초 단위 추가가 나을 수 있음.
+        let s = seconds % 60
+        return String(format: "%d시간 %02d분 %02d초", h, m, s)
+    }
+}
+
 struct MemberRow: View {
     let user: User // ✨ [New] User 객체를 직접 받음 (정렬된 데이터)
     let isLeader: Bool
@@ -296,8 +464,8 @@ struct MemberRow: View {
                     Text(user.nickname)
                         .font(.body.bold())
                     if isLeader {
-                        Image(systemName: "crown.fill")
-                            .foregroundColor(.yellow)
+                        Image(systemName: "star.circle.fill") // ✨ [Modified] 방장 아이콘 변경 (왕관 -> 별)
+                            .foregroundColor(.orange)
                             .font(.caption)
                     }
                 }
@@ -327,8 +495,6 @@ struct MemberRow: View {
                     .font(.system(.body, design: .monospaced)) // 숫자 등폭 폰트 사용
                     .fontWeight(.bold)
                     .foregroundColor(user.isStudying ? .blue : .gray)
-                
-                // ✨ [Modified] 말하기 시간 표시 제거 (순공시간에 합산됨)
             }
         }
         .padding()
@@ -340,7 +506,7 @@ struct MemberRow: View {
                 Button(role: .destructive) {
                     showDelegateAlert = true
                 } label: {
-                    Label("방장 위임하기", systemImage: "crown")
+                    Label("방장 위임하기", systemImage: "star.circle") // ✨ [Modified] 메뉴 아이콘도 일치
                 }
             }
         }
@@ -364,16 +530,61 @@ struct MemberRow: View {
         .onChange(of: user.id) { _ in updateTime() }
         .onChange(of: user.isStudying) { _ in updateTime() }
         .onChange(of: user.todayStudyTime) { _ in updateTime() }
+        .onChange(of: user.lastStudyDate) { _ in updateTime() } // ✨ [New] 날짜 변경 감지
     }
     
     func updateTime() {
+        let calendar = Calendar.current
+        let isToday = calendar.isDateInToday(user.lastStudyDate)
+        
+        // 날짜가 지났으면 저장된 시간은 0으로 취급 (화면 표시용)
+        let baseTime = isToday ? user.todayStudyTime : 0
+        
         if user.isStudying, let startTime = user.currentStudyStartTime {
-            let elapsed = Int(Date().timeIntervalSince(startTime))
-            // 음수 방지 (시간 동기화 오차 등)
-            let addedTime = max(0, elapsed)
-            currentDisplayTime = user.todayStudyTime + addedTime
+            // 현재 공부중인데 날짜가 바뀐 경우 처리:
+            // (1) lastStudyDate가 오늘이면 -> 그냥 누적
+            // (2) lastStudyDate가 어제면 -> 자정 넘어서 공부 중인 상황
+            //     원칙적으로는 00시 기준으로 잘라야 하지만,
+            //     간단히 '현재 날짜' 기준 경과 시간으로 처리하거나,
+            //     FirestoreSyncManager의 로직에 따라 클라이언트에서는 단순 경과 시간만 더해줌.
+            //     -> 여기서는 User 데이터가 아직 갱신 안 된 상태일 수 있으므로,
+            //        startTime이 오늘 이전에 시작되었다면, 오늘 00:00부터의 시간만 보여주는게 맞음.
+            //        그러나 복잡성을 줄이기 위해, "화면 갱신 시점" 기준으로 계산.
+            
+            // 만약 시작 시간이 어제고, 지금은 오늘이라면?
+            // startTime ~ Now 전체가 아니라 Today 00:00 ~ Now 여야 함 (일일 공부시간이니까)
+            // 하지만 User 모델의 todayStudyTime은 아직 리셋 안되었을 수도 있음 (서버 로직 의존).
+            
+            // 여기서 순수 클라이언트 로직:
+            // "오늘 공부시간" = (오늘 저장된 시간) + (공부 중이라면 현재까지 추가 시간)
+            // 만약 저장된 데이터(lastStudyDate)가 어제라면 -> 오늘 저장된 시간 = 0
+            
+            let now = Date()
+            var addedTime = 0
+            
+            if isToday {
+               // 같은 날 시작 -> 현재 - 시작
+               let elapsed = Int(now.timeIntervalSince(startTime))
+               addedTime = max(0, elapsed)
+            } else {
+               // 날짜가 다름 (어제 기록이거나, start가 어제)
+               if calendar.isDateInToday(startTime) {
+                   // 시작은 오늘인데 lastDate가 어제? (데이터 꼬임 or 00시 직후)
+                   let elapsed = Int(now.timeIntervalSince(startTime))
+                   addedTime = max(0, elapsed)
+               } else {
+                   // 시작도 어제, lastDate도 어제 -> 자정 넘어서 공부 중
+                   // 오늘 00:00 부터 흐른 시간만 표시해야 함
+                   let startOfToday = calendar.startOfDay(for: now)
+                   let elapsedSinceMidnight = Int(now.timeIntervalSince(startOfToday))
+                   addedTime = max(0, elapsedSinceMidnight)
+               }
+            }
+            
+            currentDisplayTime = baseTime + addedTime
         } else {
-            currentDisplayTime = user.todayStudyTime
+            // 공부 중 아님
+            currentDisplayTime = baseTime
         }
     }
     

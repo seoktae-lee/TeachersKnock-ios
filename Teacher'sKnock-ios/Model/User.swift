@@ -16,6 +16,9 @@ struct User: Identifiable, Codable {
     
     var currentStudyStartTime: Date? // ✨ [New] 현재 공부 시작 시간
     
+    // ✨ [New] 일별 공부 기록 (날짜: 시간(초)) - 주간 랭킹용
+    var dailyStudyRecords: [String: Int] = [:]
+    
     // UI Convenience
     var displayName: String { nickname }
     
@@ -35,6 +38,7 @@ struct User: Identifiable, Codable {
         self.todaySpeakingTime = (data["todaySpeakingTime"] as? NSNumber)?.intValue ?? 0 // ✨ [New]
         self.lastStudyDate = (data["lastStudyDate"] as? Timestamp)?.dateValue() ?? Date()
         self.currentStudyStartTime = (data["currentStudyStartTime"] as? Timestamp)?.dateValue()
+        self.dailyStudyRecords = data["dailyStudyRecords"] as? [String: Int] ?? [:]
         
         if let timestamp = data["createdAt"] as? Timestamp {
             self.createdAt = timestamp.dateValue()
