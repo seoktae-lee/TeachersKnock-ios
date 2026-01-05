@@ -116,11 +116,21 @@ struct CharacterStorageCard: View {
                     
                     Spacer()
                     
-                    // 캐릭터 이미지
-                    Text(level.emoji(for: character.type))
-                        .font(.system(size: 60))
-                        .grayscale(character.isUnlocked ? 0 : 1.0)
-                        .opacity(character.isUnlocked ? 1.0 : 0.5)
+                    // 캐릭터 이미지 (이미지 우선, 없으면 이모지)
+                    if let imageName = level.imageName(for: character.type) {
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 80) // 텍스트 크기 대응
+                            .padding(10)
+                            .grayscale(character.isUnlocked ? 0 : 1.0)
+                            .opacity(character.isUnlocked ? 1.0 : 0.5)
+                    } else {
+                        Text(level.emoji(for: character.type))
+                            .font(.system(size: 60))
+                            .grayscale(character.isUnlocked ? 0 : 1.0)
+                            .opacity(character.isUnlocked ? 1.0 : 0.5)
+                    }
                     
                     // 정보
                     VStack(spacing: 2) {

@@ -110,10 +110,19 @@ struct CharacterView: View {
                     .fill(GoalColorHelper.color(for: themeColorName).opacity(0.1))
                     .frame(width: 100, height: 100) // 140 -> 100
                 
-                Text(currentLevel.emoji(for: characterType))
-                    .font(.system(size: 60)) // 80 -> 60
-                    .scaleEffect(isWiggling ? 1.1 : 1.0)
-                    .onTapGesture { triggerInteraction() }
+                if let imageName = currentLevel.imageName(for: characterType) {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(12)
+                        .scaleEffect(isWiggling ? 1.1 : 1.0)
+                        .onTapGesture { triggerInteraction() }
+                } else {
+                    Text(currentLevel.emoji(for: characterType))
+                        .font(.system(size: 60)) // 80 -> 60
+                        .scaleEffect(isWiggling ? 1.1 : 1.0)
+                        .onTapGesture { triggerInteraction() }
+                }
             }
             
             // --- 하단 정보 및 경험치 시스템 ---
@@ -349,20 +358,38 @@ struct EvolutionView: View {
                     // Old Character
                     // ✨ Visible during start, evolving AND reveal (exiting)
                     if animationState == .start || animationState == .evolving || animationState == .reveal {
-                        Text(oldLevel.emoji(for: characterType))
-                            .font(.system(size: 100))
-                            // ✨ Apply Theme-specific effects for Old Character
-                            .modifier(EvolutionOldEffect(theme: theme, state: animationState, rotationY: rotationY, slideOffset: slideOffsetOld, blurRadius: blurRadius))
-                            .opacity(animationState == .reveal && theme != .slide ? 0 : 1) // Default Fade out in reveal unless Slide
-                            .animation(theme == .slide ? nil : .easeOut(duration: 0.5), value: animationState) // Smooth fade out
+                        Group {
+                            if let imageName = oldLevel.imageName(for: characterType) {
+                                Image(imageName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .padding(20)
+                            } else {
+                                Text(oldLevel.emoji(for: characterType))
+                                    .font(.system(size: 100))
+                            }
+                        }
+                        // ✨ Apply Theme-specific effects for Old Character
+                        .modifier(EvolutionOldEffect(theme: theme, state: animationState, rotationY: rotationY, slideOffset: slideOffsetOld, blurRadius: blurRadius))
+                        .opacity(animationState == .reveal && theme != .slide ? 0 : 1) // Default Fade out in reveal unless Slide
+                        .animation(theme == .slide ? nil : .easeOut(duration: 0.5), value: animationState) // Smooth fade out
                     }
                     
                     // New Character
                     if animationState == .reveal || animationState == .celebration {
-                        Text(newLevel.emoji(for: characterType))
-                            .font(.system(size: 150))
-                            // ✨ Apply Theme-specific effects for New Character
-                            .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
+                        Group {
+                            if let imageName = newLevel.imageName(for: characterType) {
+                                Image(imageName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .padding(10)
+                            } else {
+                                Text(newLevel.emoji(for: characterType))
+                                    .font(.system(size: 150))
+                            }
+                        }
+                        // ✨ Apply Theme-specific effects for New Character
+                        .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
                     }
                 }
                 .frame(height: 200)
@@ -619,6 +646,7 @@ struct EvolutionView: View {
         let renderView = EvolutionShareView(
             characterType: characterType,
             characterEmoji: newLevel.emoji(for: characterType),
+            characterImageName: newLevel.imageName(for: characterType),
             levelTitle: newLevel.title(for: characterType),
             levelRaw: newLevel.rawValue + 1,
             themeColor: themeColor
@@ -643,6 +671,7 @@ struct EvolutionView: View {
 struct EvolutionShareView: View {
     let characterType: String
     let characterEmoji: String
+    let characterImageName: String? // ✨ [Add] Optional image name
     let levelTitle: String
     let levelRaw: Int
     let themeColor: Color
@@ -685,8 +714,15 @@ struct EvolutionShareView: View {
                         .frame(width: 250, height: 250)
                         .shadow(radius: 20)
                     
-                    Text(characterEmoji)
-                        .font(.system(size: 140))
+                    if let imageName = characterImageName {
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(30)
+                    } else {
+                        Text(characterEmoji)
+                            .font(.system(size: 140))
+                    }
                 }
                 
                 // Info

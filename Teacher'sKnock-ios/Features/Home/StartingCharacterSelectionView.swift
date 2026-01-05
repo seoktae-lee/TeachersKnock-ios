@@ -158,10 +158,20 @@ struct CharacterSelectionCard: View {
                     )
                 
                 VStack(spacing: 15) {
-                    Text(option.emoji)
-                        .font(.system(size: isSelected ? 80 : 60))
-                        .scaleEffect(isSelected ? 1.1 : 1.0)
-                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
+                    if let imageName = CharacterLevel.lv1.imageName(for: option.type) {
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: isSelected ? 100 : 80) // 이미지 크기 조정
+                            .padding(10)
+                            .scaleEffect(isSelected ? 1.1 : 1.0)
+                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
+                    } else {
+                        Text(option.emoji)
+                            .font(.system(size: isSelected ? 80 : 60))
+                            .scaleEffect(isSelected ? 1.1 : 1.0)
+                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
+                    }
                     
                     Text(option.name.split(separator: " ").last ?? "") // "티노", "새싹" 등만 표시
                         .font(.system(size: 18, weight: .bold))

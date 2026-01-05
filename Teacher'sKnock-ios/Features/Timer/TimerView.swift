@@ -24,7 +24,7 @@ struct AudioVisualizerView: View {
         // -160 ~ 0 dB -> 0 ~ 1 normalized
         // 보통 -60dB 이상이면 소리 감지
         // Linear scale로 변환
-        let minDb: Float = -60
+        let minDb: Float = -50
         let level = max(audioLevel, minDb)
         let normalized = CGFloat((level - minDb) / (0 - minDb)) // 0.0 ~ 1.0
         

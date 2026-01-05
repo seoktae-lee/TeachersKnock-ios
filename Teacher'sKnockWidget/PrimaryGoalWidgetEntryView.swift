@@ -16,14 +16,24 @@ struct PrimaryGoalWidgetEntryView: View {
     @ViewBuilder
     func realContent(data: WidgetData) -> some View {
         let themeColor = GoalColorHelper.color(for: data.characterColor)
-        let emoji = CharacterLevel(rawValue: data.level - 1)?.emoji(for: data.characterType) ?? "🥚"
+        let characterLevel = CharacterLevel(rawValue: data.level - 1) ?? .lv1
+        let emoji = characterLevel.emoji(for: data.characterType)
+        let imageName = characterLevel.imageName(for: data.characterType)
         
         if family == .accessoryRectangular {
             HStack(spacing: 0) {
-                Text(emoji)
-                    .font(.system(size: 20))
-                    .padding(6)
-                    .background(Circle().stroke(lineWidth: 1))
+                if let imageName = imageName {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .padding(2)
+                } else {
+                    Text(emoji)
+                        .font(.system(size: 20))
+                        .padding(6)
+                        .background(Circle().stroke(lineWidth: 1))
+                }
                 Spacer()
                 Text(dDayString(data.dDay))
                     .font(.system(size: 32, weight: .black, design: .rounded))
@@ -31,10 +41,17 @@ struct PrimaryGoalWidgetEntryView: View {
         } else if family == .accessoryCircular {
             // Lock Screen Widget (Circular)
             ZStack {
-                Text(emoji)
-                    .font(.system(size: 30))
-                    .padding(4)
-                    .background(Circle().stroke(lineWidth: 1))
+                if let imageName = imageName {
+                    Image(imageName)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(4)
+                } else {
+                    Text(emoji)
+                        .font(.system(size: 30))
+                        .padding(4)
+                        .background(Circle().stroke(lineWidth: 1))
+                }
             }
         } else {
             GeometryReader { proxy in
@@ -59,8 +76,16 @@ struct PrimaryGoalWidgetEntryView: View {
                                 Circle()
                                     .fill(themeColor.opacity(0.2))
                                     .frame(width: 50, height: 50)
-                                Text(emoji)
-                                    .font(.system(size: 28))
+                                if let imageName = imageName {
+                                    Image(imageName)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .padding(8)
+                                        .frame(width: 50, height: 50)
+                                } else {
+                                    Text(emoji)
+                                        .font(.system(size: 28))
+                                }
                             }
                             
                             // 목표 제목 (짧게)
@@ -80,8 +105,16 @@ struct PrimaryGoalWidgetEntryView: View {
                                     Circle()
                                         .fill(themeColor.opacity(0.2))
                                         .frame(width: 60, height: 60)
-                                    Text(emoji)
-                                        .font(.system(size: 34))
+                                    if let imageName = imageName {
+                                        Image(imageName)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .padding(10)
+                                            .frame(width: 60, height: 60)
+                                    } else {
+                                        Text(emoji)
+                                            .font(.system(size: 34))
+                                    }
                                 }
                                 Text("LV.\(data.level)")
                                     .font(.caption)

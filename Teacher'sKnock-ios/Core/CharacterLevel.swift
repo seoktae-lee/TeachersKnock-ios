@@ -67,6 +67,28 @@ enum CharacterLevel: Int, CaseIterable {
         }
     }
     
+    // ✨ [추가] 캐릭터 타입별 이미지 이름 반환 (이모지 대신 사용)
+    func imageName(for type: String) -> String? {
+        if type == "bird" {
+            // bird 타입은 이모지 대신 이미지 사용 (bird_lv1 ~ bird_lv4)
+            // bird는 Lv.4가 Max이므로 그 이상 레벨이라도 마지막 이미지 사용
+            let maxIndex = 3 // Lv.4
+            let index = min(self.rawValue, maxIndex)
+            return "bird_lv\(index + 1)"
+        }
+        if type == "plant" {
+            let maxIndex = 3 // Lv.4
+            let index = min(self.rawValue, maxIndex)
+            return "plant_lv\(index + 1)"
+        }
+        if type == "sea" {
+            let maxIndex = 3 // Lv.4
+            let index = min(self.rawValue, maxIndex)
+            return "sea_lv\(index + 1)"
+        }
+        return nil
+    }
+    
     // ✨ [수정] 캐릭터 타입별 최종 진화 문구 반영
     func title(for type: String) -> String {
         // 1. 해당 캐릭터 타입의 최대 레벨(인덱스) 확인

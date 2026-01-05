@@ -302,16 +302,30 @@ struct CharacterAvatarView: View {
             Circle()
                 .fill(rarityColor.opacity(0.1))
             
-            // 캐릭터 이모지
-            Text(level.emoji(for: character.type))
-                .font(.system(size: 80))
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
-                .scaleEffect(isAnimating ? 1.05 : 0.95)
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                        isAnimating = true
+            // 캐릭터 표시 (이미지 우선, 없으면 이모지)
+            if let imageName = level.imageName(for: character.type) {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(15) // 이모지 대비 이미지가 꽉 차보일 수 있어서 패딩 추가
+                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
+                    .scaleEffect(isAnimating ? 1.05 : 0.95)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                            isAnimating = true
+                        }
                     }
-                }
+            } else {
+                Text(level.emoji(for: character.type))
+                    .font(.system(size: 80))
+                    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 5)
+                    .scaleEffect(isAnimating ? 1.05 : 0.95)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                            isAnimating = true
+                        }
+                    }
+            }
             
             // ✨ [수정] 배지 표시 옵션 적용
             if showBadge {

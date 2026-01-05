@@ -17,9 +17,9 @@ struct UserCharacter: Codable, Identifiable {
     // UI 표시용 기본 이름
     var defaultName: String {
         switch type {
-        case "bird": return "열정의 티노"
-        case "plant": return "성실의 새싹"
-        case "sea": return "지혜의 바다"
+        case "bird": return "IGNIS SPARK"
+        case "plant": return "TERRA LEAF"
+        case "sea": return "AQUA DROPLIN"
         default: return "알 수 없음"
         }
     }
