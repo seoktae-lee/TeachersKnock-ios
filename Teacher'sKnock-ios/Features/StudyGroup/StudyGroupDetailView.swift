@@ -148,13 +148,20 @@ extension StudyGroupDetailView {
             
             // ✨ [Moved] 네비게이션 바 클리핑 방지를 위해 헤더 영역으로 이동
             VStack(spacing: 8) { // 2행 (간격 조금 넓힘)
-                HStack(spacing: 8) { // 1행: 공지, 응원
+                HStack(spacing: 8) { // 1행: 공지, 일정
                     Button(action: { showNoticeSheet = true }) {
                         headerIconButton(icon: "megaphone.fill", color: .orange, hasBadge: studyManager.hasUnreadNotice(group: liveGroup))
                     }
                     
-                    Button(action: { showCheerSheet = true }) {
-                        headerIconButton(icon: "bubble.left.and.bubble.right.fill", color: .blue, hasBadge: studyManager.hasUnreadCheers(group: liveGroup))
+                    // ✨ [Modified] 일정 버튼 (응원 기능 대체)
+                    NavigationLink(destination: GroupScheduleView(
+                        groupID: liveGroup.id,
+                        groupName: liveGroup.name,
+                        isLeader: isLeader,
+                        scheduleManager: GroupScheduleManager(),
+                        selectedDate: .constant(Date())
+                    )) {
+                        headerIconButton(icon: "calendar", color: .blue, hasBadge: false)
                     }
                 }
                 

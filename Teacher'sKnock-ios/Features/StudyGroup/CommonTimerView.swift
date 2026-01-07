@@ -15,6 +15,7 @@ struct CommonTimerView: View {
     
     @State private var currentTime = Date()
     @State private var remainingTime: TimeInterval = 0
+    @State private var isFinished = false // ✨ [New] 중복 저장 방지
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
@@ -127,8 +128,21 @@ struct CommonTimerView: View {
             remainingTime = state.endTime.timeIntervalSince(currentTime)
         } else {
             remainingTime = 0
-            // 종료 로직 (1회만 실행되도록 플래그 처리 필요하지만 여기선 단순화)
-            // 실제 구현 시 Record 저장 로직 추가
+            // 종료 로직 (1회만 실행되도록 플래그 처리)
+            if !isFinished {
+                isFinished = true
+                
+                let schedule = GroupSchedule(
+                    groupID: group.id,
+                    title: "공통 타이머 종료",
+                    content: "'\(state.goal)' 목표 달성!",
+                    date: Date(),
+                    type: .timer,
+                    authorID: "system", // 시스템 자동 생성
+                    authorName: "스터디 알림"
+                )
+                GroupScheduleManager().addSchedule(schedule: schedule) { _ in }
+            }
         }
     }
     

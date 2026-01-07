@@ -107,6 +107,12 @@
 		54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */; };
 		54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DBCD152F010AB200B43C2B /* DailyNote.swift */; };
 		54DBCD1A2F011C2100B43C2B /* StudyTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DBCD192F011C2100B43C2B /* StudyTimerView.swift */; };
+		54E3CD812F0ECF090006A183 /* GroupSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD802F0ECF090006A183 /* GroupSchedule.swift */; };
+		54E3CD832F0ECF180006A183 /* GroupScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD822F0ECF180006A183 /* GroupScheduleManager.swift */; };
+		54E3CD882F0ECF3C0006A183 /* GroupScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD862F0ECF3C0006A183 /* GroupScheduleView.swift */; };
+		54E3CD892F0ECF3C0006A183 /* GlobalScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD852F0ECF3C0006A183 /* GlobalScheduleView.swift */; };
+		54E3CD8A2F0ECF3C0006A183 /* AddGroupScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD842F0ECF3C0006A183 /* AddGroupScheduleView.swift */; };
+		54E3CD8C2F0ED39C0006A183 /* EditGroupScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD8B2F0ED39C0006A183 /* EditGroupScheduleView.swift */; };
 		54E5ED8A2F00E886003031AC /* Schedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E5ED892F00E886003031AC /* Schedule.swift */; };
 		54F81CD22EE1AC8E002226B4 /* DailyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */; };
 		54F81CD42EE1B06C002226B4 /* DailyTimelineViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */; };
@@ -241,6 +247,12 @@
 		54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCalendarView.swift; sourceTree = "<group>"; };
 		54DBCD152F010AB200B43C2B /* DailyNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyNote.swift; sourceTree = "<group>"; };
 		54DBCD192F011C2100B43C2B /* StudyTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyTimerView.swift; sourceTree = "<group>"; };
+		54E3CD802F0ECF090006A183 /* GroupSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSchedule.swift; sourceTree = "<group>"; };
+		54E3CD822F0ECF180006A183 /* GroupScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupScheduleManager.swift; sourceTree = "<group>"; };
+		54E3CD842F0ECF3C0006A183 /* AddGroupScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddGroupScheduleView.swift; sourceTree = "<group>"; };
+		54E3CD852F0ECF3C0006A183 /* GlobalScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalScheduleView.swift; sourceTree = "<group>"; };
+		54E3CD862F0ECF3C0006A183 /* GroupScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupScheduleView.swift; sourceTree = "<group>"; };
+		54E3CD8B2F0ED39C0006A183 /* EditGroupScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditGroupScheduleView.swift; sourceTree = "<group>"; };
 		54E5ED892F00E886003031AC /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
 		54F81CD12EE1AC8E002226B4 /* DailyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyDetailViewModel.swift; sourceTree = "<group>"; };
 		54F81CD32EE1B06C002226B4 /* DailyTimelineViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTimelineViewModel.swift; sourceTree = "<group>"; };
@@ -324,6 +336,7 @@
 		5459AE532EE19E41008EE0E4 /* Model */ = {
 			isa = PBXGroup;
 			children = (
+				54E3CD802F0ECF090006A183 /* GroupSchedule.swift */,
 				548AFA9D2F0BAE23003EA411 /* Cheer.swift */,
 				54A40FF52F0A6C5700A0474F /* FriendRequest.swift */,
 				54A40FF12F0A648200A0474F /* StudyInvitation.swift */,
@@ -341,6 +354,7 @@
 		5459AE542EE19E76008EE0E4 /* Service */ = {
 			isa = PBXGroup;
 			children = (
+				54E3CD822F0ECF180006A183 /* GroupScheduleManager.swift */,
 				548AFA962F0BADC7003EA411 /* AlertManager.swift */,
 				54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */,
 				54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */,
@@ -489,6 +503,7 @@
 		54BE67FA2F07C3B700E6EC64 /* StudyGroup */ = {
 			isa = PBXGroup;
 			children = (
+				54E3CD872F0ECF3C0006A183 /* Schedule */,
 				548AFAA52F0BD6F6003EA411 /* CommonTimerSetupView.swift */,
 				548AFAA62F0BD6F6003EA411 /* CommonTimerView.swift */,
 				548AFAA32F0BCAC8003EA411 /* PairingSheet.swift */,
@@ -505,6 +520,17 @@
 				548AFA992F0BADFA003EA411 /* ParticipationView.swift */,
 			);
 			path = StudyGroup;
+			sourceTree = "<group>";
+		};
+		54E3CD872F0ECF3C0006A183 /* Schedule */ = {
+			isa = PBXGroup;
+			children = (
+				54E3CD8B2F0ED39C0006A183 /* EditGroupScheduleView.swift */,
+				54E3CD842F0ECF3C0006A183 /* AddGroupScheduleView.swift */,
+				54E3CD852F0ECF3C0006A183 /* GlobalScheduleView.swift */,
+				54E3CD862F0ECF3C0006A183 /* GroupScheduleView.swift */,
+			);
+			path = Schedule;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -672,6 +698,9 @@
 				5459AE5C2EE1A10E008EE0E4 /* PlannerViewModel.swift in Sources */,
 				54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */,
 				5432C75E2EE3FF69005B4221 /* SafariView.swift in Sources */,
+				54E3CD882F0ECF3C0006A183 /* GroupScheduleView.swift in Sources */,
+				54E3CD892F0ECF3C0006A183 /* GlobalScheduleView.swift in Sources */,
+				54E3CD8A2F0ECF3C0006A183 /* AddGroupScheduleView.swift in Sources */,
 				54A40FF62F0A6C5700A0474F /* FriendRequest.swift in Sources */,
 				54F81CD82EE1CBBB002226B4 /* SchedulePreviewView.swift in Sources */,
 				54F81CD62EE1B383002226B4 /* AddScheduleViewModel.swift in Sources */,
@@ -680,6 +709,7 @@
 				5435A2182F0807C3002A37D4 /* CharacterStorageView.swift in Sources */,
 				54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */,
 				548AFAA22F0BBB8D003EA411 /* StudyGroupListView_Preview.swift in Sources */,
+				54E3CD832F0ECF180006A183 /* GroupScheduleManager.swift in Sources */,
 				5459AE402EE19535008EE0E4 /* SettingsView.swift in Sources */,
 				5459AE412EE19535008EE0E4 /* SignUpView.swift in Sources */,
 				5459AE422EE19535008EE0E4 /* SplashView.swift in Sources */,
@@ -698,6 +728,7 @@
 				5459AE472EE19535008EE0E4 /* SubjectName.swift in Sources */,
 				544E3A082EE5E95B00551E30 /* DDayWidget.swift in Sources */,
 				5459AE482EE19535008EE0E4 /* SubjectSelectView.swift in Sources */,
+				54E3CD812F0ECF090006A183 /* GroupSchedule.swift in Sources */,
 				5459AE492EE19535008EE0E4 /* TeachersKnock_iosApp.swift in Sources */,
 				548AFA972F0BADC7003EA411 /* AlertManager.swift in Sources */,
 				5432C7582EE3FCBF005B4221 /* NoticeData.swift in Sources */,
@@ -716,6 +747,7 @@
 				54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */,
 				54BE67FC2F07C3B700E6EC64 /* MemberInviteView.swift in Sources */,
 				54BE67FD2F07C3B700E6EC64 /* StudyGroupListView.swift in Sources */,
+				54E3CD8C2F0ED39C0006A183 /* EditGroupScheduleView.swift in Sources */,
 				54BE67FE2F07C3B700E6EC64 /* StudyGroupDetailView.swift in Sources */,
 				544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */,
 				54A40FEE2F0A57A200A0474F /* ProfileImageView.swift in Sources */,

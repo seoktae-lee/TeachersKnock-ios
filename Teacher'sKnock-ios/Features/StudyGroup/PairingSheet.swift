@@ -256,6 +256,19 @@ struct PairingSheet: View {
                 
                 // 방장은 직접 눌렀으니 무조건 애니메이션
                 self.isAnimating = true
+                
+                // ✨ [New] 일정 자동 등록
+                let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? Auth.auth().currentUser?.displayName ?? "알 수 없음"
+                let schedule = GroupSchedule(
+                    groupID: self.group.id,
+                    title: "짝 스터디 매칭 완료",
+                    content: "오늘의 짝 스터디가 매칭되었습니다. 파트너와 함께 공부를 시작해보세요!",
+                    date: Date(),
+                    type: .pairing,
+                    authorID: Auth.auth().currentUser?.uid ?? "",
+                    authorName: nickname
+                )
+                GroupScheduleManager().addSchedule(schedule: schedule) { _ in }
             }
         }
     }

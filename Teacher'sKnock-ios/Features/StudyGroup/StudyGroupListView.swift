@@ -47,6 +47,13 @@ struct StudyGroupListView: View {
             .navigationDestination(for: StudyGroup.self) { group in
                 StudyGroupDetailView(group: group, studyManager: studyManager)
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: GlobalScheduleView(myGroupIDs: studyManager.myGroups.map { $0.id })) {
+                        Image(systemName: "calendar")
+                    }
+                }
+            }
         }
         // ✨ [New] 외부(일정 탭 등)에서 요청된 그룹으로 이동
         .onChange(of: navManager.targetGroupID) { groupID in
