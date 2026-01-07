@@ -389,7 +389,14 @@ struct TimeSection: View {
             }
         }
         .sheet(isPresented: $showingStartPicker) {
-            SingleDayTimePicker(selection: $viewModel.startDate, title: "시작 시간 설정")
+            SingleDayTimePicker(selection: Binding(
+                get: { viewModel.startDate },
+                set: { newDate in
+                    let duration = viewModel.endDate.timeIntervalSince(viewModel.startDate)
+                    viewModel.startDate = newDate
+                    viewModel.endDate = newDate.addingTimeInterval(duration)
+                }
+            ), title: "시작 시간 설정")
                 .presentationDetents([.height(300)])
         }
         .sheet(isPresented: $showingEndPicker) {
