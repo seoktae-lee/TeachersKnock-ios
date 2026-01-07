@@ -16,7 +16,12 @@ struct StudyGroup: Identifiable, Codable, Hashable {
     
     // ✨ [New] 짝 스터디 매칭 정보
     var lastPairingDate: Date? // 마지막 매칭 생성 날짜
-    var pairs: [[String]]? // 매칭된 짝 (User ID 배열의 배열) e.g. [["uid1", "uid2"], ["uid3", "uid4"]]
+    
+    // Firestore 중첩 배열 한계로 인한 구조체 래핑
+    struct PairTeam: Codable, Hashable {
+        var memberIDs: [String]
+    }
+    var pairs: [PairTeam]? // 매칭된 짝 (User ID 배열을 담은 구조체의 배열)
     
     // ✨ [New] 공통 타이머 상태
     struct CommonTimerState: Codable, Hashable {
@@ -78,7 +83,18 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         self.noticeUpdatedAt = (data["noticeUpdatedAt"] as? Timestamp)?.dateValue()
         self.latestCheerAt = (data["latestCheerAt"] as? Timestamp)?.dateValue()
         self.lastPairingDate = (data["lastPairingDate"] as? Timestamp)?.dateValue()
-        self.pairs = data["pairs"] as? [[String]]
+        
+        // Deserialize pairs
+        if let pairsData = data["pairs"] as? [[String: Any]] {
+            self.pairs = pairsData.compactMap { dict -> PairTeam? in
+                if let ids = dict["memberIDs"] as? [String] {
+                    return PairTeam(memberIDs: ids)
+                }
+                return nil
+            }
+        } else {
+            self.pairs = nil
+        }
         
         if let timerData = data["commonTimer"] as? [String: Any],
            let goal = timerData["goal"] as? String,
@@ -107,7 +123,7 @@ struct StudyGroup: Identifiable, Codable, Hashable {
             "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp(), // nil이면 생성시점? or just ignore
             "latestCheerAt": latestCheerAt, /// nil okay
             "lastPairingDate": lastPairingDate,
-            "pairs": pairs,
+            "pairs": pairs?.map { ["memberIDs": $0.memberIDs] } ?? FieldValue.delete(),
             "commonTimer": commonTimer.map { [
                 "goal": $0.goal,
                 "startTime": $0.startTime,

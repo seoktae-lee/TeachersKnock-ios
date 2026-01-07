@@ -452,10 +452,14 @@ class StudyGroupManager: ObservableObject {
         case standard // 나머지 (자동 룰)
     }
     
-    func generatePairs(members: [String], splitType: PairSplitType = .standard) -> [[String]] {
+    func generatePairs(members: [String], splitType: PairSplitType = .standard) -> [StudyGroup.PairTeam] {
         var shuffled = members.shuffled()
         let count = shuffled.count
-        var result: [[String]] = []
+        var result: [StudyGroup.PairTeam] = []
+        
+        func createTeam(_ ids: [String]) -> StudyGroup.PairTeam {
+            return StudyGroup.PairTeam(memberIDs: ids)
+        }
         
         switch count {
         case 6:
@@ -463,41 +467,50 @@ class StudyGroupManager: ObservableObject {
                 // 3명 / 3명
                 let group1 = Array(shuffled.prefix(3))
                 let group2 = Array(shuffled.suffix(3))
-                result = [group1, group2]
+                result = [createTeam(group1), createTeam(group2)]
             } else {
                 // 2명 / 2명 / 2명 (기본값)
                 let group1 = Array(shuffled[0..<2])
                 let group2 = Array(shuffled[2..<4])
                 let group3 = Array(shuffled[4..<6])
-                result = [group1, group2, group3]
+                result = [createTeam(group1), createTeam(group2), createTeam(group3)]
             }
         case 5:
             // 2명 / 3명
             let group1 = Array(shuffled.prefix(2))
             let group2 = Array(shuffled.suffix(3))
-            result = [group1, group2]
+            result = [createTeam(group1), createTeam(group2)]
         case 4:
             // 2명 / 2명
             let group1 = Array(shuffled.prefix(2))
             let group2 = Array(shuffled.suffix(2))
-            result = [group1, group2]
+            result = [createTeam(group1), createTeam(group2)]
         case 3:
             // 1명 / 2명
             let group1 = Array(shuffled.prefix(1)) // 혼자 하는 사람
             let group2 = Array(shuffled.suffix(2)) // 짝
-            result = [group1, group2]
+            result = [createTeam(group1), createTeam(group2)]
         default:
             // 2명 이하 or 7명 이상 (현재 룰 없음, 그냥 1팀으로)
-            result = [shuffled]
+            // 2명인 경우엔 UI에서 막지만, 혹시 넘어오면 그냥 전체 리턴
+            result = [createTeam(shuffled)]
         }
         
         return result
     }
     
-    func updatePairs(groupID: String, pairs: [[String]], completion: @escaping (Bool) -> Void) {
+    func updatePairs(groupID: String, currentNotice: String, pairs: [StudyGroup.PairTeam], completion: @escaping (Bool) -> Void) {
+        let serializedPairs = pairs.map { ["memberIDs": $0.memberIDs] }
+        
+        // ✨ [UX Improvement] 매칭 완료 공지 추가 (멤버들에게 알림/빨간점 효과)
+        let systemNotice = "\n[알림] 오늘의 짝 스터디 매칭이 완료되었습니다! 짝을 확인해보세요."
+        let newNotice = currentNotice + systemNotice
+        
         db.collection("study_groups").document(groupID).updateData([
-            "pairs": pairs,
+            "pairs": serializedPairs,
             "lastPairingDate": FieldValue.serverTimestamp(),
+            "notice": newNotice,
+            "noticeUpdatedAt": FieldValue.serverTimestamp(), // ✨ 공지 갱신 -> 빨간점 트리거
             "updatedAt": FieldValue.serverTimestamp()
         ]) { error in
             if let error = error {
