@@ -137,12 +137,49 @@ struct EditScheduleView: View {
         // ✨ [알림] 변경된 내용으로 알림 업데이트
         NotificationManager.shared.updateNotifications(for: item)
         
+        // ✨ [동기화] 방장이 공통 타이머 일정 수정 시 그룹에도 반영
+        if item.isCommonTimer, let groupID = item.targetGroupID {
+             // 닉네임 가져오기 (비동기 없이 편의상 UserDefaults 사용)
+             let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
+             
+             // 그룹 스케줄 객체 생성
+             let groupSchedule = GroupSchedule(
+                 id: item.id.uuidString,
+                 groupID: groupID,
+                 title: item.title,
+                 content: "공통 타이머 일정이 수정되었습니다.",
+                 date: item.startDate,
+                 type: .timer,
+                 authorID: item.ownerID,
+                 authorName: nickname,
+                 subject: item.subject,
+                 purpose: item.studyPurpose
+             )
+             
+             // 단순히 업데이트 요청 (결과 기다리지 않고 진행 - 실패 확률 낮음 & UX 우선)
+             GroupScheduleManager().updateSchedule(schedule: groupSchedule) { _ in
+                 print("✅ [EditSchedule] 그룹 일정 동기화(수정) 완료")
+             }
+        }
+        
         dismiss()
     }
     
     private func deleteSchedule() {
         // ✨ [알림] 삭제 시 알림 취소
         NotificationManager.shared.cancelNotifications(for: item)
+        
+        // ✨ [동기화] 방장이 공통 타이머 일정 삭제 시 그룹에서도 삭제
+        if item.isCommonTimer, let groupID = item.targetGroupID {
+             GroupScheduleManager().deleteSchedule(
+                 groupID: groupID,
+                 scheduleID: item.id.uuidString,
+                 scheduleTitle: item.title,
+                 isCommonTimer: true
+             ) { _ in
+                 print("✅ [EditSchedule] 그룹 일정 동기화(삭제) 완료")
+             }
+        }
         
         modelContext.delete(item)
         dismiss()

@@ -32,6 +32,9 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         var purpose: String
         var isActive: Bool
         
+        // ✨ [New] 실시간 참여자 목록 (User IDs)
+        var activeParticipants: [String] = []
+        
         func toDictionary() -> [String: Any] {
             return [
                 "goal": goal,
@@ -39,11 +42,28 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 "endTime": endTime,
                 "subject": subject,
                 "purpose": purpose,
-                "isActive": isActive
+                "isActive": isActive,
+                "activeParticipants": activeParticipants
             ]
         }
     }
     var commonTimer: CommonTimerState?
+    
+    // ✨ [New] 공지사항 아이템 구조체
+    struct NoticeItem: Identifiable, Codable, Hashable {
+        var id: String
+        var type: NoticeType
+        var content: String
+        var date: Date
+        
+        enum NoticeType: String, Codable {
+            case general // 일반 (시스템 알림 등)
+            case timer // 공통 타이머
+            case pairing // 짝 스터디
+            case announcement // ✨ [New] 방장 공지 (고정)
+        }
+    }
+    var notices: [NoticeItem] = [] // ✨ [New] 구조화된 공지사항 목록
     
     // UI convenience
     var memberCount: Int { members.count }
@@ -54,6 +74,7 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         self.name = name
         self.description = description
         self.notice = ""  // 초기값 없음
+        self.notices = [] // ✨ [New]
         self.leaderID = leaderID
         self.members = members.isEmpty ? [leaderID] : members // Leader is always a member
         self.maxMembers = 6 // Fixed constraint
@@ -84,6 +105,22 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         self.latestCheerAt = (data["latestCheerAt"] as? Timestamp)?.dateValue()
         self.lastPairingDate = (data["lastPairingDate"] as? Timestamp)?.dateValue()
         
+        // ✨ [New] Deserialize notices
+        if let noticesData = data["notices"] as? [[String: Any]] {
+            self.notices = noticesData.compactMap { dict -> NoticeItem? in
+                guard let id = dict["id"] as? String,
+                      let typeRaw = dict["type"] as? String,
+                      let type = NoticeItem.NoticeType(rawValue: typeRaw),
+                      let content = dict["content"] as? String,
+                      let date = (dict["date"] as? Timestamp)?.dateValue() else { return nil }
+                return NoticeItem(id: id, type: type, content: content, date: date)
+            }
+            // 최신순 정렬 (혹시 몰라서)
+            self.notices.sort { $0.date > $1.date }
+        } else {
+            self.notices = []
+        }
+        
         // Deserialize pairs
         if let pairsData = data["pairs"] as? [[String: Any]] {
             self.pairs = pairsData.compactMap { dict -> PairTeam? in
@@ -103,7 +140,16 @@ struct StudyGroup: Identifiable, Codable, Hashable {
            let subject = timerData["subject"] as? String,
            let purpose = timerData["purpose"] as? String,
            let isActive = timerData["isActive"] as? Bool {
-            self.commonTimer = CommonTimerState(goal: goal, startTime: start, endTime: end, subject: subject, purpose: purpose, isActive: isActive)
+            let participants = timerData["activeParticipants"] as? [String] ?? []
+            self.commonTimer = CommonTimerState(
+                goal: goal,
+                startTime: start,
+                endTime: end,
+                subject: subject,
+                purpose: purpose,
+                isActive: isActive,
+                activeParticipants: participants
+            )
         } else {
             self.commonTimer = nil
         }
@@ -115,6 +161,12 @@ struct StudyGroup: Identifiable, Codable, Hashable {
             "name": name,
             "description": description,
             "notice": notice,
+            "notices": notices.map { [
+                "id": $0.id,
+                "type": $0.type.rawValue,
+                "content": $0.content,
+                "date": $0.date
+            ] }, // ✨ [New]
             "leaderID": leaderID,
             "members": members,
             "maxMembers": maxMembers,
@@ -130,7 +182,8 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 "endTime": $0.endTime,
                 "subject": $0.subject,
                 "purpose": $0.purpose,
-                "isActive": $0.isActive
+                "isActive": $0.isActive,
+                "activeParticipants": $0.activeParticipants
             ] } ?? FieldValue.delete()
         ]
     }

@@ -7,71 +7,191 @@ struct NoticeSheet: View {
     @Environment(\.dismiss) var dismiss
     
     @State private var noticeText: String = ""
-    @State private var isEditing: Bool = false
+    @State private var isAdding: Bool = false
     
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                if isEditing {
-                    Text("공지사항 수정")
-                        .font(.headline)
-                        .padding(.top)
-                    
-                    TextEditor(text: $noticeText)
-                        .frame(minHeight: 200)
-                        .padding(8)
-                        .background(Color(uiColor: .systemGray6))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
-                } else {
-                    ScrollView {
-                        Text(group.notice.isEmpty ? "등록된 공지사항이 없습니다." : group.notice)
+            VStack {
+                if displayNotices.isEmpty {
+                    // Empty State
+                     VStack(spacing: 20) {
+                        Image(systemName: "bell.slash")
+                            .font(.system(size: 48))
+                            .foregroundColor(.gray.opacity(0.3))
+                        Text("새로운 공지사항이 없습니다.")
                             .font(.body)
-                            .lineSpacing(4)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .foregroundColor(.gray)
+                        Text("지난 알림은 공유 일정표에서 확인하세요.")
+                            .font(.caption)
+                            .foregroundColor(.gray.opacity(0.8))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(displayNotices) { notice in
+                            NoticeRow(notice: notice)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        }
+                    }
+                    .listStyle(.plain)
+                    
+                    // ✨ [New] 모두 확인 버튼
+                    Button(action: {
+                        studyManager.updateReadStatus(groupID: group.id)
+                        dismiss()
+                    }) {
+                        Text("모두 확인 및 닫기")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                             .padding()
                     }
-                    .background(Color(uiColor: .systemGray6))
-                    .cornerRadius(12)
                 }
-                
-                Spacer()
             }
-            .padding()
             .navigationTitle("공지사항")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("닫기") {
+                        // 닫을 때 읽음 처리
+                        studyManager.updateReadStatus(groupID: group.id)
                         dismiss()
                     }
                 }
                 
                 if isLeader {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(isEditing ? "저장" : "수정") {
-                            if isEditing {
-                                saveNotice()
-                            } else {
-                                isEditing = true
-                            }
+                        Button(action: { isAdding = true }) {
+                            Image(systemName: "plus")
                         }
                     }
                 }
             }
-            .onAppear {
-                noticeText = group.notice
-                // 읽음 처리
-                studyManager.markNoticeAsRead(groupID: group.id)
+            .sheet(isPresented: $isAdding) {
+                NavigationStack {
+                    VStack {
+                        TextEditor(text: $noticeText)
+                            .padding()
+                            .navigationTitle("새 공지사항")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .cancellationAction) {
+                                    Button("취소") {
+                                        isAdding = false
+                                        noticeText = ""
+                                    }
+                                }
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("등록") {
+                                        addNotice()
+                                    }
+                                    .disabled(noticeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                }
+                            }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+            .onDisappear {
+               studyManager.updateReadStatus(groupID: group.id)
             }
         }
     }
     
-    func saveNotice() {
-        studyManager.updateNotice(groupID: group.id, notice: noticeText)
-        isEditing = false
+    // ✨ [New] 표시할 공지사항 (방장 공지는 고정, 나머지는 안 읽은 것만)
+    var displayNotices: [StudyGroup.NoticeItem] {
+        let key = "lastReadNotice_\(group.id)"
+        let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
+        
+        return group.notices.filter { notice in
+            // 1. 방장 공지(.announcement)는 항상 표시
+            if notice.type == .announcement { return true }
+            
+            // 2. 나머지는 안 읽은 것만
+            return notice.date > lastRead.addingTimeInterval(1)
+        }
+    }
+    
+    func addNotice() {
+        studyManager.addNotice(groupID: group.id, content: noticeText)
+        isAdding = false
+        noticeText = ""
+    }
+}
+
+// ✨ [New] 공지사항 행 디자인 (아이콘 + 내용)
+struct NoticeRow: View {
+    let notice: StudyGroup.NoticeItem
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Icon Box
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(backgroundColor)
+                    .frame(width: 40, height: 40)
+                
+                Image(systemName: iconName)
+                    .font(.system(size: 20))
+                    .foregroundColor(iconColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                // Content
+                Text(notice.content)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                // Date
+                Text(dateString(notice.date))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .background(Color(uiColor: .systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .padding(.vertical, 4)
+    }
+    
+    var backgroundColor: Color {
+        switch notice.type {
+        case .announcement: return Color.red.opacity(0.1) // ✨ Red for Announcement
+        case .general: return Color.blue.opacity(0.1)
+        case .timer: return Color.purple.opacity(0.1)
+        case .pairing: return Color.green.opacity(0.1)
+        }
+    }
+    
+    var iconName: String {
+        switch notice.type {
+        case .announcement: return "megaphone.fill"       // ✨ Megaphone
+        case .general: return "calendar"
+        case .timer: return "stopwatch"
+        case .pairing: return "arrow.triangle.2.circlepath"
+        }
+    }
+    
+    var iconColor: Color {
+        switch notice.type {
+        case .announcement: return .red
+        case .general: return .blue
+        case .timer: return .purple
+        case .pairing: return .green
+        }
+    }
+    
+    private func dateString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "M/d a h:mm"
+        return f.string(from: date)
     }
 }

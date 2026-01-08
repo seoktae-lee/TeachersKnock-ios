@@ -49,7 +49,10 @@ struct StudyGroupListView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: GlobalScheduleView(myGroupIDs: studyManager.myGroups.map { $0.id })) {
+                    NavigationLink(destination: GlobalScheduleView(
+                        myGroupIDs: studyManager.myGroups.map { $0.id },
+                        groupNameMap: Dictionary(uniqueKeysWithValues: studyManager.myGroups.map { ($0.id, $0.name) })
+                    )) {
                         Image(systemName: "calendar")
                     }
                 }

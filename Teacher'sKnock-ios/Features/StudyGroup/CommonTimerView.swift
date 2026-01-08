@@ -60,11 +60,10 @@ struct CommonTimerView: View {
                         .font(.system(size: 40, weight: .bold, design: .monospaced))
                 }
                 
-                // Active Participants (Simple Count)
-                // 추후 실시간 참여자 목록 확장 가능
+                // Active Participants
                 HStack {
                     Image(systemName: "person.2.fill")
-                    Text("\(group.memberCount)명 참여 중") // 실제로는 접속중인 멤버 수 로직 필요 (PresenceSystem)
+                    Text("\(state.activeParticipants.count)명 참여 중") // 실시간 인원 표시
                 }
                 .font(.caption)
                 .foregroundColor(.gray)
@@ -74,6 +73,7 @@ struct CommonTimerView: View {
                 
                 // Exit Button
                 Button(action: {
+                    studyManager.leaveCommonTimer(groupID: group.id) // 퇴장 처리
                     dismiss()
                 }) {
                     Text("나가기")
@@ -84,7 +84,10 @@ struct CommonTimerView: View {
                 Text("설정된 공통 타이머가 없습니다.")
                     .font(.headline)
                     .foregroundColor(.gray)
-                Button("돌아가기") { dismiss() }
+                Button("돌아가기") { 
+                    studyManager.leaveCommonTimer(groupID: group.id)
+                    dismiss() 
+                }
             }
         }
         .padding()
@@ -92,7 +95,13 @@ struct CommonTimerView: View {
             updateTimer()
         }
         .onAppear {
+            studyManager.joinCommonTimer(groupID: group.id) // 입장 처리
             updateTimer()
+        }
+        .onDisappear {
+            // 화면이 완전히 사라질 때 퇴장 처리 (백그라운드 진입 등이 아닌 네비게이션 팝)
+            // 주의: onDisappear는 시트가 닫힐 때 호출됨.
+            studyManager.leaveCommonTimer(groupID: group.id)
         }
     }
     

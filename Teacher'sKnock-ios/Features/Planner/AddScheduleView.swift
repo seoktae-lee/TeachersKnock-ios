@@ -60,6 +60,9 @@ struct AddScheduleView: View {
                 // ✨ [수정] 새 일정 추가 모드일 때만 '이어달리기' 시간 자동 설정
                 if viewModel.editingSchedule == nil {
                     viewModel.autoSetStartTimeToLastSchedule()
+                } else if viewModel.isCommonTimer {
+                    // 수정 모드이고 공통 타이머가 켜져있다면 그룹 정보를 불러와야 권한 체크 가능
+                    viewModel.fetchMyStudyGroups()
                 }
                 
                 if viewModel.isStudySubject && !settingsManager.favoriteSubjects.isEmpty {

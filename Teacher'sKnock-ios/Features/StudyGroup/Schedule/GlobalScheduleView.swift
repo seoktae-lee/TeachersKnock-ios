@@ -3,6 +3,9 @@ import SwiftUI
 struct GlobalScheduleView: View {
     // 내 그룹 목록의 ID 배열
     var myGroupIDs: [String]
+    // ✨ [New] 그룹 이름 매핑 (ID -> Name)
+    var groupNameMap: [String: String] = [:]
+    
     @StateObject private var scheduleManager = GroupScheduleManager()
     
     @State private var selectedDate = Date()
@@ -18,37 +21,47 @@ struct GlobalScheduleView: View {
                 .padding()
             
             List {
+                
                 // 날짜에 해당하는 모든 스케줄을 가져옴
                 let dailySchedules = scheduleManager.schedules(at: selectedDate, from: scheduleManager.globalSchedules)
                 
-                if dailySchedules.isEmpty {
-                    Text("일정이 없습니다.")
-                        .foregroundColor(.gray)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .listRowBackground(Color.clear)
-                } else {
-                    ForEach(dailySchedules) { schedule in
-                        /* 
-                           Global 뷰에서는 해당 스케줄이 어느 그룹의 것인지 표시해주는게 좋음
-                           하지만 현재 GroupSchedule 모델엔 groupName이 없음.
-                           (fetch 시 id만 받아옴)
-                           일단은 UI에 심플하게 보여주고, 클릭 시 이동은 추후 고려 (Optional)
-                        */
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(schedule.title)
-                                    .font(.subheadline.bold())
-                                // 여기서 그룹명을 보여주려면 별도 매핑이 필요함 -> 일단 패스
+                Section {
+                    if dailySchedules.isEmpty {
+                        Text("일정이 없습니다.")
+                            .foregroundColor(.gray)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(dailySchedules) { schedule in
+                            HStack {
+                                // 아이콘 표시
+                                let iconData = getIconData(for: schedule.type)
+                                
+                                Image(systemName: iconData.icon)
+                                    .foregroundColor(iconData.color)
+                                    .frame(width: 32, height: 32)
+                                    .background(iconData.color.opacity(0.1))
+                                    .cornerRadius(8) // ✨ [Modified] 원형 -> 둥근 사각형 (통일감)
+                                
+                                VStack(alignment: .leading) {
+                                    // 그룹명 조회
+                                    let groupName = groupNameMap[schedule.groupID] ?? "알 수 없는 그룹"
+                                    
+                                    if schedule.type == .timer, let subject = schedule.subject {
+                                        Text("\(groupName) / \(subject) / \(schedule.title)")
+                                            .font(.subheadline.bold())
+                                    } else {
+                                        Text("\(groupName) / \(schedule.title)")
+                                            .font(.subheadline.bold())
+                                    }
+                                }
+                                Spacer()
                             }
-                            Spacer()
-                            Text(schedule.type.rawValue)
-                                .font(.caption2)
-                                .padding(4)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(4)
                         }
                     }
+                } header: {
+                    Text("일정 목록")
                 }
             }
             .listStyle(.plain)
@@ -58,6 +71,17 @@ struct GlobalScheduleView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             scheduleManager.listenToGlobalSchedules(myGroupIDs: myGroupIDs)
+        }
+    }
+    
+    // ✨ [New] Helper for Icon Data (Consistent with GroupScheduleView)
+    func getIconData(for type: GroupSchedule.ScheduleType) -> (icon: String, color: Color) {
+        switch type {
+        case .notice: return ("megaphone.fill", .orange)
+        case .timer: return ("stopwatch", .purple)
+        case .pairing: return ("arrow.triangle.2.circlepath", .green)
+        case .gathering: return ("person.3.fill", .blue)
+        case .etc: return ("calendar", .gray)
         }
     }
 }

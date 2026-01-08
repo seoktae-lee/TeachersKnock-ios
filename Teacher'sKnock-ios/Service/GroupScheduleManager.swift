@@ -65,7 +65,8 @@ class GroupScheduleManager: ObservableObject {
     
     // MARK: - CRUD
     func addSchedule(schedule: GroupSchedule, completion: @escaping (Bool) -> Void) {
-        let ref = db.collection("study_groups").document(schedule.groupID).collection("schedules").document()
+        // ✨ [Modified] ID 동기화를 위해 random ID가 아닌 schedule.id(UUID)를 그대로 문서 ID로 사용합니다.
+        let ref = db.collection("study_groups").document(schedule.groupID).collection("schedules").document(schedule.id)
         var data = schedule.toDictionary()
         
         // Batch write to update both Schedule and Group Notice
@@ -73,10 +74,23 @@ class GroupScheduleManager: ObservableObject {
         batch.setData(data, forDocument: ref)
         
         let groupRef = db.collection("study_groups").document(schedule.groupID)
-        let noticeMsg = "📅 [일정 등록] \(schedule.title) (\(dateString(schedule.date)))"
+        
+        // ✨ [Modified] 공지사항 아이템 생성
+        let type: StudyGroup.NoticeItem.NoticeType = schedule.type == .timer ? .timer : (schedule.type == .pairing ? .pairing : .general)
+        let content = "[일정 등록] \(schedule.title) (\(dateString(schedule.date)))"
+        let newNoticeItem = StudyGroup.NoticeItem(id: UUID().uuidString, type: type, content: content, date: Date())
+        
+        // Dictionary로 변환
+        let noticeDict: [String: Any] = [
+            "id": newNoticeItem.id,
+            "type": newNoticeItem.type.rawValue,
+            "content": newNoticeItem.content,
+            "date": Timestamp(date: newNoticeItem.date)
+        ]
         
         batch.updateData([
-            "notice": noticeMsg,
+            "notices": FieldValue.arrayUnion([noticeDict]), // ✨ 구조화된 공지 추가
+            "notice": content, // ✨ [Legacy Support] 최신 공지내용 반영
             "noticeUpdatedAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp() // To trigger list badge
         ], forDocument: groupRef)
@@ -99,10 +113,22 @@ class GroupScheduleManager: ObservableObject {
         batch.updateData(data, forDocument: ref)
         
         let groupRef = db.collection("study_groups").document(schedule.groupID)
-        let noticeMsg = "📅 [일정 수정] \(schedule.title) (\(dateString(schedule.date)))"
+        
+        // ✨ [Modified] 공지사항 아이템 생성
+        let type: StudyGroup.NoticeItem.NoticeType = schedule.type == .timer ? .timer : (schedule.type == .pairing ? .pairing : .general)
+        let content = "[일정 수정] \(schedule.title) (\(dateString(schedule.date)))"
+        let newNoticeItem = StudyGroup.NoticeItem(id: UUID().uuidString, type: type, content: content, date: Date())
+        
+        let noticeDict: [String: Any] = [
+            "id": newNoticeItem.id,
+            "type": newNoticeItem.type.rawValue,
+            "content": newNoticeItem.content,
+            "date": Timestamp(date: newNoticeItem.date)
+        ]
         
         batch.updateData([
-            "notice": noticeMsg,
+            "notices": FieldValue.arrayUnion([noticeDict]),
+            "notice": content,
             "noticeUpdatedAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp()
         ], forDocument: groupRef)
@@ -124,8 +150,35 @@ class GroupScheduleManager: ObservableObject {
         return f.string(from: date)
     }
     
-    func deleteSchedule(groupID: String, scheduleID: String, completion: @escaping (Bool) -> Void) {
-        db.collection("study_groups").document(groupID).collection("schedules").document(scheduleID).delete { error in
+    func deleteSchedule(groupID: String, scheduleID: String, scheduleTitle: String, isCommonTimer: Bool, completion: @escaping (Bool) -> Void) {
+        // ✨ [Modified] 삭제 시 공지사항 업데이트 추가
+        let batch = db.batch()
+        
+        let scheduleRef = db.collection("study_groups").document(groupID).collection("schedules").document(scheduleID)
+        batch.deleteDocument(scheduleRef)
+        
+        let groupRef = db.collection("study_groups").document(groupID)
+        
+        // ✨ [Modified] 공지사항 아이템 생성 (타이머는 timer, 나머지는 general)
+        let type: StudyGroup.NoticeItem.NoticeType = isCommonTimer ? .timer : .general
+        let content = "[일정 취소] \(scheduleTitle)"
+        let newNoticeItem = StudyGroup.NoticeItem(id: UUID().uuidString, type: type, content: content, date: Date())
+        
+        let noticeDict: [String: Any] = [
+            "id": newNoticeItem.id,
+            "type": newNoticeItem.type.rawValue,
+            "content": newNoticeItem.content,
+            "date": Timestamp(date: newNoticeItem.date)
+        ]
+        
+        batch.updateData([
+            "notices": FieldValue.arrayUnion([noticeDict]),
+            "notice": content,
+            "noticeUpdatedAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ], forDocument: groupRef)
+        
+        batch.commit { error in
             if let error = error {
                 print("Error deleting schedule: \(error)")
                 completion(false)
@@ -135,6 +188,41 @@ class GroupScheduleManager: ObservableObject {
         }
     }
     
+    // MARK: - Daily Memo
+    @Published var currentDailyMemo: DailyMemo?
+    
+    func listenToDailyMemo(groupID: String, date: Date) {
+        // 날짜 포맷팅
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd"
+        let dateID = f.string(from: date)
+        
+        db.collection("study_groups").document(groupID).collection("daily_memos").document(dateID)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                guard let document = snapshot else { return }
+                
+                if document.exists {
+                    self.currentDailyMemo = DailyMemo(document: document)
+                } else {
+                    // 문서가 없으면 빈 메모 객체 생성 (UI용)
+                    self.currentDailyMemo = DailyMemo(id: dateID)
+                }
+            }
+    }
+    
+    func updateDailyMemo(groupID: String, memo: DailyMemo, completion: @escaping (Bool) -> Void) {
+        let ref = db.collection("study_groups").document(groupID).collection("daily_memos").document(memo.id)
+        ref.setData(memo.toDictionary(), merge: true) { error in
+            if let error = error {
+                print("Error updating memo: \(error)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+
     // MARK: - Helpers
     func schedules(at date: Date, from list: [GroupSchedule]) -> [GroupSchedule] {
         let calendar = Calendar.current

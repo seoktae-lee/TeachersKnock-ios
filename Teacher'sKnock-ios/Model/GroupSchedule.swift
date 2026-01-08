@@ -12,6 +12,10 @@ struct GroupSchedule: Identifiable, Codable, Hashable {
     var authorName: String // UI 표시용
     var createdAt: Date
     
+    // ✨ [New] 공통 타이머 메타데이터
+    var subject: String? // 과목
+    var purpose: String? // 공부 목적
+    
     enum ScheduleType: String, Codable, CaseIterable {
         case notice = "공지"
         case pairing = "짝 스터디"
@@ -23,14 +27,14 @@ struct GroupSchedule: Identifiable, Codable, Hashable {
             switch self {
             case .notice: return "megaphone.fill"
             case .pairing: return "person.2.fill"
-            case .timer: return "timer"
+            case .timer: return "stopwatch"
             case .gathering: return "person.3.fill"
             case .etc: return "calendar"
             }
         }
     }
     
-    init(id: String = UUID().uuidString, groupID: String, title: String, content: String, date: Date, type: ScheduleType, authorID: String, authorName: String) {
+    init(id: String = UUID().uuidString, groupID: String, title: String, content: String, date: Date, type: ScheduleType, authorID: String, authorName: String, subject: String? = nil, purpose: String? = nil) {
         self.id = id
         self.groupID = groupID
         self.title = title
@@ -40,6 +44,8 @@ struct GroupSchedule: Identifiable, Codable, Hashable {
         self.authorID = authorID
         self.authorName = authorName
         self.createdAt = Date()
+        self.subject = subject
+        self.purpose = purpose
     }
     
     // Firestore Init
@@ -67,10 +73,14 @@ struct GroupSchedule: Identifiable, Codable, Hashable {
         self.authorID = authorID
         self.authorName = authorName
         self.createdAt = createdAtTimestamp.dateValue()
+        
+        // Optional helpers
+        self.subject = data["subject"] as? String
+        self.purpose = data["purpose"] as? String
     }
     
     func toDictionary() -> [String: Any] {
-        return [
+        var dict: [String: Any] = [
             "groupID": groupID,
             "title": title,
             "content": content,
@@ -80,5 +90,15 @@ struct GroupSchedule: Identifiable, Codable, Hashable {
             "authorName": authorName,
             "createdAt": Timestamp(date: createdAt)
         ]
+        
+        if let subject = subject {
+            dict["subject"] = subject
+        }
+        
+        if let purpose = purpose {
+            dict["purpose"] = purpose
+        }
+        
+        return dict
     }
 }

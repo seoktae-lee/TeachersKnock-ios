@@ -14,6 +14,8 @@ class StudyNavigationManager: ObservableObject {
     
     // ✨ [New] 공통 타이머 이동을 위한 그룹 ID
     @Published var targetGroupID: String?
+    @Published var targetSubject: String?
+    @Published var targetPurpose: String?
     
     // ✨ [추가] 딥링크로 타이머 이동이 필요한지 여부 (Cold Start 대응)
     @Published var shouldNavigateToTimer: Bool = false
@@ -26,6 +28,8 @@ class StudyNavigationManager: ObservableObject {
         if schedule.isCommonTimer, let groupID = schedule.targetGroupID {
             // 공통 타이머인 경우 스터디 탭(3)으로 이동
             self.targetGroupID = groupID
+            self.targetSubject = schedule.subject
+            self.targetPurpose = schedule.studyPurpose
             self.tabSelection = 3
         } else {
             // 개인 타이머인 경우 타이머 탭(2)으로 이동
@@ -38,5 +42,7 @@ class StudyNavigationManager: ObservableObject {
     func clearTarget() {
         self.targetSchedule = nil
         self.targetGroupID = nil
+        self.targetSubject = nil
+        self.targetPurpose = nil
     }
 }

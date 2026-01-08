@@ -1,10 +1,14 @@
 import SwiftUI
 import FirebaseAuth
+import SwiftData
 
 struct EditGroupScheduleView: View {
     @ObservedObject var scheduleManager: GroupScheduleManager
     var schedule: GroupSchedule
     @Environment(\.dismiss) var dismiss
+    
+    // ✨ [New] Local Sync
+    @Environment(\.modelContext) private var modelContext
     
     @State private var title: String
     @State private var content: String
@@ -72,8 +76,34 @@ struct EditGroupScheduleView: View {
         
         scheduleManager.updateSchedule(schedule: updatedSchedule) { success in
             if success {
+                // ✨ [동기화] 방장이 공통 타이머 일정 수정 시 로컬 플래너에서도 수정
+                if updatedSchedule.type == .timer {
+                    updateLocalSchedule(scheduleID: updatedSchedule.id, newTitle: title, newDate: date, newContent: content)
+                }
                 dismiss()
             }
+        }
+    }
+    
+    // ✨ [New] Local Update Sync
+    func updateLocalSchedule(scheduleID: String, newTitle: String, newDate: Date, newContent: String) {
+        guard let uuid = UUID(uuidString: scheduleID) else { return }
+        
+        do {
+            let descriptor = FetchDescriptor<ScheduleItem>(
+                predicate: #Predicate { $0.id == uuid }
+            )
+            if let item = try modelContext.fetch(descriptor).first {
+                item.title = newTitle
+                item.startDate = newDate
+                // 종료 시간은 시작 시간 + 1시간 (기본값) 또는 기존 기간 유지
+                let duration = item.endDate?.timeIntervalSince(item.startDate) ?? 3600
+                item.endDate = newDate.addingTimeInterval(duration)
+                item.details = newContent
+                print("✅ [동기화] 로컬 일정 수정 완료: \(item.title)")
+            }
+        } catch {
+            print("❌ [동기화] 로컬 일정 수정 실패: \(error)")
         }
     }
 }

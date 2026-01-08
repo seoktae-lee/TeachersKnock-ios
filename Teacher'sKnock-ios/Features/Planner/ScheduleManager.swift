@@ -22,13 +22,54 @@ class ScheduleManager {
         }
     }
     
-    // 2. 일정 삭제
+    // 2. 일정 삭제 (Cascading Delete for Common Timer Leader)
     func deleteSchedule(itemId: String, userId: String) {
-        db.collection("users").document(userId).collection("schedules").document(itemId).delete() { error in
-            if let error = error {
-                print("❌ 서버 삭제 실패: \(error)")
-            } else {
-                print("🗑️ 서버 삭제 완료")
+        let scheduleRef = db.collection("users").document(userId).collection("schedules").document(itemId)
+        
+        // 1. 문서 정보를 먼저 가져와서 공통 타이머인지 확인
+        scheduleRef.getDocument { [weak self] snapshot, error in
+            guard let self = self, let document = snapshot, document.exists, let data = document.data() else {
+                print("❌ 삭제할 문서를 찾을 수 없음")
+                // 문서를 못 찾더라도 삭제 시도 (혹시 모를 잔여물)
+                scheduleRef.delete()
+                return
+            }
+            
+            let title = data["title"] as? String ?? "일정"
+            let isCommonTimer = data["isCommonTimer"] as? Bool ?? false
+            let targetGroupID = data["targetGroupID"] as? String
+            
+            // 2. 개인 일정 삭제
+            scheduleRef.delete { error in
+                if let error = error {
+                    print("❌ 서버 삭제 실패: \(error)")
+                } else {
+                    print("🗑️ 서버 삭제 완료: \(title)")
+                    
+                    // 3. 공통 타이머이고 그룹 ID가 있다면 -> 방장 권한 확인 후 그룹 스케줄 삭제
+                    if isCommonTimer, let groupID = targetGroupID {
+                        self.checkLeaderAndCascadeDelete(groupId: groupID, userId: userId, scheduleId: itemId, title: title)
+                    }
+                }
+            }
+        }
+    }
+    
+    // ✨ [New] 방장 권한 확인 및 그룹 일정 삭제
+    private func checkLeaderAndCascadeDelete(groupId: String, userId: String, scheduleId: String, title: String) {
+        db.collection("study_groups").document(groupId).getDocument { snapshot, error in
+            if let document = snapshot, document.exists, let data = document.data() {
+                let leaderID = data["leaderID"] as? String
+                
+                if leaderID == userId {
+                    print("👑 방장 권한 확인됨. 그룹 스케줄 삭제 진행...")
+                    // ✨ [Modified] isCommonTimer: true 전달
+                    GroupScheduleManager().deleteSchedule(groupID: groupId, scheduleID: scheduleId, scheduleTitle: title, isCommonTimer: true) { success in
+                        if success { print("✅ 그룹 스케줄 연동 삭제 완료") }
+                    }
+                } else {
+                    print("👤 방장이 아니므로 개인 일정만 삭제됨")
+                }
             }
         }
     }
@@ -144,18 +185,54 @@ class NotificationManager {
         )
     }
     
+    // ✨ [New] 공통 타이머 전용 알림 (1시간 전, 10분 전, 정시)
+    func scheduleCommonTimerNotifications(for schedule: ScheduleItem) {
+        cancelNotifications(for: schedule) // 중복 방지
+        
+        guard schedule.hasReminder, !schedule.isCompleted, !schedule.isPostponed else { return }
+        
+        let baseID = schedule.id.uuidString
+        let title = schedule.title
+        let subject = schedule.subject
+        
+        // 1. 1시간 전
+        scheduleNotification(
+            for: schedule,
+            triggerDate: schedule.startDate.addingTimeInterval(-3600),
+            identifier: "\(baseID)_1h",
+            body: "⏰ [공통 타이머] 시작 1시간 전입니다! (\(subject))"
+        )
+        
+        // 2. 10분 전
+        scheduleNotification(
+            for: schedule,
+            triggerDate: schedule.startDate.addingTimeInterval(-600),
+            identifier: "\(baseID)_10min",
+            body: "⏰ [공통 타이머] 시작 10분 전입니다! 준비해주세요. (\(subject))"
+        )
+        
+        // 3. 정시
+        scheduleNotification(
+            for: schedule,
+            triggerDate: schedule.startDate,
+            identifier: "\(baseID)_onTime",
+            body: "🔥 [공통 타이머] 공부 시작 시간입니다! (\(title))"
+        )
+    }
+    
     // 3. 알림 취소
     func cancelNotifications(for schedule: ScheduleItem) {
         let identifiers = [
             "\(schedule.id.uuidString)_10min",
-            "\(schedule.id.uuidString)_onTime"
+            "\(schedule.id.uuidString)_onTime",
+            "\(schedule.id.uuidString)_1h"
         ]
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiers)
         print("알림 취소 완료: \(schedule.title)")
     }
     
     // 내부 헬퍼: 실제 알림 등록
-    private func scheduleNotification(for schedule: ScheduleItem, triggerDate: Date, identifier: String, body: String) {
+    func scheduleNotification(for schedule: ScheduleItem, triggerDate: Date, identifier: String, body: String) {
         // 과거 시간은 알림 예약 불가
         guard triggerDate > Date() else { return }
         

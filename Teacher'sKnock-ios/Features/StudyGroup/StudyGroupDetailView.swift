@@ -13,6 +13,9 @@ struct StudyGroupDetailView: View {
     // ✨ [New] 화면 닫기용
     @Environment(\.dismiss) var dismiss
     
+    // ✨ [New] 네비게이션 매니저 (자동 이동용)
+    @EnvironmentObject var navManager: StudyNavigationManager
+    
     @State private var showingInviteSheet = false
     @State private var showDeleteConfirmAlert = false
     @State private var showDeletedNoticeAlert = false
@@ -71,9 +74,44 @@ struct StudyGroupDetailView: View {
             // ✨ [New] 멤버 정보 실시간 구독
             studyManager.fetchGroupMembers(groupID: liveGroup.id, memberUIDs: liveGroup.members)
             
+            // ✨ [New] 공통 타이머 참여자 감지 (알림용)
+            studyManager.monitorCommonTimerParticipants(groupID: liveGroup.id)
+            
             // ✨ [New] 시스템 알림 정리 및 읽음 처리
             studyManager.cleanupSystemNotice(groupID: liveGroup.id, notice: liveGroup.notice)
             studyManager.markAsRead(groupID: liveGroup.id)
+            
+            // ✨ [New] 플래너에서 넘어온 경우 자동 처리
+            if navManager.targetGroupID == liveGroup.id {
+                // 타겟 클리어 (재진입 시 중복 트리거 방지)
+                // 주의: 여기서 지우면 아래 로직 실행 전에 지워질 수 있으니 로직 실행 후 지움
+                
+                // 리더인 경우 설정 화면 혹은 타이머
+                if isLeader {
+                    if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
+                        showCommonTimer = true
+                    } else {
+                        showCommonTimerSetup = true
+                    }
+                } else {
+                    // 멤버인 경우 (타이머 있으면 입장, 없으면 알림)
+                    if let timer = liveGroup.commonTimer, timer.isActive {
+                        showCommonTimer = true
+                    } else {
+                        showTimerAlert = true
+                    }
+                }
+                
+                // 처리 완료 후 타겟 초기화 (약간의 딜레이를 주어 뷰 상태 반영 보장 권장)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if navManager.targetGroupID == liveGroup.id { // 여전히 같으면 클리어
+                        navManager.clearTarget()
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            studyManager.stopMonitoringParticipants()
         }
     }
     
@@ -153,13 +191,11 @@ extension StudyGroupDetailView {
                         headerIconButton(icon: "megaphone.fill", color: .orange, hasBadge: studyManager.hasUnreadNotice(group: liveGroup))
                     }
                     
-                    // ✨ [Modified] 일정 버튼 (응원 기능 대체)
                     NavigationLink(destination: GroupScheduleView(
                         groupID: liveGroup.id,
                         groupName: liveGroup.name,
                         isLeader: isLeader,
-                        scheduleManager: GroupScheduleManager(),
-                        selectedDate: .constant(Date())
+                        scheduleManager: GroupScheduleManager()
                     )) {
                         headerIconButton(icon: "calendar", color: .blue, hasBadge: false)
                     }
@@ -370,7 +406,14 @@ extension StudyGroupDetailView {
                     .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showCommonTimerSetup) {
-                CommonTimerSetupView(studyManager: studyManager, group: liveGroup, showCommonTimer: $showCommonTimer)
+                // ✨ [New] 데이터 주입
+                CommonTimerSetupView(
+                    studyManager: studyManager, 
+                    group: liveGroup, 
+                    showCommonTimer: $showCommonTimer,
+                    initialSubject: navManager.targetSubject,
+                    initialPurpose: navManager.targetPurpose != nil ? StudyPurpose(rawValue: navManager.targetPurpose!) : nil
+                )
             }
             .fullScreenCover(isPresented: $showCommonTimer) { // 타이머는 몰입을 위해 풀스크린 추천
                 CommonTimerView(studyManager: studyManager, group: liveGroup)

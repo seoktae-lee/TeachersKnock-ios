@@ -10,6 +10,10 @@ struct CommonTimerSetupView: View {
     
     @Binding var showCommonTimer: Bool // 설정 완료 후 타이머 화면으로 바로 이동하기 위함
     
+    // ✨ [New] Auto-fill Params
+    var initialSubject: String?
+    var initialPurpose: StudyPurpose?
+    
     // Form States
     @State private var goalTitle: String = ""
     @State private var selectedSubject: String = ""
@@ -24,7 +28,7 @@ struct CommonTimerSetupView: View {
         NavigationStack {
             Form {
                 Section(header: Text("목표 설정")) {
-                    TextField("예: 티처스 노크 모의고사 1회", text: $goalTitle)
+                    TextField("예: 티처스 노크 모의고사 1회차", text: $goalTitle)
                 }
                 
                 Section(header: Text("공부 설정")) {
@@ -45,7 +49,7 @@ struct CommonTimerSetupView: View {
                     }
                 }
                 
-                Section(header: Text("시간 설정 (수동)")) {
+                Section(header: Text("시간 설정")) {
                     DatePicker("시작 시간", selection: $startTime, displayedComponents: [.hourAndMinute])
                     DatePicker("종료 시간", selection: $endTime, in: startTime..., displayedComponents: [.hourAndMinute])
                     
@@ -68,10 +72,10 @@ struct CommonTimerSetupView: View {
                     }
                     .disabled(goalTitle.isEmpty || selectedSubject.isEmpty)
                 } footer: {
-                    Text("타이머를 시작하면 모든 스터디원에게 알림이 가며, 설정한 시간에 맞춰 공통 타이머가 작동합니다.")
+                    Text("공유 타이머를 시작하면 모든 스터디원들에게 알림이 가며, 설정한 시간에 맞춰 공유 타이머가 작동합니다.")
                 }
             }
-            .navigationTitle("공통 타이머 설정")
+            .navigationTitle("공유 타이머 설정")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -79,9 +83,17 @@ struct CommonTimerSetupView: View {
                 }
             }
             .onAppear {
-                if selectedSubject.isEmpty {
+                // 1. 초기값 주입 (플래너 연동 등)
+                if let subject = initialSubject, !subject.isEmpty {
+                    selectedSubject = subject
+                } else if selectedSubject.isEmpty {
                     selectedSubject = settingsManager.favoriteSubjects.first?.name ?? ""
                 }
+                
+                if let purpose = initialPurpose {
+                    selectedPurpose = purpose
+                }
+                
                 // 기본 시작 시간을 현재 시간의 다음 정각이나 30분 단위로 맞추면 좋을듯 하지만, 일단 현재 시간
             }
         }
