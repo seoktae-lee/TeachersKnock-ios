@@ -580,7 +580,7 @@ struct ScheduleRow: View {
                     
                     if !item.isPostponed && !item.isCompleted && SubjectName.isStudySubject(item.subject) {
                         Button(action: startStudyAction) {
-                            Image(systemName: "stopwatch")
+                            Image(systemName: item.isCommonTimer ? "stopwatch" : "timer")
                                 .font(.title2)
                                 .foregroundColor(subjectColor)
                         }

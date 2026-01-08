@@ -189,7 +189,7 @@ extension StudyGroupDetailView {
                         }
                     }) {
                         let isActive = (liveGroup.commonTimer?.isActive ?? false) && (Date() < (liveGroup.commonTimer?.endTime ?? Date()))
-                        headerIconButton(icon: "timer", color: isActive ? .red : .purple, hasBadge: isActive)
+                        headerIconButton(icon: "stopwatch", color: isActive ? .red : .purple, hasBadge: isActive)
                     }
                 }
             }

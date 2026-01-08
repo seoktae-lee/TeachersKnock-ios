@@ -5,3 +5,7 @@ scripts/serviceAccountKey.json
 # User-specific
 .DS_Store
 xcuserdata/
+
+# Build artifacts
+Build/
+.build/

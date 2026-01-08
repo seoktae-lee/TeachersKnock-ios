@@ -187,6 +187,7 @@ struct CharacterView: View {
         .fullScreenCover(isPresented: $isEvolving) {
             EvolutionView(
                 characterType: characterType,
+                characterName: characterName,
                 themeColorName: themeColorName,
                 oldLevel: oldLevelForEvolution,
                 newLevel: currentLevel,
@@ -271,6 +272,7 @@ extension CharacterView {
 
 struct EvolutionView: View {
     let characterType: String
+    let characterName: String
     let themeColorName: String
     let oldLevel: CharacterLevel
     let newLevel: CharacterLevel
@@ -319,8 +321,9 @@ struct EvolutionView: View {
         var opacity: Double = 1.0
     }
     
-    init(characterType: String, themeColorName: String, oldLevel: CharacterLevel, newLevel: CharacterLevel, theme: EvolutionTheme, onCompletion: @escaping () -> Void) {
+    init(characterType: String, characterName: String, themeColorName: String, oldLevel: CharacterLevel, newLevel: CharacterLevel, theme: EvolutionTheme, onCompletion: @escaping () -> Void) {
         self.characterType = characterType
+        self.characterName = characterName
         self.themeColorName = themeColorName
         self.oldLevel = oldLevel
         self.newLevel = newLevel
@@ -508,7 +511,7 @@ struct EvolutionView: View {
     private var headerText: String {
         switch animationState {
         case .start, .evolving:
-            return "오잉? \(characterType == "bird" ? "새" : characterType == "sea" ? "물고기" : "식물")의 상태가...?"
+            return "오잉? \(characterName)의 상태가...?"
         case .flash:
             return ""
         case .reveal, .celebration:

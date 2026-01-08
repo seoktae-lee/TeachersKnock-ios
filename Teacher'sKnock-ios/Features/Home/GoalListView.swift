@@ -93,28 +93,13 @@ struct GoalListView: View {
                 syncGoals()
             }
             .alert("목표 이름 수정", isPresented: $isEditingGoal) {
-                TextField("새로운 목표 이름을 입력하세요", text: $newGoalTitle)
-                Button("취소", role: .cancel) {}
-                Button("저장") {
-                    saveGoalTitle()
-                }
+                editGoalAlertActions
             } message: {
                 Text("목표의 이름을 변경합니다.")
             }
             // ✨ [추가] 진화 애니메이션 전체 화면 오버레이
             .fullScreenCover(isPresented: $characterManager.showEvolutionAnimation) {
-                if let character = characterManager.equippedCharacter {
-                    EvolutionView(
-                        characterType: character.type,
-                        themeColorName: primaryGoal?.characterColor ?? "Blue",
-                        oldLevel: CharacterLevel(rawValue: max(0, character.level - 1)) ?? .lv1,
-                        newLevel: CharacterLevel(rawValue: character.level) ?? .lv1,
-                        theme: EvolutionTheme.allCases.randomElement() ?? .fog,
-                        onCompletion: {
-                            characterManager.showEvolutionAnimation = false
-                        }
-                    )
-                }
+                evolutionOverlay
             }
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -236,7 +221,32 @@ struct GoalListView: View {
             }
         }
     }
-
+    
+    @ViewBuilder
+    private var editGoalAlertActions: some View {
+        TextField("새로운 목표 이름을 입력하세요", text: $newGoalTitle)
+        Button("취소", role: .cancel) {}
+        Button("저장") {
+            saveGoalTitle()
+        }
+    }
+    
+    @ViewBuilder
+    private var evolutionOverlay: some View {
+        if let character = characterManager.equippedCharacter {
+            EvolutionView(
+                characterType: character.type,
+                characterName: authManager.userNickname,
+                themeColorName: primaryGoal?.characterColor ?? "Blue",
+                oldLevel: CharacterLevel(rawValue: max(0, character.level - 1)) ?? .lv1,
+                newLevel: CharacterLevel(rawValue: character.level) ?? .lv1,
+                theme: EvolutionTheme.allCases.randomElement() ?? .fog,
+                onCompletion: {
+                    characterManager.showEvolutionAnimation = false
+                }
+            )
+        }
+    }
     
     // ✨ [추가] 캐릭터 매니저 연동
     @ObservedObject var characterManager = CharacterManager.shared
