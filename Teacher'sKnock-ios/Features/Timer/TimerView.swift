@@ -45,6 +45,12 @@ struct AudioVisualizerView: View {
     }
 }
 
+// ✨ [New] 타이머 탭 내부 네비게이션 목적지 정의
+enum TimerDestination: Hashable {
+    case statistics(String) // userId
+    case subjectManagement
+}
+
 struct TimerView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject var settingsManager: SettingsManager
@@ -60,11 +66,15 @@ struct TimerView: View {
     // ✨ 목표 데이터를 가져와 저장 시 연결하기 위함
     @Query(sort: \Goal.targetDate) private var goals: [Goal]
     
+    // ✨ [New] 네비게이션 경로 관리
+    @State private var path = NavigationPath()
+    
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
     var body: some View {
-        NavigationStack {
+        // ✨ [Refactor] NavigationStack에 path 바인딩 연결
+        NavigationStack(path: $path) {
             VStack(spacing: 12) {
                 // 0. 네비게이션 타이틀과의 겹침 방지 여백 (겹침 문제 해결을 위해 다시 확대)
                 Spacer().frame(height: 140)
@@ -155,7 +165,8 @@ struct TimerView: View {
                                 }
                             }
                             Divider()
-                            NavigationLink(destination: SubjectManagementView()) {
+                            // ✨ [Refactor] NavigationLink(value:) 사용
+                            NavigationLink(value: TimerDestination.subjectManagement) {
                                 Label("과목 추가/관리", systemImage: "plus.circle")
                             }
                         } label: {
@@ -290,11 +301,23 @@ struct TimerView: View {
             .background(Color(.systemGray6))
             .navigationTitle("집중 타이머")
             // .toolbar { ... } 제거 (허용 앱 버튼 이동됨)
+            // ✨ [New] 목적지 처리
+            .navigationDestination(for: TimerDestination.self) { destination in
+                switch destination {
+                case .statistics(let userId):
+                    StatisticsView(userId: userId)
+                case .subjectManagement:
+                    SubjectManagementView()
+                }
+            }
             .onAppear {
                 if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
                 }
+                
+                // ✨ [Refactor] 초기 진입 시 타겟 스케줄이 있으면 path 리셋 후 적용
                 if let schedule = navManager.targetSchedule {
+                    path = NavigationPath() // 스택 초기화
                     viewModel.applySchedule(schedule)
                     navManager.clearTarget()
                 }
@@ -303,10 +326,12 @@ struct TimerView: View {
                     showOnboarding = true
                 }
                 
-                viewModel.checkAndSavePendingRecord(context: modelContext, ownerID: currentUserId)
+                viewModel.checkAndSavePendingRecord(context: modelContext, ownerID: currentUserId, goals: goals)
             }
+            // ✨ [Refactor] 타겟 스케줄 변경 감지 시 path 리셋 후 적용
             .onChange(of: navManager.targetSchedule) { newSchedule in
                 if let schedule = newSchedule {
+                    path = NavigationPath() // 스택 초기화 (최상위로 이동)
                     viewModel.applySchedule(schedule)
                     navManager.clearTarget()
                 }
@@ -509,12 +534,12 @@ struct OnboardingPage: View {
             Spacer()
             
             Image(systemName: imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 100, height: 100)
-                .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
-                .padding()
-                .background(Circle().fill(Color.white).shadow(radius: 5))
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: 100, height: 100)
+            .foregroundColor(Color(red: 0.35, green: 0.65, blue: 0.95))
+            .padding()
+            .background(Circle().fill(Color.white).shadow(radius: 5))
             
             VStack(spacing: 15) {
                 Text(title)
@@ -566,7 +591,8 @@ struct RecentRecordsView: View {
             HStack {
                 Text("최근 공부 기록").font(.headline)
                 Spacer()
-                NavigationLink(destination: StatisticsView(userId: userId)) {
+                // ✨ [Refactor] NavigationLink(value:) 사용
+                NavigationLink(value: TimerDestination.statistics(userId)) {
                     HStack(spacing: 4) {
                         Image(systemName: "chart.bar.xaxis")
                         Text("통계")

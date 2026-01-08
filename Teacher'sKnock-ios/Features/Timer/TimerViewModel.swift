@@ -384,7 +384,7 @@ class TimerViewModel: ObservableObject {
     }
     
     // ✨ [New] 강제 종료되어 저장되지 못한 기록이 있는지 확인하고 저장
-    func checkAndSavePendingRecord(context: ModelContext, ownerID: String) {
+    func checkAndSavePendingRecord(context: ModelContext, ownerID: String, goals: [Goal]) {
         let duration = UserDefaults.standard.integer(forKey: Self.kPendingRecordDuration)
         
         if duration > 0 {
@@ -396,6 +396,9 @@ class TimerViewModel: ObservableObject {
             let memo = UserDefaults.standard.string(forKey: Self.kPendingRecordMemo)
             let speakingDuration = UserDefaults.standard.integer(forKey: Self.kPendingRecordSpeakingDuration) // ✨ [New]
             
+            // ✨ [Goal Connection] 복구 시에도 목표 연결 시도
+            let primaryGoal = goals.first { $0.isPrimaryGoal } ?? goals.first
+            
             // 기록 생성
             let newRecord = StudyRecord(
                 durationSeconds: duration,
@@ -404,7 +407,7 @@ class TimerViewModel: ObservableObject {
                 ownerID: ownerID,
                 studyPurpose: purposeRaw,
                 memo: memo,
-                goal: nil, // 목표 연결은 복구 시점이라 어려울 수 있음 (가장 가까운 목표를 찾거나 nil)
+                goal: primaryGoal,
                 speakingSeconds: speakingDuration // ✨ [New]
             )
             
