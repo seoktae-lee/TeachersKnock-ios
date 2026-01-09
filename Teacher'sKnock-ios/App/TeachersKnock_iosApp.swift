@@ -25,21 +25,22 @@ struct TeachersKnock_iosApp: App {
         appearance.configureWithDefaultBackground()
         
         // Helper to create rounded font
+        // Helper to create rounded font
         func roundedFont(style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+            // 1. 현재 Dynamic Type 설정에 맞는 사이즈 가져오기
             let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: style)
+            let size = descriptor.pointSize
             
-            // 디자인: Rounded 적용 시도
-            if let roundedDescriptor = descriptor.withDesign(.rounded) {
-                // Traits: Bold/Semibold 보존/적용
-                let traits: UIFontDescriptor.SymbolicTraits = (weight == .bold) ? .traitBold : []
-                if let finalDescriptor = roundedDescriptor.withSymbolicTraits(traits) {
-                    print("✅ [App] \(style) Rounded Font 생성 성공")
-                    return UIFont(descriptor: finalDescriptor, size: 0) // 0 means keep descriptor size
-                }
+            // 2. 원하는 굵기의 시스템 폰트 생성
+            let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
+            
+            // 3. Rounded Design 적용 (Descriptor 레벨에서 변환)
+            if let roundedDescriptor = systemFont.fontDescriptor.withDesign(.rounded) {
+                print("✅ [App] \(style) Rounded Font 적용 성공 (Weight: \(weight))")
                 return UIFont(descriptor: roundedDescriptor, size: 0)
             } else {
-                print("❌ [App] \(style) Rounded Design 미지원, 기본 폰트 반환")
-                return UIFont.preferredFont(forTextStyle: style)
+                print("❌ [App] \(style) Rounded Design 미지원, 기본 시스템 폰트 반환")
+                return systemFont
             }
         }
         

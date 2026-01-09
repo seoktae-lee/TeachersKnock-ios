@@ -156,8 +156,9 @@ struct StudyGroup: Identifiable, Codable, Hashable {
     }
     
     // Convert to Dictionary for Firestore
+    // Convert to Dictionary for Firestore
     func toDictionary() -> [String: Any] {
-        return [
+        var dict: [String: Any] = [
             "name": name,
             "description": description,
             "notice": notice,
@@ -166,25 +167,39 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 "type": $0.type.rawValue,
                 "content": $0.content,
                 "date": $0.date
-            ] }, // ✨ [New]
+            ] },
             "leaderID": leaderID,
             "members": members,
             "maxMembers": maxMembers,
             "createdAt": createdAt,
             "updatedAt": updatedAt,
-            "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp(), // nil이면 생성시점? or just ignore
-            "latestCheerAt": latestCheerAt, /// nil okay
-            "lastPairingDate": lastPairingDate,
-            "pairs": pairs?.map { ["memberIDs": $0.memberIDs] } ?? FieldValue.delete(),
-            "commonTimer": commonTimer.map { [
-                "goal": $0.goal,
-                "startTime": $0.startTime,
-                "endTime": $0.endTime,
-                "subject": $0.subject,
-                "purpose": $0.purpose,
-                "isActive": $0.isActive,
-                "activeParticipants": $0.activeParticipants
-            ] } ?? FieldValue.delete()
+            "noticeUpdatedAt": noticeUpdatedAt ?? FieldValue.serverTimestamp()
         ]
+        
+        if let latestCheerAt = latestCheerAt {
+            dict["latestCheerAt"] = latestCheerAt
+        }
+        
+        if let lastPairingDate = lastPairingDate {
+            dict["lastPairingDate"] = lastPairingDate
+        }
+        
+        if let pairs = pairs {
+            dict["pairs"] = pairs.map { ["memberIDs": $0.memberIDs] }
+        }
+        
+        if let commonTimer = commonTimer {
+            dict["commonTimer"] = [
+                "goal": commonTimer.goal,
+                "startTime": commonTimer.startTime,
+                "endTime": commonTimer.endTime,
+                "subject": commonTimer.subject,
+                "purpose": commonTimer.purpose,
+                "isActive": commonTimer.isActive,
+                "activeParticipants": commonTimer.activeParticipants
+            ]
+        }
+        
+        return dict
     }
 }
