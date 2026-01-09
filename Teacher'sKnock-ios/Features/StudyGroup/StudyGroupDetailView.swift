@@ -193,8 +193,7 @@ extension StudyGroupDetailView {
                     NavigationLink(destination: GroupScheduleView(
                         groupID: liveGroup.id,
                         groupName: liveGroup.name,
-                        isLeader: isLeader,
-                        scheduleManager: GroupScheduleManager()
+                        isLeader: isLeader
                     )) {
                         headerIconButton(icon: "calendar", color: .blue, hasBadge: false)
                     }

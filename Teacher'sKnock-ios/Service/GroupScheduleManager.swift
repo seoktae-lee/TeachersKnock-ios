@@ -78,15 +78,27 @@ class GroupScheduleManager: ObservableObject {
         // ✨ [Modified] 공지사항 아이템 생성
         let type: StudyGroup.NoticeItem.NoticeType = schedule.type == .timer ? .timer : (schedule.type == .pairing ? .pairing : .general)
         let content = "[일정 등록] \(schedule.title) (\(dateString(schedule.date)))"
-        let newNoticeItem = StudyGroup.NoticeItem(id: UUID().uuidString, type: type, content: content, date: Date())
+        
+        // ✨ [Updated] subject 추가
+        let newNoticeItem = StudyGroup.NoticeItem(
+            id: UUID().uuidString,
+            type: type,
+            content: content,
+            date: Date(),
+            subject: schedule.type == .timer ? schedule.subject : nil
+        )
         
         // Dictionary로 변환
-        let noticeDict: [String: Any] = [
+        var noticeDict: [String: Any] = [
             "id": newNoticeItem.id,
             "type": newNoticeItem.type.rawValue,
             "content": newNoticeItem.content,
             "date": Timestamp(date: newNoticeItem.date)
         ]
+        
+        if let subject = newNoticeItem.subject {
+            noticeDict["subject"] = subject
+        }
         
         batch.updateData([
             "notices": FieldValue.arrayUnion([noticeDict]), // ✨ 구조화된 공지 추가
@@ -117,14 +129,26 @@ class GroupScheduleManager: ObservableObject {
         // ✨ [Modified] 공지사항 아이템 생성
         let type: StudyGroup.NoticeItem.NoticeType = schedule.type == .timer ? .timer : (schedule.type == .pairing ? .pairing : .general)
         let content = "[일정 수정] \(schedule.title) (\(dateString(schedule.date)))"
-        let newNoticeItem = StudyGroup.NoticeItem(id: UUID().uuidString, type: type, content: content, date: Date())
         
-        let noticeDict: [String: Any] = [
+        // ✨ [Updated] subject 추가
+        let newNoticeItem = StudyGroup.NoticeItem(
+            id: UUID().uuidString,
+            type: type,
+            content: content,
+            date: Date(),
+            subject: schedule.type == .timer ? schedule.subject : nil
+        )
+        
+        var noticeDict: [String: Any] = [
             "id": newNoticeItem.id,
             "type": newNoticeItem.type.rawValue,
             "content": newNoticeItem.content,
             "date": Timestamp(date: newNoticeItem.date)
         ]
+        
+        if let subject = newNoticeItem.subject {
+            noticeDict["subject"] = subject
+        }
         
         batch.updateData([
             "notices": FieldValue.arrayUnion([noticeDict]),
@@ -190,16 +214,26 @@ class GroupScheduleManager: ObservableObject {
     
     // MARK: - Daily Memo
     @Published var currentDailyMemo: DailyMemo?
+    @Published var isLoadingMemo: Bool = false
+    
+    private var memoListener: ListenerRegistration?
     
     func listenToDailyMemo(groupID: String, date: Date) {
+        // 기존 리스너 제거
+        memoListener?.remove()
+        
+        self.isLoadingMemo = true // 로딩 시작
+        
         // 날짜 포맷팅
         let f = DateFormatter()
         f.dateFormat = "yyyyMMdd"
         let dateID = f.string(from: date)
         
-        db.collection("study_groups").document(groupID).collection("daily_memos").document(dateID)
+        memoListener = db.collection("study_groups").document(groupID).collection("daily_memos").document(dateID)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
+                self.isLoadingMemo = false // 로딩 종료
+                
                 guard let document = snapshot else { return }
                 
                 if document.exists {

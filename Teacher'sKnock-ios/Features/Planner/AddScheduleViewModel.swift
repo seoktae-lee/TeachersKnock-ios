@@ -246,19 +246,21 @@ class AddScheduleViewModel: ObservableObject {
     func saveSchedule(dismissAction: @escaping () -> Void) {
         guard let context = modelContext else { return }
         
-        // ✨ [수정] 유효 종료 시간 계산 (자정 넘김 처리)
         let finalEndDate = effectiveEndDate
-        
         let finalTitle = title.isEmpty ? selectedSubject : title
         
-        // 저장할 때, 현재 선택된 과목을 기억해두기
         UserDefaults.standard.set(selectedSubject, forKey: "LastSelectedSubject")
         
-        // 비동기 작업 완료를 추적하기 위한 플래그 (그룹 스케줄이 없으면 바로 닫힘)
         var shouldWaitForAsync = false
         
         if let existingItem = editingSchedule {
-            // [수정 모드] 기존 객체 업데이트
+            // [수정 모드]
+            
+            // 1. 변경 전 상태 캡처
+            let wasCommonTimer = existingItem.isCommonTimer
+            let oldGroupID = existingItem.targetGroupID
+            
+            // 2. 로컬 업데이트
             existingItem.title = finalTitle
             existingItem.startDate = startDate
             existingItem.endDate = finalEndDate
@@ -270,40 +272,40 @@ class AddScheduleViewModel: ObservableObject {
             
             ScheduleManager.shared.saveSchedule(existingItem)
             
-            // ✨ [알림] 공통 타이머 여부에 따라 알림 분기 처리
-            if existingItem.isCommonTimer {
-                 NotificationManager.shared.scheduleCommonTimerNotifications(for: existingItem)
+            // 3. 동기화 로직 분기
+            if isCommonTimer {
+                NotificationManager.shared.scheduleCommonTimerNotifications(for: existingItem)
                 
-                // ✨ [New] 방장인 경우 공통 타이머 일정 업데이트 동기화
+                // (1) 일반 -> 공통 타이머 (생성)
+                // (2) 공통 타이머 -> 공통 타이머 (수정)
+                // (3) 그룹 변경 (삭제 후 생성? or 업데이트) -> 여기서는 단순 업데이트로 처리
+                
                 if let groupID = existingItem.targetGroupID,
                    let group = myStudyGroups.first(where: { $0.id == groupID }),
                    group.leaderID == userId {
                     
-                    shouldWaitForAsync = true // 비동기 대기
+                    shouldWaitForAsync = true
                     
-                    let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
-                    let groupSchedule = GroupSchedule(
-                        id: existingItem.id.uuidString, // ✨ ID 동기화 (기존 ID 사용)
-                        groupID: groupID,
-                        title: existingItem.title,
-                        content: "공통 타이머 일정이 수정되었습니다.",
-                        date: existingItem.startDate,
-                        type: .timer,
-                        authorID: userId,
-                        authorName: nickname,
-                        subject: existingItem.subject,
-                        purpose: existingItem.studyPurpose
-                    )
-                    
-                    GroupScheduleManager().updateSchedule(schedule: groupSchedule) { _ in
-                        print("✅ [방장] 공통 타이머 일정 수정 동기화 완료")
-                        DispatchQueue.main.async { dismissAction() }
+                    if !wasCommonTimer || oldGroupID != groupID {
+                       // 새로 등록과 동일하게 처리
+                       syncCreateGroupSchedule(item: existingItem, groupID: groupID) { dismissAction() }
+                    } else {
+                        // 단순 업데이트
+                        syncUpdateGroupSchedule(item: existingItem, groupID: groupID) { dismissAction() }
                     }
-                } else {
-                     NotificationManager.shared.updateNotifications(for: existingItem)
                 }
+                
             } else {
-                 NotificationManager.shared.updateNotifications(for: existingItem)
+                NotificationManager.shared.updateNotifications(for: existingItem)
+                
+                // (4) 공통 타이머 -> 일반 (삭제)
+                if wasCommonTimer, let oldID = oldGroupID {
+                    shouldWaitForAsync = true
+                    // 방장 권한 확인 (메모리 상의 목록 이용) 혹은 그냥 시도(서버 룰) -> 여기선 안전하게 체크
+                    // 하지만 oldID 그룹이 myStudyGroups에 없을 수도 있음.
+                    // 그냥 삭제 시도
+                    syncDeleteGroupSchedule(itemID: existingItem.id.uuidString, title: existingItem.title, groupID: oldID) { dismissAction() }
+                }
             }
             
         } else {
@@ -326,85 +328,74 @@ class AddScheduleViewModel: ObservableObject {
             context.insert(newItem)
             ScheduleManager.shared.saveSchedule(newItem)
             
-            // ✨ [알림] 분기 처리
             if newItem.isCommonTimer {
                 NotificationManager.shared.scheduleCommonTimerNotifications(for: newItem)
-                
-                // ✨ [New] 그룹 스케줄 자동 생성 (방장 전용)
-                if let groupID = newItem.targetGroupID {
-                    // 방장 권한 체크
-                    if let group = myStudyGroups.first(where: { $0.id == groupID }), group.leaderID == userId {
-                        
-                        shouldWaitForAsync = true // 비동기 대기
-                        
-                        // 1. 공지사항 추가 (NoticeItem)
-                        let noticeContent = "공통 타이머 일정이 등록되었습니다: \(newItem.title)"
-                        let newNoticeItem = StudyGroup.NoticeItem(
-                            id: UUID().uuidString,
-                            type: .timer, // ✨ 타이머 타입
-                            content: noticeContent,
-                            date: Date()
-                        )
-                        
-                        let noticeDict: [String: Any] = [
-                            "id": newNoticeItem.id,
-                            "type": newNoticeItem.type.rawValue,
-                            "content": newNoticeItem.content,
-                            "date": Timestamp(date: newNoticeItem.date)
-                        ]
-                        
-                        // 2. 그룹 스케줄 추가 (GroupSchedule)
-                        let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
-                        let groupSchedule = GroupSchedule(
-                            id: newItem.id.uuidString, // ✨ ID 동기화 (새 ID 사용)
-                            groupID: groupID,
-                            title: newItem.title,
-                            content: "공통 타이머 일정이 등록되었습니다.",
-                            date: newItem.startDate,
-                            type: .timer,
-                            authorID: userId,
-                            authorName: nickname,
-                            subject: newItem.subject,
-                            purpose: newItem.studyPurpose
-                        )
-                        
-                        // Firestore Batch 작업 (공지사항 + 스케줄 + Legacy Notice)
-                        let batch = Firestore.firestore().batch()
-                        let groupRef = Firestore.firestore().collection("study_groups").document(groupID)
-                        let scheduleRef = Firestore.firestore().collection("study_groups").document(groupID).collection("schedules").document(groupSchedule.id)
-                        
-                        // 공지사항 업데이트
-                        batch.updateData([
-                            "notices": FieldValue.arrayUnion([noticeDict]),
-                            "notice": noticeContent, // Legacy support
-                            "noticeUpdatedAt": FieldValue.serverTimestamp(),
-                            "updatedAt": FieldValue.serverTimestamp()
-                        ], forDocument: groupRef)
-                        
-                        // 스케줄 추가
-                        batch.setData(groupSchedule.toDictionary(), forDocument: scheduleRef)
-                        
-                        batch.commit { error in
-                            if let error = error {
-                                print("❌ 공통 타이머 등록 실패(공지+스케줄): \(error)")
-                            } else {
-                                print("✅ [방장] 공통 타이머 등록 완료 (공지+스케줄)")
-                            }
-                            DispatchQueue.main.async { dismissAction() }
-                        }
-                    } else {
-                        print("⚠️ [멤버] 공통 타이머 일정은 개인용으로만 저장됩니다. (그룹 스케줄 미생성)")
-                        // 비동기 작업 아님
-                    }
-                }
+                 if let groupID = newItem.targetGroupID,
+                   let group = myStudyGroups.first(where: { $0.id == groupID }),
+                   group.leaderID == userId {
+                     shouldWaitForAsync = true
+                     syncCreateGroupSchedule(item: newItem, groupID: groupID) { dismissAction() }
+                 }
             } else {
                 NotificationManager.shared.updateNotifications(for: newItem)
             }
         }
         
-        // 비동기 작업이 없으면 바로 닫기
         if !shouldWaitForAsync {
             dismissAction()
+        }
+    }
+    
+    // MARK: - Sync Helpers
+    
+    private func syncCreateGroupSchedule(item: ScheduleItem, groupID: String, completion: @escaping () -> Void) {
+        let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
+        
+        let groupSchedule = GroupSchedule(
+            id: item.id.uuidString,
+            groupID: groupID,
+            title: item.title,
+            content: "공통 타이머 일정이 등록되었습니다.",
+            date: item.startDate,
+            type: .timer,
+            authorID: userId,
+            authorName: nickname,
+            subject: item.subject,
+            purpose: item.studyPurpose
+        )
+        
+        GroupScheduleManager().addSchedule(schedule: groupSchedule) { success in
+            if success { print("✅ [Sync] 공통 타이머 생성 완료") }
+            DispatchQueue.main.async { completion() }
+        }
+    }
+    
+    private func syncUpdateGroupSchedule(item: ScheduleItem, groupID: String, completion: @escaping () -> Void) {
+        let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
+        
+        let groupSchedule = GroupSchedule(
+            id: item.id.uuidString,
+            groupID: groupID,
+            title: item.title,
+            content: "공통 타이머 일정이 수정되었습니다.",
+            date: item.startDate,
+            type: .timer,
+            authorID: userId,
+            authorName: nickname,
+            subject: item.subject,
+            purpose: item.studyPurpose
+        )
+        
+        GroupScheduleManager().updateSchedule(schedule: groupSchedule) { success in
+            if success { print("✅ [Sync] 공통 타이머 수정 완료") }
+            DispatchQueue.main.async { completion() }
+        }
+    }
+    
+    private func syncDeleteGroupSchedule(itemID: String, title: String, groupID: String, completion: @escaping () -> Void) {
+        GroupScheduleManager().deleteSchedule(groupID: groupID, scheduleID: itemID, scheduleTitle: title, isCommonTimer: true) { success in
+            if success { print("✅ [Sync] 공통 타이머 해제(삭제) 완료") }
+            DispatchQueue.main.async { completion() }
         }
     }
     

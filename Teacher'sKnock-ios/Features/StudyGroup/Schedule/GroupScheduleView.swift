@@ -6,97 +6,118 @@ struct GroupScheduleView: View {
     var groupID: String
     var groupName: String
     var isLeader: Bool
-    @ObservedObject var scheduleManager: GroupScheduleManager
     
-    // ✨ [New] Local Sync
+    // ✨ [Modified] View owns the StateObject -> Lifecycle Fix!
+    @StateObject private var scheduleManager = GroupScheduleManager()
+    
+    // Local Sync
     @Environment(\.modelContext) private var modelContext
     
-// ✨ [New] 편집용 state (기존 유지)
+    // State
     @State private var editingSchedule: GroupSchedule?
-    @State private var selectedDate = Date() // ✨ [Fixed] Missing State
+    @State private var selectedDate = Date()
+    @State private var isAddingSchedule = false
     
-    // Calendar Config
-    @Environment(\.calendar) var calendar
-    @Namespace var animation
-    
-    // ✨ [New] 햅틱 피드백
+    // Haptics
     private let feedback = UIImpactFeedbackGenerator(style: .medium)
     
     var body: some View {
-        VStack(spacing: 0) {
-            // 1. Calendar
-            DatePicker("날짜 선택", selection: $selectedDate, displayedComponents: [.date])
-                .datePickerStyle(.graphical)
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-                .padding()
-                .onChange(of: selectedDate) { newDate in
-                    feedback.impactOccurred() // 햅틱
-                    scheduleManager.listenToDailyMemo(groupID: groupID, date: newDate)
-                }
-            
-            // 2. Content Scroll
+        ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack(spacing: 20) {
+                    // 1. Calendar Section
+                    VStack {
+                        DatePicker("날짜 선택", selection: $selectedDate, displayedComponents: [.date])
+                            .datePickerStyle(.graphical)
+                            .padding(.horizontal)
+                            .padding(.bottom, 10)
+                    }
+                    .background(Color.white)
+                    .cornerRadius(20)
+                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    .onChange(of: selectedDate) { newDate in
+                        feedback.impactOccurred()
+                        scheduleManager.listenToDailyMemo(groupID: groupID, date: newDate)
+                    }
                     
-                    if let memo = scheduleManager.currentDailyMemo {
+                    // 2. Daily Content Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        
+                        // Header for the selected date
+                        Text(dateHeaderString(selectedDate))
+                            .font(.title2.bold())
+                            .padding(.horizontal)
+                        
+                        // 2-1. Daily Memo (Study Info)
+                        // ✨ [Logic Improved] Prioritize Loading -> Then Content -> Then Empty Check
+                        if scheduleManager.isLoadingMemo {
+                             HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                            .padding()
+                            .frame(height: 100) // Prevent layout collapse
+                        } else {
+                            // If memo exists (even empty), show it. If nil (initial load fail?), show empty state.
+                            if let memo = scheduleManager.currentDailyMemo {
+                                DailyMemoCard(memo: memo, groupID: groupID, scheduleManager: scheduleManager)
+                                    .padding(.horizontal)
+                            } else {
+                                // Fallback loading (shouldn't happen often if listenToDailyMemo works)
+                                ProgressView()
+                                    .padding()
+                            }
+                        }
+                        
+                        // 2-2. Schedule List (Shared Schedules)
                         let schedules = scheduleManager.schedules(at: selectedDate, from: scheduleManager.groupSchedules)
                         
-                        // ✨ [Logic] 스터디 없음 = 스케줄 없음 AND 메모 비어있음
-                        if schedules.isEmpty && memo.isEmpty {
-                            // Empty State
-                             DailyMemoSection(memo: memo, isScheduleEmpty: true) { updatedMemo in
-                                scheduleManager.updateDailyMemo(groupID: groupID, memo: updatedMemo) { _ in }
-                            }
-                            
-                        } else {
-                            // Study Exists (Memo or Schedules)
-                            
-                            // 1. Study Section (Memo/Location/Members)
-                            DailyMemoSection(memo: memo, isScheduleEmpty: false) { updatedMemo in
-                                scheduleManager.updateDailyMemo(groupID: groupID, memo: updatedMemo) { _ in }
-                            }
-                            
-                            // 2. Schedule List
-                            LazyVStack(spacing: 12) {
-                                if !schedules.isEmpty {
-                                    ForEach(schedules) { schedule in
-                                        GroupScheduleRow(
-                                            schedule: schedule,
-                                            isLeader: isLeader,
-                                            onDelete: {
-                                                let isTimer = schedule.type == .timer
-                                                scheduleManager.deleteSchedule(groupID: groupID, scheduleID: schedule.id, scheduleTitle: schedule.title, isCommonTimer: isTimer) { success in
-                                                    // ✨ [동기화] 방장이 공통 타이머 일정 삭제 시 로컬 플래너에서도 삭제
-                                                    if success && isLeader && isTimer {
-                                                        deleteLocalSchedule(scheduleID: schedule.id)
-                                                    }
-                                                }
-                                            },
-                                            onEdit: {
-                                                editingSchedule = schedule
-                                            }
-                                        )
+                        // ✨ [Logic Improved] Always show schedules list area
+                        LazyVStack(spacing: 12) {
+                            if schedules.isEmpty {
+                                // Empty Schedule State
+                                HStack {
+                                    Spacer()
+                                    VStack(spacing: 12) {
+                                        Image(systemName: "calendar.badge.exclamationmark")
+                                            .font(.system(size: 30))
+                                            .foregroundColor(.gray.opacity(0.3))
+                                        Text("등록된 일정이 없습니다.")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
                                     }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 30)
+                            } else {
+                                ForEach(schedules) { schedule in
+                                    GroupScheduleRow(
+                                        schedule: schedule,
+                                        isLeader: isLeader,
+                                        onDelete: {
+                                            deleteSchedule(schedule)
+                                        },
+                                        onEdit: {
+                                            editingSchedule = schedule
+                                        }
+                                    )
                                 }
                             }
-                            .padding(.horizontal)
                         }
-                    } else {
-                        // 로딩 중 (데이터가 오기 전)
-                        ProgressView()
-                            .padding(.top, 50)
+                        .padding(.horizontal)
                     }
+                    .padding(.bottom, 80) // Space for FAB
                 }
-                .padding(.vertical)
-            }
+            } // End of ScrollView
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle(groupName)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            // ✨ Ensure Listeners are only set once or updated correctly
             scheduleManager.listenToGroupSchedules(groupID: groupID)
             scheduleManager.listenToDailyMemo(groupID: groupID, date: selectedDate)
         }
@@ -104,10 +125,29 @@ struct GroupScheduleView: View {
             EditGroupScheduleView(scheduleManager: scheduleManager, schedule: schedule)
                 .presentationDetents([.medium])
         }
+        .sheet(isPresented: $isAddingSchedule) {
+            AddGroupScheduleView(scheduleManager: scheduleManager, groupID: groupID, selectedDate: selectedDate)
+                .presentationDetents([.medium])
+        }
     }
-
     
-    // ✨ [New] Local Delete Sync
+    // Helpers
+    func dateHeaderString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "M월 d일 EEEE"
+        return f.string(from: date)
+    }
+    
+    func deleteSchedule(_ schedule: GroupSchedule) {
+        let isTimer = schedule.type == .timer
+        scheduleManager.deleteSchedule(groupID: groupID, scheduleID: schedule.id, scheduleTitle: schedule.title, isCommonTimer: isTimer) { success in
+            if success && isLeader && isTimer {
+                deleteLocalSchedule(scheduleID: schedule.id)
+            }
+        }
+    }
+    
     func deleteLocalSchedule(scheduleID: String) {
         let uuidString = scheduleID
         guard let uuid = UUID(uuidString: uuidString) else { return }
@@ -118,21 +158,18 @@ struct GroupScheduleView: View {
             )
             if let item = try modelContext.fetch(descriptor).first {
                 modelContext.delete(item)
-                print("✅ [동기화] 로컬 일정 삭제 완료: \(item.title)")
             }
         } catch {
-            print("❌ [동기화] 로컬 일정 삭제 실패: \(error)")
+            print("Failed to delete local schedule: \(error)")
         }
     }
 }
 
-
-
-// ✨ [New] Daily Memo Component (Refined)
-struct DailyMemoSection: View {
+// ✨ [New] Daily Memo Card matching the style
+struct DailyMemoCard: View {
     var memo: DailyMemo
-    var isScheduleEmpty: Bool
-    var onUpdate: (DailyMemo) -> Void
+    var groupID: String
+    var scheduleManager: GroupScheduleManager
     
     @State private var isEditing = false
     @State private var editContent = ""
@@ -141,88 +178,74 @@ struct DailyMemoSection: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if !isEditing && memo.isEmpty && isScheduleEmpty {
-                // 완전 빈 상태 (Pure Empty State)
-                 VStack(spacing: 15) {
-                    Image(systemName: "calendar.badge.exclamationmark")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray.opacity(0.5))
-                    
-                    Text("오늘은 스터디가 없습니다.")
-                        .font(.headline)
-                        .foregroundColor(.gray)
-                    
-                    Button(action: {
+            // Header with Edit Button
+            HStack {
+                Text("오늘의 스터디 정보")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button(action: {
+                    if isEditing {
+                        save()
+                    } else {
                         startEditing()
-                    }) {
-                        Text("스터디 계획하기")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .cornerRadius(20)
+                    }
+                }) {
+                    Text(isEditing ? "완료" : "수정")
+                        .font(.caption.bold())
+                        .foregroundColor(isEditing ? .blue : .gray)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(16)
+            
+            Divider()
+            
+            // Content
+            VStack(spacing: 0) {
+                if isEditing {
+                    VStack(spacing: 0) { // spacing 0 to allow dividers to look connected if needed, but here we use standard spacing
+                        InputRow(icon: "mappin.and.ellipse", placeholder: "장소", text: $editLocation)
+                        Divider().padding(.leading, 34)
+                        InputRow(icon: "person.2", placeholder: "참여 멤버", text: $editMembers)
+                        Divider().padding(.leading, 34)
+                        InputRow(icon: "doc.text", placeholder: "메모", text: $editContent, isMultiLine: true)
+                    }
+                    .padding(16)
+                } else {
+                    // check if empty
+                    if memo.location.isEmpty && memo.members.isEmpty && memo.content.isEmpty {
+                         HStack {
+                            Spacer()
+                            Text("등록된 정보가 없습니다.")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.vertical, 20)
+                            Spacer()
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 0) {
+                            if !memo.location.isEmpty { DisplayRow(icon: "mappin.and.ellipse", text: memo.location) }
+                            if !memo.location.isEmpty && (!memo.members.isEmpty || !memo.content.isEmpty) { Divider().padding(.leading, 34) }
+                            
+                            if !memo.members.isEmpty { DisplayRow(icon: "person.2", text: memo.members) }
+                            if !memo.members.isEmpty && !memo.content.isEmpty { Divider().padding(.leading, 34) }
+                            
+                            if !memo.content.isEmpty { DisplayRow(icon: "doc.text", text: memo.content) }
+                        }
+                        .padding(16)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-            } else {
-                // 내용이 있거나 에디팅 중 (또는 스케줄은 있는데 메모는 비어있는 경우 -> 입력창 표시)
-                VStack(alignment: .leading, spacing: 0) {
-                    // Header
-                    HStack {
-                        Text("스터디 정보")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            if isEditing {
-                                save()
-                            } else {
-                                startEditing()
-                            }
-                        }) {
-                            Text(isEditing ? "완료" : "수정")
-                                .font(.subheadline.bold())
-                                .foregroundColor(isEditing ? .blue : .gray)
-                        }
-                    }
-                    .padding()
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    
-                    Divider()
-                    
-                    // Body
-                    VStack(spacing: 0) {
-                        if isEditing {
-                            VStack(spacing: 0) {
-                                InputRow(icon: "mappin.and.ellipse", placeholder: "스터디 장소", text: $editLocation)
-                                Divider().padding(.leading, 34)
-                                InputRow(icon: "person.2", placeholder: "참여 멤버", text: $editMembers)
-                                Divider().padding(.leading, 34)
-                                InputRow(icon: "doc.text", placeholder: "스터디 메모", text: $editContent, isMultiLine: true)
-                            }
-                            .padding()
-                        } else {
-                            VStack(alignment: .leading, spacing: 0) {
-                                DisplayRow(icon: "mappin.and.ellipse", text: memo.location.isEmpty ? "장소 미정" : memo.location)
-                                Divider().padding(.leading, 34)
-                                DisplayRow(icon: "person.2", text: memo.members.isEmpty ? "멤버 미정" : memo.members)
-                                Divider().padding(.leading, 34)
-                                DisplayRow(icon: "doc.text", text: memo.content.isEmpty ? "메모 없음" : memo.content)
-                            }
-                            .padding()
-                        }
-                    }
-                    .background(Color.white)
-                }
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-                .padding(.horizontal)
             }
         }
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
     }
     
     func startEditing() {
@@ -237,12 +260,12 @@ struct DailyMemoSection: View {
         newMemo.content = editContent
         newMemo.location = editLocation
         newMemo.members = editMembers
-        onUpdate(newMemo)
+        scheduleManager.updateDailyMemo(groupID: groupID, memo: newMemo) { _ in }
         isEditing = false
     }
 }
 
-// ✨ [New] Input Row (Standardized)
+// Reusing InputRow and DisplayRow
 struct InputRow: View {
     let icon: String
     let placeholder: String
@@ -252,25 +275,24 @@ struct InputRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.system(size: 16))
                 .foregroundColor(.gray)
-                .frame(width: 24, height: 24)
-                .padding(.top, 2)
+                .frame(width: 20, height: 20)
+                .padding(.top, 4)
             
             if isMultiLine {
                 TextField(placeholder, text: $text, axis: .vertical)
                     .lineLimit(3...6)
-                    .font(.body)
+                    .font(.subheadline)
             } else {
                 TextField(placeholder, text: $text)
-                    .font(.body)
+                    .font(.subheadline)
             }
         }
         .padding(.vertical, 8)
     }
 }
 
-// ✨ [New] Display Row (Standardized)
 struct DisplayRow: View {
     let icon: String
     let text: String
@@ -278,22 +300,24 @@ struct DisplayRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(.blue) // Stylish blue
-                .frame(width: 24, height: 24)
+                .font(.system(size: 16))
+                .foregroundColor(.blue)
+                .frame(width: 20, height: 20)
+                .padding(.top, 2)
             
             Text(text)
-                .font(.body)
-                .foregroundColor(text.contains("미정") || text.contains("없음") ? .gray : .primary)
+                .font(.subheadline)
+                .foregroundColor(.primary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(4)
             
             Spacer()
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 }
 
-// ✨ [Refined] GroupScheduleRow (Notice Style)
+// ✨ [New] GroupScheduleRow Style matching NoticeRow
 struct GroupScheduleRow: View {
     let schedule: GroupSchedule
     let isLeader: Bool
@@ -304,7 +328,7 @@ struct GroupScheduleRow: View {
         HStack(alignment: .top, spacing: 12) {
             // Icon Box
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(backgroundColor)
                     .frame(width: 44, height: 44)
                 
@@ -315,28 +339,30 @@ struct GroupScheduleRow: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 // Title
-                 if schedule.type == .timer, let subject = schedule.subject {
-                     HStack(spacing: 6) {
-                         Text(subject)
-                             .font(.caption.bold())
-                             .foregroundColor(iconColor)
-                             .padding(.horizontal, 6)
-                             .padding(.vertical, 2)
-                             .background(backgroundColor)
-                             .cornerRadius(4)
-                         
-                         Text(schedule.title)
-                             .font(.subheadline.bold())
-                             .foregroundColor(.primary)
-                     }
-                } else {
-                    Text(schedule.title)
-                        .font(.subheadline.bold())
-                        .foregroundColor(.primary)
-                }
+                Text(schedule.title)
+                    .font(.subheadline.bold())
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 
-                // Content (if any)
-                if !schedule.content.isEmpty && schedule.content != schedule.title {
+                // Content (Time or Description)
+                if schedule.type == .timer {
+                    HStack(spacing: 6) {
+                        Text(timeString(schedule.date))
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        // ✨ [New] 과목 표시
+                        if let subject = schedule.subject, !subject.isEmpty {
+                            Text(subject)
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.1))
+                                .foregroundColor(.purple)
+                                .cornerRadius(4)
+                        }
+                    }
+                } else {
                     Text(schedule.content)
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -345,23 +371,14 @@ struct GroupScheduleRow: View {
             }
             
             Spacer()
+            
+            // ✨ [Removed] 자동화된 시스템이므로 수동 편집/삭제 메뉴 제거
+            // (사용자 요청: "자동 시스템이니까 이거는 없애자")
         }
-        .padding()
+        .padding(12)
         .background(Color.white)
-        .cornerRadius(16) // More rounded
-        .shadow(color: .black.opacity(0.03), radius: 5, x: 0, y: 2)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if isLeader || schedule.authorID == Auth.auth().currentUser?.uid {
-                Button(role: .destructive, action: onDelete) {
-                    Label("삭제", systemImage: "trash")
-                }
-                
-                Button(action: onEdit) {
-                    Label("수정", systemImage: "pencil")
-                }
-                .tint(.blue)
-            }
-        }
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
     }
     
     var backgroundColor: Color {
@@ -392,5 +409,12 @@ struct GroupScheduleRow: View {
         case .gathering: return .blue
         case .etc: return .gray
         }
+    }
+    
+    func timeString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ko_KR")
+        f.dateFormat = "a h:mm"
+        return f.string(from: date)
     }
 }

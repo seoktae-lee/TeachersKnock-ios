@@ -153,10 +153,23 @@ struct NoticeRow: View {
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 
-                // Date
-                Text(dateString(notice.date))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
+                HStack(spacing: 6) {
+                    // Date
+                    Text(dateString(notice.date))
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                    
+                    // ✨ [New] 공통 타이머 공지일 경우 과목 표시
+                    if notice.type == .timer, let subject = notice.subject, !subject.isEmpty {
+                        Text(subject)
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.purple.opacity(0.1))
+                            .foregroundColor(.purple)
+                            .cornerRadius(4)
+                    }
+                }
             }
             
             Spacer()

@@ -55,6 +55,7 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         var type: NoticeType
         var content: String
         var date: Date
+        var subject: String? // ✨ [Updated] 과목 표시
         
         enum NoticeType: String, Codable {
             case general // 일반 (시스템 알림 등)
@@ -113,7 +114,10 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                       let type = NoticeItem.NoticeType(rawValue: typeRaw),
                       let content = dict["content"] as? String,
                       let date = (dict["date"] as? Timestamp)?.dateValue() else { return nil }
-                return NoticeItem(id: id, type: type, content: content, date: date)
+                
+                // ✨ [Updated] subject 읽기
+                let subject = dict["subject"] as? String
+                return NoticeItem(id: id, type: type, content: content, date: date, subject: subject)
             }
             // 최신순 정렬 (혹시 몰라서)
             self.notices.sort { $0.date > $1.date }
