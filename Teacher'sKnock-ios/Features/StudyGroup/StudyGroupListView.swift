@@ -42,8 +42,7 @@ struct StudyGroupListView: View {
                     FriendListView(requestManager: friendRequestManager)
                 }
             }
-            .navigationTitle("스터디")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("공유 스터디")
             .navigationDestination(for: StudyGroup.self) { group in
                 StudyGroupDetailView(group: group, studyManager: studyManager)
             }

@@ -16,6 +16,47 @@ struct TeachersKnock_iosApp: App {
     
     init() {
         FirebaseApp.configure()
+        TeachersKnock_iosApp.configureAppearance()
+    }
+    
+    static func configureAppearance() {
+        print("🎨 [App] configureAppearance 호출됨 (Refined)")
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        
+        // Helper to create rounded font
+        func roundedFont(style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
+            let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: style)
+            
+            // 디자인: Rounded 적용 시도
+            if let roundedDescriptor = descriptor.withDesign(.rounded) {
+                // Traits: Bold/Semibold 보존/적용
+                let traits: UIFontDescriptor.SymbolicTraits = (weight == .bold) ? .traitBold : []
+                if let finalDescriptor = roundedDescriptor.withSymbolicTraits(traits) {
+                    print("✅ [App] \(style) Rounded Font 생성 성공")
+                    return UIFont(descriptor: finalDescriptor, size: 0) // 0 means keep descriptor size
+                }
+                return UIFont(descriptor: roundedDescriptor, size: 0)
+            } else {
+                print("❌ [App] \(style) Rounded Design 미지원, 기본 폰트 반환")
+                return UIFont.preferredFont(forTextStyle: style)
+            }
+        }
+        
+        // Large Title (큰 제목)
+        appearance.largeTitleTextAttributes = [.font: roundedFont(style: .largeTitle, weight: .bold)]
+        
+        // Inline Title (작은 제목)
+        appearance.titleTextAttributes = [.font: roundedFont(style: .headline, weight: .semibold)]
+        
+        // Back Button
+        let backAppearance = UIBarButtonItemAppearance()
+        backAppearance.normal.titleTextAttributes = [.font: roundedFont(style: .body, weight: .medium)]
+        appearance.backButtonAppearance = backAppearance
+        
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
     }
     
     var body: some Scene {
@@ -51,6 +92,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // 앱 실행 시 델리게이트 설정
         UNUserNotificationCenter.current().delegate = self
+        
+        // ✨ [Move] Appearance 설정을 여기서 확실하게 호출
+        TeachersKnock_iosApp.configureAppearance()
+        
         return true
     }
     

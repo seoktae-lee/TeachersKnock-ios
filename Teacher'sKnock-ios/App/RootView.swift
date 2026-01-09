@@ -56,6 +56,9 @@ struct RootView: View {
             // ✨ [핵심] 중요: 매니저들 연결 (Dependency Injection)
             authManager.setup(settingsManager: settingsManager, modelContext: modelContext)
             
+            // ✨ [New] 네비게이션Appearance 재적용 (확실한 적용 보장)
+            TeachersKnock_iosApp.configureAppearance()
+            
             // 2초 뒤에 스플래시를 끄고 메인 로직으로 진입
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 withAnimation {
