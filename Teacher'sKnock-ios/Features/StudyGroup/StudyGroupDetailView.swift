@@ -25,6 +25,7 @@ struct StudyGroupDetailView: View {
     @State private var showCheerSheet = false
     @State private var showPairingSheet = false // ✨ [New] 짝 스터디 시트
     @State private var showTimerAlert = false // ✨ [New] 타이머 준비중 알림 (사용 안함, 하위 호환 위해 남겨둠)
+    @State private var showConcurrentTimerAlert = false // ✨ [New] 중복 참여 방지 알림
     @State private var showCommonTimerSetup = false // ✨ [New] 공통 타이머 설정
     @State private var showCommonTimer = false // ✨ [New] 공통 타이머 화면
     
@@ -85,20 +86,11 @@ struct StudyGroupDetailView: View {
                 // 타겟 클리어 (재진입 시 중복 트리거 방지)
                 // 주의: 여기서 지우면 아래 로직 실행 전에 지워질 수 있으니 로직 실행 후 지움
                 
-                // 리더인 경우 설정 화면 혹은 타이머
-                if isLeader {
-                    if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
-                        showCommonTimer = true
-                    } else {
-                        showCommonTimerSetup = true
-                    }
+                // 리더/멤버 구분 없이 공통 로직 적용 (최초 입장자 설정 권한)
+                if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
+                    showCommonTimer = true
                 } else {
-                    // 멤버인 경우 (타이머 있으면 입장, 없으면 알림)
-                    if let timer = liveGroup.commonTimer, timer.isActive {
-                        showCommonTimer = true
-                    } else {
-                        showTimerAlert = true
-                    }
+                    showCommonTimerSetup = true
                 }
                 
                 // 처리 완료 후 타겟 초기화 (약간의 딜레이를 주어 뷰 상태 반영 보장 권장)
@@ -205,21 +197,17 @@ extension StudyGroupDetailView {
                     }
                     
                     Button(action: {
-                        if isLeader {
-                            // 리더면 설정 화면 혹은 바로 타이머 (이미 활성 상태면)
-                            if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
-                                showCommonTimer = true
-                            } else {
-                                showCommonTimerSetup = true
-                            }
+                        // ✨ [New] 중복 참여 방지
+                        if studyManager.hasActiveTimerInOtherGroups(excluding: liveGroup.id) {
+                            showConcurrentTimerAlert = true
+                            return
+                        }
+                        
+                        // ✨ [Updated] 누구나 타이머가 없으면 설정 가능 (최초 입장자)
+                        if let timer = liveGroup.commonTimer, timer.isActive, Date() < timer.endTime {
+                             showCommonTimer = true
                         } else {
-                            // 멤버면 타이머 화면 (활성 상태일 때만)
-                            if let timer = liveGroup.commonTimer, timer.isActive {
-                                showCommonTimer = true
-                            } else {
-                                // 비활성이면 알림
-                                showTimerAlert = true
-                            }
+                             showCommonTimerSetup = true
                         }
                     }) {
                         let isActive = (liveGroup.commonTimer?.isActive ?? false) && (Date() < (liveGroup.commonTimer?.endTime ?? Date()))
@@ -415,6 +403,11 @@ extension StudyGroupDetailView {
             }
             .fullScreenCover(isPresented: $showCommonTimer) { // 타이머는 몰입을 위해 풀스크린 추천
                 CommonTimerView(studyManager: studyManager, group: liveGroup)
+            }
+            .alert("입장 불가", isPresented: $showConcurrentTimerAlert) {
+                Button("확인") {}
+            } message: {
+                Text("다른 스터디 그룹에서 이미 공유 타이머가 실행 중입니다.\n동시에 두 개의 타이머에 참여할 수 없습니다.")
             }
             .alert("준비 중", isPresented: $showTimerAlert) {
                 Button("확인") {}

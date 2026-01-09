@@ -629,7 +629,7 @@ class StudyGroupManager: ObservableObject {
         lastParticipants = []
     }
     
-    private func checkAndNotifyEntry(groupID: String, memberID: String, timerData: [String: Any]) {
+    func checkAndNotifyEntry(groupID: String, memberID: String, timerData: [String: Any]) {
         // 시간 조건 체크: 시작 10분 전 ~ 시작 시간 (공부 중 방해 금지)
         guard let startTime = (timerData["startTime"] as? Timestamp)?.dateValue() else { return }
         
@@ -653,6 +653,22 @@ class StudyGroupManager: ObservableObject {
             identifier: UUID().uuidString,
             body: "🚪 \(nickname)님이 공통 타이머에 입장했습니다! 얼른 함께해요 🔥"
         )
+    }
+    
+    // ✨ [New] 중복 참여 방지 확인
+    func hasActiveTimerInOtherGroups(excluding groupID: String) -> Bool {
+        guard let uid = Auth.auth().currentUser?.uid else { return false }
+        
+        return myGroups.contains { group in
+            // 제외할 그룹(현재 그룹)이 아니고
+            if group.id == groupID { return false }
+            
+            // 타이머가 활성화되어 있고
+            guard let timer = group.commonTimer, timer.isActive else { return false }
+            
+            // 내가 참여자 명단에 있다면
+            return timer.activeParticipants.contains(uid)
+        }
     }
 }
 

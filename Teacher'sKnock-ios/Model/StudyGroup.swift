@@ -34,6 +34,12 @@ struct StudyGroup: Identifiable, Codable, Hashable {
         
         // ✨ [New] 실시간 참여자 목록 (User IDs)
         var activeParticipants: [String] = []
+        // ✨ [New] 참여 대상 멤버 (User IDs) - 모두 참여 시 시작
+        var targetMembers: [String] = []
+        
+        // ✨ [New] 개설자 정보
+        var creatorID: String = ""
+        var creatorName: String = ""
         
         func toDictionary() -> [String: Any] {
             return [
@@ -43,7 +49,10 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 "subject": subject,
                 "purpose": purpose,
                 "isActive": isActive,
-                "activeParticipants": activeParticipants
+                "activeParticipants": activeParticipants,
+                "targetMembers": targetMembers,
+                "creatorID": creatorID,
+                "creatorName": creatorName
             ]
         }
     }
@@ -145,6 +154,10 @@ struct StudyGroup: Identifiable, Codable, Hashable {
            let purpose = timerData["purpose"] as? String,
            let isActive = timerData["isActive"] as? Bool {
             let participants = timerData["activeParticipants"] as? [String] ?? []
+             let targets = timerData["targetMembers"] as? [String] ?? []
+             let cID = timerData["creatorID"] as? String ?? ""
+             let cName = timerData["creatorName"] as? String ?? ""
+            
             self.commonTimer = CommonTimerState(
                 goal: goal,
                 startTime: start,
@@ -152,14 +165,16 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 subject: subject,
                 purpose: purpose,
                 isActive: isActive,
-                activeParticipants: participants
+                activeParticipants: participants,
+                targetMembers: targets,
+                creatorID: cID,
+                creatorName: cName
             )
         } else {
             self.commonTimer = nil
         }
     }
     
-    // Convert to Dictionary for Firestore
     // Convert to Dictionary for Firestore
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
@@ -200,7 +215,10 @@ struct StudyGroup: Identifiable, Codable, Hashable {
                 "subject": commonTimer.subject,
                 "purpose": commonTimer.purpose,
                 "isActive": commonTimer.isActive,
-                "activeParticipants": commonTimer.activeParticipants
+                "activeParticipants": commonTimer.activeParticipants,
+                "targetMembers": commonTimer.targetMembers,
+                "creatorID": commonTimer.creatorID,
+                "creatorName": commonTimer.creatorName
             ]
         }
         

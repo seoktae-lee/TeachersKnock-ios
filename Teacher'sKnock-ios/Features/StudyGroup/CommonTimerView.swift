@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import FirebaseAuth
+import SwiftData
 
 struct CommonTimerView: View {
     @Environment(\.dismiss) var dismiss
@@ -15,224 +16,645 @@ struct CommonTimerView: View {
     
     @State private var currentTime = Date()
     @State private var remainingTime: TimeInterval = 0
-    @State private var isFinished = false // ✨ [New] 중복 저장 방지
+    @State private var isFinished = false
+    @State private var accumulatedTime: TimeInterval = 0 // ✨ [New] 누적 공부 시간
+    @State private var lastTick: Date? // ✨ [New] 마지막 틱 시간
+    
+    // ✨ [New] Summary View State
+    @State private var showSummary = false
+    @State private var finalParticipants: [String] = [] // 요약 화면에 보여줄 참여자 목록
+    
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
+    // Waiting Room State
+    var isTimerRunning: Bool {
+        guard let state = state else { return false }
+        // ✨ [Updated] 정시 출발 로직: 멤버 참여 여부와 관계없이 시작 시간이 되면 무조건 실행
+        return currentTime >= state.startTime
+    }
+    
+    var isUserJoined: Bool {
+        guard let state = state, let uid = Auth.auth().currentUser?.uid else { return false }
+        return state.activeParticipants.contains(uid)
+    }
+    
     var body: some View {
-        VStack(spacing: 20) {
-            // Header: Goal & Time Info
+        VStack(spacing: 0) {
+            // Header Section
             if let state = state {
-                VStack(spacing: 8) {
+                VStack(spacing: 12) {
+                    // ✨ [New] 상단 네비게이션 영역 (닫기 버튼)
+                    // 공부 중일 때는 숨김 (종료하기 버튼 강제)
+                    if !(isTimerRunning && isUserJoined) {
+                        HStack {
+                            Button(action: {
+                                dismiss()
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.title3)
+                                    .foregroundColor(.primary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.bottom, 5)
+                    } else {
+                        // 공간 유지용 투명 뷰 or Spacer만
+                        HStack { Spacer() }
+                            .padding(.bottom, 5)
+                    }
+                    
+                    // ✨ [New] 개설자 표시
+                    if !state.creatorName.isEmpty {
+                        Text("공유 타이머 개설자: \(state.creatorName)님")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
                     Text(state.goal)
-                        .font(.title2.bold())
+                        .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
+                        .padding(.top, 0) // 위쪽 간격 조정
                     
-                    Text("\(state.subject) | \(StudyPurpose(rawValue: state.purpose)?.localizedName ?? state.purpose)")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
-                    
-                    Text(timeRangeString(start: state.startTime, end: state.endTime))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 8) {
+                        Text(state.subject)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
+                        
+                        Text(StudyPurpose(rawValue: state.purpose)?.localizedName ?? state.purpose)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.orange.opacity(0.1))
+                            .foregroundColor(.orange)
+                            .cornerRadius(8)
+                    }
+                    .font(.subheadline.bold())
                 }
-                .padding(.top, 20)
-                
-                // Analog Clock
-                ZStack {
-                    AnalogClockView(currentTime: currentTime, startTime: state.startTime, endTime: state.endTime)
-                        .frame(width: 300, height: 300)
-                    
-                    // Central Digital Time (Optional, maybe just remaining time at bottom)
-                }
-                .padding(.vertical, 20)
-                
-                // Remaining Time
-                VStack(spacing: 5) {
-                    Text(timerStatusText)
-                        .font(.headline)
-                        .foregroundColor(statusColor)
-                    
-                    Text(formatRemainingTime(remainingTime))
-                        .font(.system(size: 40, weight: .bold, design: .monospaced))
-                }
-                
-                // Active Participants
-                HStack {
-                    Image(systemName: "person.2.fill")
-                    Text("\(state.activeParticipants.count)명 참여 중") // 실시간 인원 표시
-                }
-                .font(.caption)
-                .foregroundColor(.gray)
-                .padding(.top, 10)
+                .padding(.horizontal)
                 
                 Spacer()
                 
-                // Exit Button
-                Button(action: {
-                    studyManager.leaveCommonTimer(groupID: group.id) // 퇴장 처리
-                    dismiss()
-                }) {
-                    Text("나가기")
-                        .foregroundColor(.red)
-                        .padding()
+                if isTimerRunning {
+                    if isUserJoined {
+                         // --- Case 1: Running & Joined (Studying) ---
+                         RunningTimerView(currentTime: currentTime, startTime: state.startTime, endTime: state.endTime)
+                         
+                         Spacer()
+                         
+                         // Time Info
+                         HStack {
+                             VStack(alignment: .leading) {
+                                 Text("시작")
+                                     .font(.caption)
+                                     .foregroundColor(.gray)
+                                 Text(formatTime(state.startTime))
+                                     .font(.headline)
+                             }
+                             Spacer()
+                             VStack(alignment: .trailing) {
+                                 Text("종료")
+                                     .font(.caption)
+                                     .foregroundColor(.gray)
+                                 Text(formatTime(state.endTime))
+                                     .font(.headline)
+                             }
+                         }
+                         .padding(.horizontal, 40)
+                         .padding(.bottom, 30)
+                         
+                         // Exit Button
+                         Button(action: {
+                             finishStudySession() // ✨ [New] 종료 및 저장 처리 -> Summary Show
+                         }) {
+                             Text("종료하기")
+                                 .font(.headline)
+                                 .foregroundColor(.white)
+                                 .frame(maxWidth: .infinity)
+                                 .padding()
+                                 .background(Color.red)
+                                 .cornerRadius(15)
+                         }
+                         .onAppear {
+                             // ✨ [New] 타이머 시작 시 공부 상태 ON (지각생도 여기서 처리)
+                             if let uid = Auth.auth().currentUser?.uid {
+                                 FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: true)
+                                 lastTick = Date()
+                             }
+                         }
+                         .padding(.horizontal)
+                         .padding(.bottom, 20)
+                         
+                    } else {
+                        // --- Case 2: Running & Not Joined (Late Entry) ---
+                        VStack(spacing: 20) {
+                            Spacer()
+                            
+                            VStack(spacing: 12) {
+                                Image(systemName: "clock.badge.exclamationmark")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.orange)
+                                    .padding(.bottom, 10)
+                                
+                                Text("이미 스터디가 진행 중입니다! 🔥")
+                                    .font(.title2.bold())
+                                
+                                Text("시작 시간: \(formatTime(state.startTime))")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                
+                                // 현재 참여중인 멤버 보여주기 (동기부여)
+                                if !state.activeParticipants.isEmpty {
+                                    Text("\(state.activeParticipants.count)명이 공부하고 있어요.")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                        .padding(.top, 5)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                studyManager.joinCommonTimer(groupID: group.id)
+                            }) {
+                                Text("지금 바로 참여하기")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.green)
+                                    .cornerRadius(15)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 40)
+                        .padding(.horizontal)
+                        .padding(.bottom, 40)
+                    }
+                } else {
+                    // --- Case 3: Waiting Room (Before Start) ---
+                    // ✨ [Refactored] UI 균형 배치 (Top-Heavy 해소)
+                    VStack(spacing: 0) {
+                        Spacer()
+                        
+                        VStack(spacing: 20) {
+                            if currentTime < state.startTime {
+                                Text("시작 시간까지 대기 중...")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                
+                                // ✨ [New] 남은 시간 카운트다운 (크게 강조)
+                                let diff = state.startTime.timeIntervalSince(currentTime)
+                                if diff > 0 {
+                                    Text("⏰ \(formatDuration(diff)) 남음")
+                                        .font(.system(size: 32, weight: .bold)) // 폰트 키움
+                                        .foregroundColor(.blue)
+                                        .contentTransition(.numericText())
+                                        .padding(.vertical, 10)
+                                }
+                            } else {
+                                Text("곧 시작합니다...")
+                                    .font(.headline)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Member Status Board (중앙 배치)
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("참여 대기 멤버")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("\(state.activeParticipants.count) / \(state.targetMembers.count)명")
+                                    .font(.subheadline.bold())
+                            }
+                            
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 15) {
+                                ForEach(state.targetMembers, id: \.self) { uid in
+                                    MemberStatusCard(
+                                        uid: uid,
+                                        isJoined: state.activeParticipants.contains(uid),
+                                        studyManager: studyManager,
+                                        groupID: group.id
+                                    )
+                                }
+                            }
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(15)
+                        }
+                        
+                        Spacer()
+                        Spacer() // 하단 여백 확보
+                        
+                        // Action Button (하단 고정)
+                        if isUserJoined {
+                            Button(action: {
+                                studyManager.leaveCommonTimer(groupID: group.id)
+                            }) {
+                                Text("입장 취소")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(15)
+                            }
+                        } else {
+                            Button(action: {
+                                studyManager.joinCommonTimer(groupID: group.id)
+                            }) {
+                                Text("입장하기")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .cornerRadius(15)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
             } else {
-                Text("설정된 공통 타이머가 없습니다.")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                Button("돌아가기") { 
-                    studyManager.leaveCommonTimer(groupID: group.id)
-                    dismiss() 
-                }
+                Text("타이머 정보를 불러올 수 없습니다.")
+                    .onAppear { dismiss() }
             }
         }
-        .padding()
         .onReceive(timer) { _ in
             updateTimer()
         }
         .onAppear {
-            studyManager.joinCommonTimer(groupID: group.id) // 입장 처리
-            updateTimer()
+            studyManager.fetchGroupMembers(groupID: group.id, memberUIDs: group.members)
         }
-        .onDisappear {
-            // 화면이 완전히 사라질 때 퇴장 처리 (백그라운드 진입 등이 아닌 네비게이션 팝)
-            // 주의: onDisappear는 시트가 닫힐 때 호출됨.
-            studyManager.leaveCommonTimer(groupID: group.id)
-        }
-    }
-    
-    var timerStatusText: String {
-        guard let state = state else { return "" }
-        if currentTime < state.startTime {
-            return "시작까지"
-        } else if currentTime < state.endTime {
-            return "종료까지"
-        } else {
-            return "종료됨"
+        // ✨ [New] Summary Overlay
+        .overlay {
+            if showSummary, let state = state {
+                summaryView(state: state)
+            }
         }
     }
     
-    var statusColor: Color {
-        guard let state = state else { return .gray }
-        if currentTime < state.startTime {
-            return .orange
-        } else if currentTime < state.endTime {
-            return .blue
-        } else {
-            return .red
+    // Member Status Card Component
+    struct MemberStatusCard: View {
+        let uid: String
+        let isJoined: Bool
+        @ObservedObject var studyManager: StudyGroupManager
+        let groupID: String
+        
+        var nickname: String {
+             studyManager.groupMembersData[groupID]?.first(where: { $0.id == uid })?.nickname ?? "알 수 없음"
         }
+        
+        var body: some View {
+            VStack {
+                ZStack {
+                    Circle()
+                        .fill(isJoined ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
+                        .frame(width: 60, height: 60)
+                    
+                    if isJoined {
+                        Image(systemName: "checkmark")
+                            .font(.title)
+                            .foregroundColor(.green)
+                    } else {
+                        Image(systemName: "person.fill")
+                            .font(.title)
+                            .foregroundColor(.gray)
+                    }
+                }
+                
+                Text(nickname)
+                    .font(.caption)
+                    .lineLimit(1)
+            }
+        }
+    }
+    
+    // Analog Clock Component (Refined)
+    struct RunningTimerView: View {
+        var currentTime: Date
+        var startTime: Date
+        var endTime: Date
+        
+        var body: some View {
+            ZStack {
+                // Background Clock Face
+                Circle()
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 20)
+                
+                // Active Pie Slice (Remaining duration relative to 1 hour or total duration?)
+                // Analog clock usually represents 12 hours.
+                // Let's visualize the session on the clock face.
+                
+                AnalogClockView(currentTime: currentTime, startTime: startTime, endTime: endTime)
+                    .frame(maxWidth: 300, maxHeight: 300)
+            }
+            .padding()
+        }
+    }
+    
+    func formatTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "a h:mm"
+        return f.string(from: date)
+    }
+    
+    // ✨ [New] 포맷팅 헬퍼
+    func formatDuration(_ duration: TimeInterval) -> String {
+        let m = Int(duration) / 60
+        let s = Int(duration) % 60
+        if m > 60 {
+             let h = m / 60
+             let min = m % 60
+             return "\(h)시간 \(min)분 전"
+        }
+        return String(format: "%02d분 %02d초", m, s)
     }
     
     func updateTimer() {
         currentTime = Date()
         guard let state = state else { return }
         
-        if currentTime < state.startTime {
-            remainingTime = state.startTime.timeIntervalSince(currentTime)
-        } else if currentTime < state.endTime {
-            remainingTime = state.endTime.timeIntervalSince(currentTime)
-        } else {
-            remainingTime = 0
-            // 종료 로직 (1회만 실행되도록 플래그 처리)
-            if !isFinished {
-                isFinished = true
-                
-                let schedule = GroupSchedule(
-                    groupID: group.id,
-                    title: "공통 타이머 종료",
-                    content: "'\(state.goal)' 목표 달성!",
-                    date: Date(),
-                    type: .timer,
-                    authorID: "system", // 시스템 자동 생성
-                    authorName: "스터디 알림"
-                )
-                GroupScheduleManager().addSchedule(schedule: schedule) { _ in }
+        if isTimerRunning && isUserJoined { // ✨ [Updated] 실행중이고 + 내가 참여중일때만
+            // ✨ [New] 공부 시간 누적
+            if let last = lastTick {
+                let interval = currentTime.timeIntervalSince(last)
+                accumulatedTime += interval
             }
+             lastTick = currentTime
+             
+             // 종료 로직 체크
+             if currentTime >= state.endTime {
+                 // End
+                 if !isFinished {
+                     isFinished = true
+                     isFinished = true
+                     // studyManager.leaveCommonTimer(groupID: group.id) // 여기선 바로 나가지 않고 Summary 띄움
+                     // dismiss()
+                 }
+             }
+        } else {
+            lastTick = nil // 대기 중 or 미참여 시간에는 리셋
         }
     }
     
-    func timeRangeString(start: Date, end: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "a h:mm"
-        return "\(f.string(from: start)) ~ \(f.string(from: end))"
+    // ✨ [New] 공부 기록 저장 로직
+    func finishStudySession() {
+        guard let uid = Auth.auth().currentUser?.uid, let state = state else { return }
+        
+        // 1. 공부 상태 OFF
+        FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: false)
+        
+        // ✨ [New] 현재 참여자 캡쳐 (요약 화면용)
+        finalParticipants = state.activeParticipants
+        
+        // 2. 기록 저장 (최소 10초 이상 시)
+        let duration = Int(accumulatedTime)
+        if duration >= 10 {
+            let record = StudyRecord(
+                durationSeconds: duration,
+                areaName: state.subject,
+                date: Date(),
+                ownerID: uid,
+                studyPurpose: state.purpose,
+                memo: state.goal,
+                goal: nil // 공통 타이머는 개인 목표와 직접 연동되지 않음 (혹은 추후 연동)
+            )
+            
+            // 로컬 & 파이어스토어 저장 (FirestoreSyncManager가 모델 컨텍스트까지 처리해주면 좋겠지만, 분리되어 있다면...)
+            // ModelContext는 View에서 접근 가능하므로 여기서 insert
+            modelContext.insert(record)
+            FirestoreSyncManager.shared.saveRecord(record)
+            
+            // 3. 경험치 지급
+            CharacterManager.shared.addExpToEquippedCharacter()
+            
+            print("✅ 공유 타이머 기록 저장 완료: \(duration)초")
+        }
+        
+        // ✨ [New] Show Summary Screen
+        showSummary = true
+        
+        // (Optional) Leave Room immediately or wait for user to close summary?
+        // User wants to see summary FIRST. So we call leave when closing summary.
+        studyManager.leaveCommonTimer(groupID: group.id)
     }
     
-    func formatRemainingTime(_ interval: TimeInterval) -> String {
-        let totalSeconds = Int(interval)
-        let h = totalSeconds / 3600
-        let m = (totalSeconds % 3600) / 60
-        let s = totalSeconds % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
+    // ✨ [New] Summary View Component
+    func summaryView(state: StudyGroup.CommonTimerState) -> some View {
+        ZStack {
+            Color.black.opacity(0.8).edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 25) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.green)
+                
+                Text("공유 타이머 종료!")
+                    .font(.title.bold())
+                    .foregroundColor(.white)
+                
+                VStack(spacing: 15) {
+                    summaryRow(icon: "clock", title: "총 공부 시간", value: formatDuration(accumulatedTime))
+                    summaryRow(icon: "book", title: "과목", value: state.subject)
+                    summaryRow(icon: "target", title: "목적", value: StudyPurpose(rawValue: state.purpose)?.localizedName ?? state.purpose)
+                }
+                .padding()
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(15)
+                
+                // 참여 멤버 표시
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("함께한 멤버")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(finalParticipants, id: \.self) { uid in
+                                MemberStatusCard(uid: uid, isJoined: true, studyManager: studyManager, groupID: group.id)
+                                    .foregroundColor(.white) // 텍스트 컬러 조정
+                            }
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("확인")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(15)
+                }
+            }
+            .padding(30)
+        }
+    }
+    
+    func summaryRow(icon: String, title: String, value: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.gray)
+                .frame(width: 24)
+            Text(title)
+                .foregroundColor(.gray)
+            Spacer()
+            Text(value)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
     }
 }
 
-// Analog Clock Component
+// Reusing AnalogClockView from previous code, but refined
+// Analog Clock Component (Refined)
 struct AnalogClockView: View {
     var currentTime: Date
     var startTime: Date
     var endTime: Date
     
+    // Timer Logic
+    // We assume the timer is for a 12-hour period on the clock face
+    
     var body: some View {
         GeometryReader { geo in
-            let radius = geo.size.width / 2
+            let radius = min(geo.size.width, geo.size.height) / 2
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
             
             ZStack {
-                // Clock Face
+                // 1. Clock Face Background
                 Circle()
-                    .stroke(Color.primary, lineWidth: 4)
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.white, Color(UIColor.secondarySystemBackground)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    // ✨ [Updated] Glow Effect Logic
+                    .shadow(color: glowColor.opacity(0.6), radius: glowRadius, x: 0, y: 0)
+                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: glowColor)
                 
-                // Markers
-                ForEach(0..<12) { i in
+                // 2. Markers & Numbers
+                ForEach(0..<60) { i in
+                    let is5Min = i % 5 == 0
+                    let angle = Angle.degrees(Double(i) * 6 - 90) // 12시 = -90도
+                    
+                    // Marker Line
                     Rectangle()
-                        .fill(Color.primary)
-                        .frame(width: 2, height: i % 3 == 0 ? 15 : 7)
-                        .offset(y: -radius + 10)
-                        .rotationEffect(.degrees(Double(i) * 30))
+                        .fill(is5Min ? Color.primary : Color.gray.opacity(0.5))
+                        .frame(width: is5Min ? 2 : 1, height: is5Min ? 12 : 6)
+                        .offset(x: radius - (is5Min ? 15 : 10))
+                        .rotationEffect(angle)
+                        .position(center) // Center the rotation around view center
+                    
+                    // Numbers (Every 5 mins)
+                    if is5Min {
+                        let number = i == 0 ? 12 : i / 5
+                        // Calculate position for number
+                        // Angle is -90 (12), 0 (3), 90 (6)...
+                        // cos, sin work with 0 at right (3 o'clock)
+                        let numberRadius = radius - 35
+                        let radian = Double(i) * 6 * .pi / 180 - .pi / 2
+                        let x = center.x + numberRadius * cos(radian)
+                        let y = center.y + numberRadius * sin(radian)
+                        
+                        Text("\(number)")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                            .position(x: x, y: y)
+                    }
                 }
                 
-                // Planned Session Sector (Pie Slice)
-                // 12시간 기준 아날로그 시계에서 startTime ~ endTime 구간 표시
-                // *주의: 12시간 넘어가면 복잡해짐. 일단 단순화하여 같은 반나절(AM/PM) 내라고 가정
-                 ClockSector(start: startTime, end: endTime)
-                     .fill(Color.blue.opacity(0.2))
-                     .rotationEffect(.degrees(-90)) // 12시가 0도
+                // 3. Planned Session Sector (Pie Slice)
+                ClockSector(start: startTime, end: endTime)
+                    .fill(Color.blue.opacity(0.2))
                 
-                // Current Time Hands
+                // 4. Current Time Hands
+                // Hands Container (z-index above face)
+                
                 // Hour Hand
-                ClockHand(length: radius * 0.5, thickness: 4, color: .primary)
-                    .rotationEffect(angle(for: currentTime, component: .hour))
+                ClockHand(length: radius * 0.55, thickness: 5, color: .primary, rounded: true)
+                     .rotationEffect(angle(for: currentTime, component: .hour))
+                     .shadow(radius: 2)
                 
                 // Minute Hand
-                ClockHand(length: radius * 0.7, thickness: 3, color: .primary)
-                    .rotationEffect(angle(for: currentTime, component: .minute))
+                ClockHand(length: radius * 0.8, thickness: 3, color: .primary, rounded: true)
+                     .rotationEffect(angle(for: currentTime, component: .minute))
+                     .shadow(radius: 2)
                 
-                // Second Hand
-                ClockHand(length: radius * 0.8, thickness: 1, color: .red)
-                    .rotationEffect(angle(for: currentTime, component: .second))
+                 // Second Hand
+                 ZStack {
+                     ClockHand(length: radius * 0.9, thickness: 1.5, color: .red, rounded: true)
+                     Circle()
+                         .fill(Color.red)
+                         .frame(width: 8, height: 8)
+                 }
+                 .rotationEffect(angle(for: currentTime, component: .second))
                 
-                // Center
+                // Center Cap
                 Circle()
-                    .fill(Color.primary)
-                    .frame(width: 10, height: 10)
+                    .fill(Color.white)
+                    .frame(width: 6, height: 6)
+                    .overlay(Circle().stroke(Color.primary, lineWidth: 2))
             }
         }
     }
     
+    // ✨ [New] Computed Glow Properites
+    var remainingSeconds: TimeInterval {
+        endTime.timeIntervalSince(currentTime)
+    }
+    
+    var glowColor: Color {
+        let min = remainingSeconds / 60
+        if min <= 10 { return .red }
+        if min <= 20 { return .orange }
+        if min <= 30 { return .yellow }
+        return .clear // 평소엔 없음 (또는 기본 그림자)
+    }
+    
+    var glowRadius: CGFloat {
+        let min = remainingSeconds / 60
+        if min <= 10 { return 30 } // 강렬하게
+        if min <= 30 { return 20 } // 은은하게
+        return 0
+    }
+    
+    // Hand starts pointing UP (12 o'clock) -> 0 degrees rotation means 12 o'clock
+    // However, standard Angle(degrees: 0) typically points RIGHT in Shapes.
+    // But rotationEffect rotates the VIEW. If view is a vertical bar, 0 deg = vertical.
     struct ClockHand: View {
         let length: CGFloat
         let thickness: CGFloat
         let color: Color
+        let rounded: Bool
         
         var body: some View {
-            RoundedRectangle(cornerRadius: thickness / 2)
-                .fill(color)
-                .frame(width: thickness, height: length)
-                .offset(y: -length / 2)
+            // Anchor point needs to be bottom center of the hand usually?
+            // Or simpler: Make a full length rectangle but offset it so it rotates around center
+            VStack(spacing: 0) {
+                 RoundedRectangle(cornerRadius: rounded ? thickness / 2 : 0)
+                     .fill(color)
+                     .frame(width: thickness, height: length)
+                 Spacer(minLength: length) // Counter-balance to make center of rotation correct
+            }
+            .frame(height: length * 2) // Total height is 2 * length, rotating around center
+            // Why length*2?
+            // Center of VStack is (w/2, length).
+            // Top half is the hand (length), Bottom half is Spacer (length).
+            // So content is hand pointing UP from center.
         }
     }
     
@@ -243,12 +665,11 @@ struct AnalogClockView: View {
         func path(in rect: CGRect) -> Path {
             var p = Path()
             let center = CGPoint(x: rect.midX, y: rect.midY)
-            let radius = min(rect.width, rect.height) / 2
+            let radius = min(rect.width, rect.height) / 2 - 20 // Slightly smaller than face
             
-            // Convert time to angles (0~360)
-            // 12 hours = 360 degrees
-            let startAngle = angle(for: start)
-            let endAngle = angle(for: end)
+            // Angles: 0 is 3 o'clock (RIGHT) in addArc
+            let startAngle = angleForArc(for: start)
+            let endAngle = angleForArc(for: end)
             
             p.move(to: center)
             p.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
@@ -256,12 +677,14 @@ struct AnalogClockView: View {
             return p
         }
         
-        func angle(for date: Date) -> Angle {
+        func angleForArc(for date: Date) -> Angle {
             let cal = Calendar.current
             let h = Double(cal.component(.hour, from: date) % 12)
             let m = Double(cal.component(.minute, from: date))
-            // hour + minute fraction
-            let degrees = (h + m / 60.0) * 30.0
+            // 12 o'clock = -90 degrees
+            // 3 o'clock = 0 degrees
+            // Formula: (h + m/60) * 30 - 90
+            let degrees = (h + m / 60.0) * 30.0 - 90.0
             return Angle(degrees: degrees)
         }
     }
@@ -272,16 +695,19 @@ struct AnalogClockView: View {
         case .hour:
             let h = Double(cal.component(.hour, from: date) % 12)
             let m = Double(cal.component(.minute, from: date))
+            // ClockHand points UP (12) by default.
+            // 12h = 0 deg, 3h = 90 deg.
             return .degrees((h + m / 60.0) * 30.0)
         case .minute:
             let m = Double(cal.component(.minute, from: date))
             let s = Double(cal.component(.second, from: date))
-            return .degrees((m + s / 60.0) * 6.0)
+             return .degrees((m + s / 60.0) * 6.0)
         case .second:
             let s = Double(cal.component(.second, from: date))
-            return .degrees(s * 6.0)
+             return .degrees(s * 6.0)
         default:
             return .zero
         }
     }
 }
+
