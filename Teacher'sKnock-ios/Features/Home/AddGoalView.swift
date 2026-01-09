@@ -30,69 +30,67 @@ struct AddGoalView: View {
                         .accentColor(GoalColorHelper.color(for: viewModel.selectedColorName))
                 }
                 
-                // ✨ [수정] 첫 목표 생성 시 캐릭터 관련 UI 표시
-                // 목표가 없거나(첫 목표), 이미 캐릭터는 있지만 목표가 없는 경우(선택 후 이탈했다 복귀)
-                if goals.isEmpty || !characterManager.characters.isEmpty {
-                    Section {
-                        // 캐릭터가 없는 경우에만 선택 버튼 활성화
-                        if characterManager.characters.isEmpty {
-                            Button(action: { showCharacterSelection = true }) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("운명의 파트너 선택하기")
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
-                                        Text("당신과 함께할 첫 번째 친구를 만나보세요")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        } else {
-                            // 이미 캐릭터가 존재하는 경우 (선택 완료됨) -> 잠금 표시 (선택된 캐릭터 보여주기)
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("운명의 파트너 선택 완료")
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                    Text("함께할 친구가 정해졌습니다")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                                Spacer()
-                                // 선택된 캐릭터 미리보기
-                                if let startChar = characterManager.characters.first, // 스타팅 캐릭터
-                                   let imageName = CharacterLevel.lv1.imageName(for: startChar.type) {
-                                    Image(imageName)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(height: 50)
-                                } else {
-                                    let emoji = characterManager.characters.first?.emoji ?? "✨"
-                                    Text(emoji)
-                                        .font(.system(size: 30))
-                                }
-                            }
-                            .padding(.vertical, 4)
+        // ✨ [수정] 캐릭터 관련 UI 표시 로직 개선
+        // 캐릭터가 없거나, 이미 캐릭터가 있는 경우 모두 표시 (조건문 제거)
+        Section {
+            // 캐릭터가 없는 경우에만 선택 버튼 활성화
+            if characterManager.characters.isEmpty {
+                Button(action: { showCharacterSelection = true }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("운명의 파트너 선택하기")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("당신과 함께할 첫 번째 친구를 만나보세요")
+                                .font(.caption)
+                                .foregroundColor(.gray)
                         }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    
-                    // 선택 완료 후 이름 입력 확인 (선택 뷰에서 이름을 가져오므로 여기선 표시만)
-                    if !viewModel.characterName.isEmpty {
-                        Section(header: Text("선택된 파트너")) {
-                            HStack {
-                                Text("이름")
-                                Spacer()
-                                Text(viewModel.characterName)
-                                    .foregroundColor(.gray)
-                            }
-                        }
+                    .padding(.vertical, 4)
+                }
+            } else {
+                // 이미 캐릭터가 존재하는 경우 (선택 완료됨) -> 잠금 표시 (선택된 캐릭터 보여주기)
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("운명의 파트너 선택 완료")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text("함께할 친구가 정해졌습니다")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                    // 선택된 캐릭터 미리보기
+                    if let startChar = characterManager.characters.first, // 스타팅 캐릭터
+                       let imageName = CharacterLevel.lv1.imageName(for: startChar.type) {
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 50)
+                    } else {
+                        let emoji = characterManager.characters.first?.emoji ?? "✨"
+                        Text(emoji)
+                            .font(.system(size: 30))
                     }
                 }
+                .padding(.vertical, 4)
+            }
+        }
+        
+        // 선택 완료 후 이름 입력 확인 (선택 뷰에서 이름을 가져오므로 여기선 표시만)
+        if !viewModel.characterName.isEmpty {
+            Section(header: Text("선택된 파트너")) {
+                HStack {
+                    Text("이름")
+                    Spacer()
+                    Text(viewModel.characterName)
+                        .foregroundColor(.gray)
+                }
+            }
+        }
                 
                 if dDay >= 200 {
                     // 메세지만 표시하고 캐릭터 설정 UI 제거 (캐릭터는 이제 전역 관리)
@@ -156,8 +154,11 @@ struct AddGoalView: View {
             )
         }
         
-        // goals.count를 넘겨주어 첫 목표 자동 대표 설정
-        viewModel.addGoal(ownerID: user.uid, context: modelContext, goalsCount: goals.count)
+        // 삭제되지 않은 활성 목표 개수 계산
+        let activeGoalsCount = goals.filter { !$0.isDeleted }.count
+        
+        // goals.count 대신 activeGoalsCount를 넘겨주어 첫 목표 자동 대표 설정
+        viewModel.addGoal(ownerID: user.uid, context: modelContext, goalsCount: activeGoalsCount)
         dismiss()
     }
 }
