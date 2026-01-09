@@ -224,7 +224,8 @@ class StudyGroupManager: ObservableObject {
         let lastReadNotice = UserDefaults.standard.object(forKey: noticeKey) as? Date ?? Date.distantPast
         
         // 최신 공지가 마지막 확인 시간보다 뒤에 있으면 true
-        if let latestNotice = group.notices.last, latestNotice.date > lastReadNotice.addingTimeInterval(1) {
+        // notices는 내림차순 정렬되어 있으므로 first가 최신
+        if let latestNotice = group.notices.first, latestNotice.date > lastReadNotice.addingTimeInterval(1) {
             return true
         }
         

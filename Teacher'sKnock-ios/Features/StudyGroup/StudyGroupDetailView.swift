@@ -79,7 +79,6 @@ struct StudyGroupDetailView: View {
             
             // ✨ [New] 시스템 알림 정리 및 읽음 처리
             studyManager.cleanupSystemNotice(groupID: liveGroup.id, notice: liveGroup.notice)
-            studyManager.markAsRead(groupID: liveGroup.id)
             
             // ✨ [New] 플래너에서 넘어온 경우 자동 처리
             if navManager.targetGroupID == liveGroup.id {
@@ -379,7 +378,7 @@ extension StudyGroupDetailView {
                 Text("방장에 의해 스터디 그룹이 삭제되었습니다.")
             }
             .sheet(isPresented: $showNoticeSheet) {
-                NoticeSheet(group: liveGroup, isLeader: isLeader, studyManager: studyManager)
+                NoticeSheet(group: $liveGroup, isLeader: isLeader, studyManager: studyManager)
                     .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showCheerSheet) {

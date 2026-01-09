@@ -24,7 +24,7 @@ class AddScheduleViewModel: ObservableObject {
         RoutineItem(label: "점심", title: "점심 식사", category: "식사", minutes: 60, icon: "fork.knife", isStudy: false),
         RoutineItem(label: "저녁", title: "저녁 식사", category: "식사", minutes: 60, icon: "moon.stars.fill", isStudy: false),
         RoutineItem(label: "헬스", title: "체력 단련", category: "운동", minutes: 60, icon: "figure.run", isStudy: false),
-        RoutineItem(label: "낮잠", title: "파워 낮잠", category: "휴식", minutes: 30, icon: "bed.double.fill", isStudy: false),
+        RoutineItem(label: "낮잠", title: "충전 낮잠", category: "휴식", minutes: 30, icon: "bed.double.fill", isStudy: false),
         RoutineItem(label: "단어", title: "영단어 암기", category: "영어", minutes: 30, icon: "character.book.closed.fill", isStudy: true)
     ]
     
@@ -337,6 +337,23 @@ class AddScheduleViewModel: ObservableObject {
                         
                         shouldWaitForAsync = true // 비동기 대기
                         
+                        // 1. 공지사항 추가 (NoticeItem)
+                        let noticeContent = "공통 타이머 일정이 등록되었습니다: \(newItem.title)"
+                        let newNoticeItem = StudyGroup.NoticeItem(
+                            id: UUID().uuidString,
+                            type: .timer, // ✨ 타이머 타입
+                            content: noticeContent,
+                            date: Date()
+                        )
+                        
+                        let noticeDict: [String: Any] = [
+                            "id": newNoticeItem.id,
+                            "type": newNoticeItem.type.rawValue,
+                            "content": newNoticeItem.content,
+                            "date": Timestamp(date: newNoticeItem.date)
+                        ]
+                        
+                        // 2. 그룹 스케줄 추가 (GroupSchedule)
                         let nickname = UserDefaults.standard.string(forKey: "userNickname") ?? "알 수 없음"
                         let groupSchedule = GroupSchedule(
                             id: newItem.id.uuidString, // ✨ ID 동기화 (새 ID 사용)
@@ -351,13 +368,33 @@ class AddScheduleViewModel: ObservableObject {
                             purpose: newItem.studyPurpose
                         )
                         
-                        // GroupScheduleManager를 통해 저장
-                        GroupScheduleManager().addSchedule(schedule: groupSchedule) { success in
-                            if success { print("✅ [방장] 그룹 스케줄 동기화 완료") }
+                        // Firestore Batch 작업 (공지사항 + 스케줄 + Legacy Notice)
+                        let batch = Firestore.firestore().batch()
+                        let groupRef = Firestore.firestore().collection("study_groups").document(groupID)
+                        let scheduleRef = Firestore.firestore().collection("study_groups").document(groupID).collection("schedules").document(groupSchedule.id)
+                        
+                        // 공지사항 업데이트
+                        batch.updateData([
+                            "notices": FieldValue.arrayUnion([noticeDict]),
+                            "notice": noticeContent, // Legacy support
+                            "noticeUpdatedAt": FieldValue.serverTimestamp(),
+                            "updatedAt": FieldValue.serverTimestamp()
+                        ], forDocument: groupRef)
+                        
+                        // 스케줄 추가
+                        batch.setData(groupSchedule.toDictionary(), forDocument: scheduleRef)
+                        
+                        batch.commit { error in
+                            if let error = error {
+                                print("❌ 공통 타이머 등록 실패(공지+스케줄): \(error)")
+                            } else {
+                                print("✅ [방장] 공통 타이머 등록 완료 (공지+스케줄)")
+                            }
                             DispatchQueue.main.async { dismissAction() }
                         }
                     } else {
                         print("⚠️ [멤버] 공통 타이머 일정은 개인용으로만 저장됩니다. (그룹 스케줄 미생성)")
+                        // 비동기 작업 아님
                     }
                 }
             } else {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct NoticeSheet: View {
-    let group: StudyGroup
+    @Binding var group: StudyGroup
     let isLeader: Bool
     @ObservedObject var studyManager: StudyGroupManager
     @Environment(\.dismiss) var dismiss
@@ -101,17 +101,24 @@ struct NoticeSheet: View {
         }
     }
     
-    // ✨ [New] 표시할 공지사항 (방장 공지는 고정, 나머지는 안 읽은 것만)
+    // ✨ [New] 표시할 공지사항 (방장 공지는 고정, 나머지는 안 읽은 것 + 최근 24시간 내 알림)
     var displayNotices: [StudyGroup.NoticeItem] {
         let key = "lastReadNotice_\(group.id)"
         let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
         
-        return group.notices.filter { notice in
+        let filtered = group.notices.filter { notice in
             // 1. 방장 공지(.announcement)는 항상 표시
             if notice.type == .announcement { return true }
             
-            // 2. 나머지는 안 읽은 것만
+            // 2. 안 읽은 공지는 표시 (읽으면 즉시 사라짐)
             return notice.date > lastRead.addingTimeInterval(1)
+        }
+        
+        // ✨ 정렬: 공지사항(announcement)을 최상단에 고정, 나머지는 최신순
+        return filtered.sorted { (n1, n2) -> Bool in
+            if n1.type == .announcement && n2.type != .announcement { return true }
+            if n1.type != .announcement && n2.type == .announcement { return false }
+            return n1.date > n2.date
         }
     }
     
