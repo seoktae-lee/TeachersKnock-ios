@@ -34,30 +34,51 @@ struct GlobalScheduleView: View {
                             .listRowBackground(Color.clear)
                     } else {
                         ForEach(dailySchedules) { schedule in
-                            HStack {
-                                // 아이콘 표시
-                                let iconData = getIconData(for: schedule.type)
+                            VStack(alignment: .leading, spacing: 6) {
+                                // 1. Group Badge
+                                let groupName = groupNameMap[schedule.groupID] ?? "알 수 없는 그룹"
+                                let groupColor = color(for: schedule.groupID)
                                 
-                                Image(systemName: iconData.icon)
-                                    .foregroundColor(iconData.color)
-                                    .frame(width: 32, height: 32)
-                                    .background(iconData.color.opacity(0.1))
-                                    .cornerRadius(8) // ✨ [Modified] 원형 -> 둥근 사각형 (통일감)
+                                Text(groupName)
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(groupColor.opacity(0.15))
+                                    .foregroundColor(groupColor)
+                                    .cornerRadius(6)
                                 
-                                VStack(alignment: .leading) {
-                                    // 그룹명 조회
-                                    let groupName = groupNameMap[schedule.groupID] ?? "알 수 없는 그룹"
+                                HStack(spacing: 12) {
+                                    // Icon
+                                    let iconData = getIconData(for: schedule.type)
+                                    Image(systemName: iconData.icon)
+                                        .font(.title3)
+                                        .foregroundColor(iconData.color)
+                                        .frame(width: 40, height: 40)
+                                        .background(iconData.color.opacity(0.1))
+                                        .cornerRadius(10)
                                     
-                                    if schedule.type == .timer, let subject = schedule.subject {
-                                        Text("\(groupName) / \(subject) / \(schedule.title)")
-                                            .font(.subheadline.bold())
-                                    } else {
-                                        Text("\(groupName) / \(schedule.title)")
-                                            .font(.subheadline.bold())
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        // 2. Title & Subject
+                                        HStack(alignment: .center, spacing: 6) {
+                                            Text(schedule.title)
+                                                .font(.body.bold())
+                                                .foregroundColor(.primary)
+                                            
+                                            if let subject = schedule.subject, !subject.isEmpty {
+                                                Text("| \(subject)")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        
+                                        // 3. Time
+                                        Text(formatTime(schedule.date))
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
                                     }
                                 }
-                                Spacer()
                             }
+                            .padding(.vertical, 4)
                         }
                     }
                 } header: {
@@ -83,5 +104,19 @@ struct GlobalScheduleView: View {
         case .gathering: return ("person.3.fill", .blue)
         case .etc: return ("calendar", .gray)
         }
+    }
+    
+    // ✨ [New] Helper for Color Generation
+    func color(for id: String) -> Color {
+        let colors: [Color] = [.red, .orange, .blue, .purple, .pink, .green, .mint, .teal, .indigo, .cyan]
+        let hash = id.utf8.reduce(0) { $0 + Int($1) }
+        return colors[hash % colors.count]
+    }
+    
+    // ✨ [New] Helper for Time Formatting
+    func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 }

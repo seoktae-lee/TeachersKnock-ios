@@ -46,16 +46,7 @@ struct StudyGroupListView: View {
             .navigationDestination(for: StudyGroup.self) { group in
                 StudyGroupDetailView(group: group, studyManager: studyManager)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: GlobalScheduleView(
-                        myGroupIDs: studyManager.myGroups.map { $0.id },
-                        groupNameMap: Dictionary(uniqueKeysWithValues: studyManager.myGroups.map { ($0.id, $0.name) })
-                    )) {
-                        Image(systemName: "calendar")
-                    }
-                }
-            }
+// ToolbarItem removed
         }
         // ✨ [New] 외부(일정 탭 등)에서 요청된 그룹으로 이동
         .onChange(of: navManager.targetGroupID) { groupID in
@@ -143,14 +134,31 @@ struct StudyGroupListView: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    Button(action: { showingCreateSheet = true }) {
-                        Image(systemName: "plus")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                            .frame(width: 56, height: 56)
-                            .background(Color(red: 0.35, green: 0.65, blue: 0.95))
-                            .clipShape(Circle())
-                            .shadow(radius: 4, y: 4)
+                    VStack(spacing: 16) {
+                        // ✨ [New] 전체 스터디 일정 FAB
+                        NavigationLink(destination: GlobalScheduleView(
+                            myGroupIDs: studyManager.myGroups.map { $0.id },
+                            groupNameMap: Dictionary(uniqueKeysWithValues: studyManager.myGroups.map { ($0.id, $0.name) })
+                        )) {
+                            Image(systemName: "calendar")
+                                .font(.title2.bold())
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Color.orange) // 구분되게 주황색 사용 혹은 메인 컬러 사용
+                                .clipShape(Circle())
+                                .shadow(radius: 4, y: 4)
+                        }
+                        
+                        // 기존 스터디 만들기 FAB
+                        Button(action: { showingCreateSheet = true }) {
+                            Image(systemName: "plus")
+                                .font(.title2.bold())
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Color(red: 0.35, green: 0.65, blue: 0.95))
+                                .clipShape(Circle())
+                                .shadow(radius: 4, y: 4)
+                        }
                     }
                     .padding()
                 }
