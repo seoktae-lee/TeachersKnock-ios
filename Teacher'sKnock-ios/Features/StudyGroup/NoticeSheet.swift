@@ -8,6 +8,7 @@ struct NoticeSheet: View {
     
     @State private var noticeText: String = ""
     @State private var isAdding: Bool = false
+    @State private var isEditingFixed: Bool = false // ✨ [New] 고정 공지 수정 모드
     
     var body: some View {
         NavigationStack {
@@ -64,8 +65,26 @@ struct NoticeSheet: View {
                 
                 if isLeader {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: { isAdding = true }) {
-                            Image(systemName: "plus")
+                        // ✨ [Modified] 고정 공지가 있으면 수정, 없으면 추가
+                        if hasFixedNotice {
+                             Button(action: {
+                                 // 수정 모드 진입
+                                 if let fixed = group.notices.first(where: { $0.type == .announcement }) {
+                                     noticeText = fixed.content
+                                     isEditingFixed = true
+                                     isAdding = true
+                                 }
+                             }) {
+                                 Text("수정") // 텍스트 버튼 or Image(systemName: "pencil")
+                             }
+                        } else {
+                            Button(action: {
+                                noticeText = ""
+                                isEditingFixed = false
+                                isAdding = true
+                            }) {
+                                Image(systemName: "plus")
+                            }
                         }
                     }
                 }
@@ -75,7 +94,7 @@ struct NoticeSheet: View {
                     VStack {
                         TextEditor(text: $noticeText)
                             .padding()
-                            .navigationTitle("새 공지사항")
+                            .navigationTitle(isEditingFixed ? "고정 공지사항 수정" : "새 고정 공지사항")
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItem(placement: .cancellationAction) {
@@ -85,12 +104,27 @@ struct NoticeSheet: View {
                                     }
                                 }
                                 ToolbarItem(placement: .confirmationAction) {
-                                    Button("등록") {
-                                        addNotice()
+                                    Button(isEditingFixed ? "저장" : "등록") {
+                                        addOrUpdateNotice()
                                     }
                                     .disabled(noticeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                 }
                             }
+                        
+                        // ✨ [New] 수정 모드일 때만 삭제 버튼 표시
+                        if isEditingFixed {
+                            Button(action: {
+                                deleteFixedNotice()
+                            }) {
+                                Text("고정 공지사항 삭제")
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.red)
+                                    .cornerRadius(10)
+                            }
+                            .padding()
+                        }
                     }
                 }
                 .presentationDetents([.medium])
@@ -101,7 +135,12 @@ struct NoticeSheet: View {
         }
     }
     
-    // ✨ [New] 표시할 공지사항 (방장 공지는 고정, 나머지는 안 읽은 것 + 최근 24시간 내 알림)
+    // ✨ [New] 고정 공지 존재 여부 확인
+    var hasFixedNotice: Bool {
+        return group.notices.contains { $0.type == .announcement }
+    }
+    
+    // ✨ [New] 표시할 공지사항
     var displayNotices: [StudyGroup.NoticeItem] {
         let key = "lastReadNotice_\(group.id)"
         let lastRead = UserDefaults.standard.object(forKey: key) as? Date ?? Date.distantPast
@@ -122,8 +161,19 @@ struct NoticeSheet: View {
         }
     }
     
-    func addNotice() {
-        studyManager.addNotice(groupID: group.id, content: noticeText)
+    func addOrUpdateNotice() {
+        if isEditingFixed {
+            studyManager.updateFixedNotice(groupID: group.id, content: noticeText)
+        } else {
+            studyManager.updateFixedNotice(groupID: group.id, content: noticeText) // 같은 함수 사용 (내부 로직 동일)
+        }
+        isAdding = false
+        noticeText = ""
+    }
+    
+    // ✨ [New] 삭제 함수
+    func deleteFixedNotice() {
+        studyManager.deleteFixedNotice(groupID: group.id)
         isAdding = false
         noticeText = ""
     }

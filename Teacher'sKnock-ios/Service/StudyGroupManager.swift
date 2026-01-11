@@ -117,11 +117,50 @@ class StudyGroupManager: ObservableObject {
     }
     
     // ✨ [New] 방장 위임
-    func delegateLeader(groupID: String, newLeaderUID: String, completion: @escaping (Bool) -> Void) {
-        db.collection("study_groups").document(groupID).updateData([
+    func delegateLeader(groupID: String, groupName: String, oldLeaderNickname: String, newLeaderUID: String, newLeaderNickname: String, completion: @escaping (Bool) -> Void) {
+        let batch = db.batch()
+        let groupRef = db.collection("study_groups").document(groupID)
+        
+        // 1. 리더 변경
+        batch.updateData([
             "leaderID": newLeaderUID,
             "updatedAt": FieldValue.serverTimestamp()
-        ]) { error in
+        ], forDocument: groupRef)
+        
+        // 2. 그룹 공지사항 추가 (시스템 알림)
+        let noticeContent = "[알림] 방장이 '\(oldLeaderNickname)'님에서 '\(newLeaderNickname)'님으로 변경되었습니다."
+        let newNoticeItem = StudyGroup.NoticeItem(
+            id: UUID().uuidString,
+            type: .general, // ✨ [Modified] announcement -> general (고정 안 함)
+            content: noticeContent,
+            date: Date()
+        )
+        
+        let noticeDict: [String: Any] = [
+            "id": newNoticeItem.id,
+            "type": newNoticeItem.type.rawValue,
+            "content": newNoticeItem.content,
+            "date": Timestamp(date: newNoticeItem.date)
+        ]
+        
+        batch.updateData([
+            "notices": FieldValue.arrayUnion([noticeDict]),
+            // "notice": noticeContent, // ✨ [removed] 고정 공지 업데이트 제거
+            "noticeUpdatedAt": FieldValue.serverTimestamp()
+        ], forDocument: groupRef)
+        
+        // 3. 새 방장에게 알림 전송 (Alert)
+        let alertRef = db.collection("users").document(newLeaderUID).collection("alerts").document()
+        let alertData: [String: Any] = [
+            "type": "delegate",
+            "groupName": groupName,
+            "fromNickname": oldLeaderNickname, // 위임한 사람
+            "timestamp": FieldValue.serverTimestamp()
+        ]
+        batch.setData(alertData, forDocument: alertRef)
+        
+        // 커밋
+        batch.commit { error in
             if let error = error {
                 print("Error delegating leader: \(error)")
                 completion(false)
@@ -205,7 +244,127 @@ class StudyGroupManager: ObservableObject {
         }
     }
     
-    // ✨ [Deprecated] 기존 단순 문자열 공지 업데이트
+    // ✨ [New] 고정 공지사항 업데이트 (방장 전용)
+    func updateFixedNotice(groupID: String, content: String) {
+        let batch = db.batch()
+        let groupRef = db.collection("study_groups").document(groupID)
+        
+        // 1. 기존 .announcement 제거 + .general 히스토리 추가 로직은
+        // Firestore 배열 조작 한계로 인해, 여기서는 removeAll을 못하므로
+        // 전체 notices를 읽어서 메모리에서 조작 후 덮어쓰거나 (비효율),
+        // 아니면 그냥 새로운 공지를 추가하고 클라이언트에서 필터링하는 방식.
+        // 하지만 고정 공지는 1개여야 하므로, 이전 고정 공지들을 .general로 바꾸거나 삭제해야 함.
+        // 배열 내 특정 요소 수정은 불가능하므로, 전체 배열을 갈아끼우는게 확실함.
+        // 하지만 동시성 이슈가 있으므로 트랜잭션을 쓰는게 좋으나, 일단은 fetch 후 update로 구현.
+        
+        groupRef.getDocument { snapshot, error in
+            guard let data = snapshot?.data(),
+                  var noticesData = data["notices"] as? [[String: Any]] else {
+                // notices가 없으면 새로 생성
+                self._createNewFixedNotice(groupID: groupID, content: content, existingNotices: [])
+                return
+            }
+            
+            // 1. 기존 .announcement 타입 찾아서 제거
+            // (실제 데이터 보존을 위해 타입을 .general로 바꾸는게 나을 수도 있지만,
+            // 요구사항은 '수정'이므로 기존 내용은 사라져도 됨. 단 히스토리에 남겨야 함.)
+            
+            // 기존 고정 공지가 있었다면 히스토리에 "공지 변경" 로그 남기기
+            let hasExisting = noticesData.contains { ($0["type"] as? String) == "announcement" }
+            
+            // notices 배열에서 announcement 타입 모두 제거
+            var newNotices = noticesData.filter { ($0["type"] as? String) != "announcement" }
+            
+            // 2. 새 고정 공지 추가 (.announcement)
+            let fixedNoticeId = UUID().uuidString
+            let fixedNotice: [String: Any] = [
+                "id": fixedNoticeId,
+                "type": "announcement", // 고정
+                "content": content,
+                "date": Timestamp(date: Date())
+            ]
+            newNotices.append(fixedNotice)
+            
+            // 3. 히스토리 로그 추가 (.general)
+            let logContent = hasExisting ? "[공지 변경] \(content)" : "[공지] \(content)"
+            let logNotice: [String: Any] = [
+                "id": UUID().uuidString,
+                "type": "general",
+                "content": logContent,
+                "date": Timestamp(date: Date())
+            ]
+            newNotices.append(logNotice)
+            
+            // 4. DB 업데이트
+            groupRef.updateData([
+                "notices": newNotices,
+                "notice": content, // Legacy field sync
+                "noticeUpdatedAt": FieldValue.serverTimestamp(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+        }
+    }
+    
+    // 내부 헬퍼 (초기 생성용)
+    private func _createNewFixedNotice(groupID: String, content: String, existingNotices: [[String: Any]]) {
+        var newNotices = existingNotices
+        
+        let fixedNotice: [String: Any] = [
+            "id": UUID().uuidString,
+            "type": "announcement",
+            "content": content,
+            "date": Timestamp(date: Date())
+        ]
+        
+        let logNotice: [String: Any] = [
+            "id": UUID().uuidString,
+            "type": "general",
+            "content": "[공지] \(content)",
+            "date": Timestamp(date: Date())
+        ]
+        
+        newNotices.append(fixedNotice)
+        newNotices.append(logNotice)
+        
+        db.collection("study_groups").document(groupID).updateData([
+            "notices": newNotices,
+            "notice": content,
+            "noticeUpdatedAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp()
+        ])
+    }
+    
+    // ✨ [New] 고정 공지사항 삭제 (방장 전용)
+    func deleteFixedNotice(groupID: String) {
+        let groupRef = db.collection("study_groups").document(groupID)
+        
+        groupRef.getDocument { snapshot, error in
+            guard let data = snapshot?.data(),
+                  let noticesData = data["notices"] as? [[String: Any]] else { return }
+            
+            // 1. .announcement 제거
+            var newNotices = noticesData.filter { ($0["type"] as? String) != "announcement" }
+            
+            // 2. 삭제 로그 추가
+            let logNotice: [String: Any] = [
+                "id": UUID().uuidString,
+                "type": "general",
+                "content": "[알림] 고정 공지사항이 삭제되었습니다.",
+                "date": Timestamp(date: Date())
+            ]
+            newNotices.append(logNotice)
+            
+            // 3. DB 업데이트 (legacy notice 필드 비우기)
+            groupRef.updateData([
+                "notices": newNotices,
+                "notice": "", // Clear legacy
+                "noticeUpdatedAt": FieldValue.serverTimestamp(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+        }
+    }
+    
+    // ✨ [Deprecated] 기존 단순 문자열 공지 업데이트 -> addNotice로 대체되었으나 호환성 유지
     func updateNotice(groupID: String, notice: String) {
         addNotice(groupID: groupID, content: notice)
     }

@@ -36,6 +36,10 @@ class AlertManager: ObservableObject {
                     if type == "knock" {
                         // ✨ [Updated] "(타 맴버)님이 (나)님을 노크했어요!!"
                         self.triggerToast(message: "\(fromNickname)님이 \(toNickname)님을 노크했어요!!", icon: "hand.wave.fill")
+                    } else if type == "delegate" {
+                        // ✨ [New] 방장 위임 알림
+                        let groupName = data["groupName"] as? String ?? "스터디"
+                        self.triggerToast(message: "'\(groupName)' 스터디의 방장이 되었습니다!", icon: "star.circle.fill")
                     }
                     
                     // 처리 후 삭제

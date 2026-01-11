@@ -270,6 +270,7 @@ extension StudyGroupDetailView {
                             isLeader: user.id == liveGroup.leaderID,
                             isViewerLeader: isLeader,
                             groupID: liveGroup.id,
+                            groupName: liveGroup.name, // ✨ [New] 그룹 이름 전달
                             studyManager: studyManager
                         )
                         Divider()
@@ -594,6 +595,7 @@ struct MemberRow: View {
     let isLeader: Bool
     let isViewerLeader: Bool
     let groupID: String
+    let groupName: String // ✨ [New]
     @ObservedObject var studyManager: StudyGroupManager
     
     @State private var showDelegateAlert = false
@@ -627,8 +629,8 @@ struct MemberRow: View {
                         .font(.body.bold())
                     if isLeader {
                         Image(systemName: "star.circle.fill")
-                            .foregroundColor(.orange)
-                            .font(.caption)
+                        .foregroundColor(.orange)
+                        .font(.caption)
                     }
                 }
                 
@@ -665,7 +667,7 @@ struct MemberRow: View {
             Button {
                 tryKnock()
             } label: {
-                Label("노크하기", systemImage: "hand.wave.fill") // ✨ [Updated] 문구 변경
+                Label("노크하기", systemImage: "hand.wave.fill")
             }
             
             if isViewerLeader && !isLeader {
@@ -716,13 +718,17 @@ struct MemberRow: View {
             return
         }
         
-        let myNickname = UserDefaults.standard.string(forKey: "userNickname") ?? Auth.auth().currentUser?.displayName ?? "스터디원"
+        var myNickname = UserDefaults.standard.string(forKey: "userNickname") ?? Auth.auth().currentUser?.displayName ?? "스터디원"
         
-        // ✨ [Updated] toNickname 추가
+        if let members = studyManager.groupMembersData[groupID],
+           let me = members.first(where: { $0.id == Auth.auth().currentUser?.uid }) {
+            myNickname = me.nickname
+        }
+        
         studyManager.sendKnock(fromNickname: myNickname, to: user.id, toNickname: user.nickname) { success in
             if success {
                 UserDefaults.standard.set(now, forKey: key)
-                knockMessage = "\(user.nickname)님을 노크했습니다!!" // ✨ [Updated] 보낸 사람 입장 텍스트도 통일감 있게
+                knockMessage = "\(user.nickname)님을 노크했습니다!!"
                 showKnockAlert = true
             } else {
                 knockMessage = "노크 전송에 실패했습니다."
@@ -761,7 +767,19 @@ struct MemberRow: View {
     }
     
     func delegateLeader() {
-        studyManager.delegateLeader(groupID: groupID, newLeaderUID: user.id) { success in
+        var myNickname = UserDefaults.standard.string(forKey: "userNickname") ?? "전 방장"
+        if let members = studyManager.groupMembersData[groupID],
+           let me = members.first(where: { $0.id == Auth.auth().currentUser?.uid }) {
+            myNickname = me.nickname
+        }
+        
+        studyManager.delegateLeader(
+            groupID: groupID,
+            groupName: groupName,
+            oldLeaderNickname: myNickname,
+            newLeaderUID: user.id,
+            newLeaderNickname: user.nickname
+        ) { success in
             if success {
                 print("방장 위임 성공")
             }
