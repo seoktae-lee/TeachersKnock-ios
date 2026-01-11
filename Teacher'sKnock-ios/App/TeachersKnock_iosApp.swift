@@ -17,6 +17,8 @@ struct TeachersKnock_iosApp: App {
     init() {
         FirebaseApp.configure()
         TeachersKnock_iosApp.configureAppearance()
+        // ✨ [New] 결제 시스템 초기화
+        PurchaseManager.shared.configure()
     }
     
     static func configureAppearance() {

@@ -236,6 +236,8 @@ struct MainCharacterView: View {
                         .padding(.horizontal, 25)
                         .padding(.bottom, 20)
                     }
+                    
+                    // ✨ [Debug] 테스트용 버튼 제거됨 (Cleanup)
                 } else {
                     // ✨ [New] 캐릭터 미선택 시 안내 Empty State
                     VStack(spacing: 12) {

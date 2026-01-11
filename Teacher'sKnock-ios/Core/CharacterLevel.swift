@@ -86,6 +86,12 @@ enum CharacterLevel: Int, CaseIterable {
             let index = min(self.rawValue, maxIndex)
             return "sea_lv\(index + 1)"
         }
+        // ✨ [New] 스톤 골렘 (Lv.6 Max)
+        if type == "golem" {
+            let maxIndex = 5 // Lv.6
+            let index = min(self.rawValue, maxIndex)
+            return "stone_golem_lv\(index + 1)"
+        }
         return nil
     }
     
@@ -97,7 +103,7 @@ enum CharacterLevel: Int, CaseIterable {
             maxLevelIndex = 9 // Lv.10
         } else if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
-        } else if ["tree", "robot"].contains(type) {
+        } else if ["tree", "robot", "golem"].contains(type) { // ✨ golem 추가
             maxLevelIndex = 5 // Lv.6
         } else {
             maxLevelIndex = 3 // Lv.4 (Normal)
@@ -130,7 +136,7 @@ enum CharacterLevel: Int, CaseIterable {
             maxLevelIndex = 9 // Lv.10
         } else if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
-        } else if ["tree", "robot"].contains(type) {
+        } else if ["tree", "robot", "golem"].contains(type) { // ✨ golem 추가
             maxLevelIndex = 5 // Lv.6
         } else {
             maxLevelIndex = 3 // Lv.4 (Normal)
