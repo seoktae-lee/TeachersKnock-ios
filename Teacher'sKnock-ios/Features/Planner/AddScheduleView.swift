@@ -510,8 +510,8 @@ struct CommonTimerSection: View {
     @State private var showingGroupSelection = false
     
     var body: some View {
-        // 공부 스케줄인 경우에만 표시
-        if viewModel.isStudySubject {
+        // 공부 스케줄인 경우에만 표시 + 말하기가 아닐 때만 표시
+        if viewModel.isStudySubject && viewModel.selectedPurpose != .speaking {
             VStack(alignment: .leading, spacing: 15) {
                 HStack {
                     Image(systemName: "timer.square").foregroundColor(.blue)

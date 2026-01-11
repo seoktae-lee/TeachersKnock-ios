@@ -37,7 +37,14 @@ class AddScheduleViewModel: ObservableObject {
     @Published var isStudySubject: Bool = true
     
     // ✨ [추가] 공부 목적 선택용 프로퍼티 (기본값: 인강시청)
-    @Published var selectedPurpose: StudyPurpose = .lectureWatching
+    @Published var selectedPurpose: StudyPurpose = .lectureWatching {
+        didSet {
+            // ✨ [수정] 말하기 목적 선택 시 공유 타이머 자동 해제
+            if selectedPurpose == .speaking {
+                isCommonTimer = false
+            }
+        }
+    }
     
     // ✨ [New] 공통 타이머 설정
     @Published var isCommonTimer: Bool = false
