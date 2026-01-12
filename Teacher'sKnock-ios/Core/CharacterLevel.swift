@@ -1,22 +1,20 @@
 import Foundation
 
 enum CharacterLevel: Int, CaseIterable {
-    case lv1 = 0, lv2, lv3, lv4, lv5, lv6, lv7, lv8, lv9, lv10
+    case lv1 = 0, lv2, lv3, lv4, lv5, lv6, lv7, lv8
     
     // ✨ [수정] 누적 학습 일수에 따른 레벨 계산 (계단식 성장)
     static func getLevel(uniqueDays: Int) -> CharacterLevel {
-        // Lv.1(0) ~ Lv.10(180)
+        // Lv.1(0) ~ Lv.8(150+)
         switch uniqueDays {
         case 0..<5: return .lv1
         case 5..<15: return .lv2
         case 15..<30: return .lv3
-        case 30..<45: return .lv4  // 스타팅 졸업
+        case 30..<45: return .lv4  // 일반(스타팅) 최종 진화 레벨(~LV.4)
         case 45..<60: return .lv5
-        case 60..<90: return .lv6  // 희귀 졸업
-        case 90..<120: return .lv7
-        case 120..<150: return .lv8 // 전설 졸업
-        case 150..<180: return .lv9
-        default: return .lv10       // 신화 졸업 (최종)
+        case 60..<80: return .lv6  // 희귀 졸업
+        case 80..<100: return .lv7
+        default: return .lv8       // 전설 졸업 (최종)
         }
     }
     
@@ -28,11 +26,9 @@ enum CharacterLevel: Int, CaseIterable {
         case .lv3: return 30
         case .lv4: return 45
         case .lv5: return 60
-        case .lv6: return 90
-        case .lv7: return 120
-        case .lv8: return 150
-        case .lv9: return 180
-        case .lv10: return 0 // Max
+        case .lv6: return 80
+        case .lv7: return 100
+        case .lv8: return 0 // Max
         }
     }
     
@@ -45,10 +41,8 @@ enum CharacterLevel: Int, CaseIterable {
         case .lv4: return 30
         case .lv5: return 45
         case .lv6: return 60
-        case .lv7: return 90
-        case .lv8: return 120
-        case .lv9: return 150
-        case .lv10: return 180
+        case .lv7: return 80
+        case .lv8: return 100
         }
     }
     
@@ -99,9 +93,8 @@ enum CharacterLevel: Int, CaseIterable {
     func title(for type: String) -> String {
         // 1. 해당 캐릭터 타입의 최대 레벨(인덱스) 확인
         let maxLevelIndex: Int
-        if ["unicorn", "dragon"].contains(type) {
-            maxLevelIndex = 9 // Lv.10
-        } else if ["whale", "phoenix"].contains(type) {
+        // ✨ 신화 등급(Lv.10) 제거됨 -> 전설(Lv.8)이 최대
+        if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
         } else if ["tree", "robot", "golem"].contains(type) { // ✨ golem 추가
             maxLevelIndex = 5 // Lv.6
@@ -123,18 +116,15 @@ enum CharacterLevel: Int, CaseIterable {
         case .lv5: return "꾸준한 노력"
         case .lv6: return "빛나는 진심"
         case .lv7: return "단단한 내공"
-        case .lv8: return "깊어지는 지혜"
-        case .lv9: return "만개하는 실력"
-        case .lv10: return "최종 진화 완료"
+        case .lv8: return "최종 진화 완료"
         }
     }
     
     // ✨ [추가] 해당 캐릭터 등급의 최대 레벨 달성 여부 확인
     func isMaxLevel(for type: String) -> Bool {
         let maxLevelIndex: Int
-        if ["unicorn", "dragon"].contains(type) {
-            maxLevelIndex = 9 // Lv.10
-        } else if ["whale", "phoenix"].contains(type) {
+        // ✨ 신화 등급(Lv.10) 제거됨 -> 전설(Lv.8)이 최대
+        if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
         } else if ["tree", "robot", "golem"].contains(type) { // ✨ golem 추가
             maxLevelIndex = 5 // Lv.6

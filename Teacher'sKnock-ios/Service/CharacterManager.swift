@@ -287,12 +287,8 @@ class CharacterManager: ObservableObject {
         let type = characters[index].type
         let maxLevelIndex: Int
         
-        // 신화 (Mythic): Lv.10 (Index 9)
-        if ["unicorn", "dragon"].contains(type) {
-            maxLevelIndex = 9
-        }
         // 전설 (Legend): Lv.8 (Index 7)
-        else if ["whale", "phoenix"].contains(type) {
+        if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7
         }
         // 희귀 (Rare): Lv.6 (Index 5)
@@ -350,7 +346,6 @@ class CharacterManager: ObservableObject {
     
     // ✨ [추가] 캐릭터 등급 텍스트 반환 헬퍼
     func getRarityTitle(type: String) -> String {
-        if ["unicorn", "dragon"].contains(type) { return "신화" }
         if ["whale", "phoenix"].contains(type) { return "전설" }
         if ["tree", "robot", "golem"].contains(type) { return "희귀" } // ✨ golem 추가
         return "일반"
@@ -358,7 +353,6 @@ class CharacterManager: ObservableObject {
     
     // ✨ [추가] 캐릭터 등급 색상 반환 헬퍼
     func getRarityColor(type: String) -> Color {
-        if ["unicorn", "dragon"].contains(type) { return .purple } // 신화
         if ["whale", "phoenix"].contains(type) { return .orange } // 전설
         if ["golem"].contains(type) { return .brown } // ✨ [New] 스톤 골렘은 갈색
         if ["tree", "robot"].contains(type) { return .blue }   // 희귀
