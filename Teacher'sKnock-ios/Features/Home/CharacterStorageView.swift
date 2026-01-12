@@ -139,7 +139,7 @@ struct CharacterStorageCard: View {
                             .foregroundColor(character.isUnlocked ? .primary : .gray)
                         
                         if character.isUnlocked {
-                            Text("Lv.\(character.level + 1) \(level.title)")
+                            Text("Lv.\(character.level + 1)")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         } else {
@@ -151,7 +151,7 @@ struct CharacterStorageCard: View {
                     .padding(.bottom, 15)
                 }
             }
-            .frame(height: 180)
+            .frame(height: 220)
         }
     }
 }

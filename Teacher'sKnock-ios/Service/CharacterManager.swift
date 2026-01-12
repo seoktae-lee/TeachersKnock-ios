@@ -17,10 +17,12 @@ struct UserCharacter: Codable, Identifiable {
     // UI 표시용 기본 이름
     var defaultName: String {
         switch type {
-        case "bird": return "IGNIS SPARK"
-        case "plant": return "TERRA LEAF"
-        case "sea": return "AQUA DROPLIN"
-        case "golem": return "스톤 골렘" // ✨ [New]
+        case "bird": return "이그니스 스파크"
+        case "plant": return "테라 리프"
+        case "sea": return "아쿠아 드롭린"
+        case "golem": return "스톤 골렘"
+        case "cloud": return "클라우드 가디언" // ✨ [Update] Match shop name
+        case "unicorn": return "브라이트닝 유니콘" // ✨ [New]
         default: return "알 수 없음"
         }
     }
@@ -31,7 +33,9 @@ struct UserCharacter: Codable, Identifiable {
         case "bird": return "🥚"
         case "plant": return "🤎"
         case "sea": return "🧊"
-        case "golem": return "🪨" // ✨ [New]
+        case "golem": return "🪨"
+        case "cloud": return "☁️" // ✨ [New]
+        case "unicorn": return "🦄" // ✨ [New]
         default: return "❓"
         }
     }
@@ -115,14 +119,16 @@ class CharacterManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([UserCharacter].self, from: data) {
             self.characters = decoded
             
-            // ✨ [Temporary Fix] 파트너 보관함에서 임시 신화 캐릭터(unicorn, dragon) 삭제 요청 처리
-            // 이 코드는 해당 캐릭터들을 로컬 데이터에서 필터링하여 제거합니다.
-            let removedCount = characters.filter { ["unicorn", "dragon"].contains($0.type) }.count
-            if removedCount > 0 {
-                self.characters.removeAll { ["unicorn", "dragon"].contains($0.type) }
-                print("🧹 임시 신화 캐릭터 \(removedCount)개 삭제 완료")
-                self.saveCharacters() // 변경사항 즉시 저장
+            // ✨ [Migration] 잘못된 이름 수정 (클라우드 정령 -> 클라우드 가디언)
+            for index in self.characters.indices {
+                if self.characters[index].type == "cloud" && self.characters[index].name == "클라우드 정령" {
+                    self.characters[index].name = "클라우드 가디언"
+                    print("🔧 '클라우드 정령' 이름 수정 완료")
+                    self.saveCharacters()
+                }
             }
+            
+
             
             // ✨ [Cleanup] 테스트용 스톤 골렘 데이터 일괄 삭제 (사용자 요청에 의한 초기화)
             // 주의: 이 로직은 앱 실행 시 'golem' 타입 캐릭터를 삭제합니다. 구매 이력 초기화용.
@@ -225,13 +231,7 @@ class CharacterManager: ObservableObject {
                         DispatchQueue.main.async {
                             self.characters = fetchedCharacters
                             
-                            // ✨ [Temporary Fix] 서버 데이터에서도 임시 신화 캐릭터(unicorn, dragon) 삭제
-                            let removedCount = self.characters.filter { ["unicorn", "dragon"].contains($0.type) }.count
-                            if removedCount > 0 {
-                                self.characters.removeAll { ["unicorn", "dragon"].contains($0.type) }
-                                print("🧹 (서버 동기화) 임시 신화 캐릭터 \(removedCount)개 삭제 및 정리")
-                                self.saveCharacters()
-                            }
+
                             print("✅ 서버에서 캐릭터 복원 완료 (총 \(self.characters.count)개)")
                             
                             // 장착 중인 캐릭터 복원
@@ -292,7 +292,7 @@ class CharacterManager: ObservableObject {
             maxLevelIndex = 7
         }
         // 희귀 (Rare): Lv.6 (Index 5)
-        else if ["tree", "robot", "golem"].contains(type) { // ✨ golem 추가
+        else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { // ✨ golem, cloud, unicorn 추가
             maxLevelIndex = 5
         }
         // 스타팅/일반 (Starter): Lv.4 (Index 3)
@@ -347,15 +347,54 @@ class CharacterManager: ObservableObject {
     // ✨ [추가] 캐릭터 등급 텍스트 반환 헬퍼
     func getRarityTitle(type: String) -> String {
         if ["whale", "phoenix"].contains(type) { return "전설" }
-        if ["tree", "robot", "golem"].contains(type) { return "희귀" } // ✨ golem 추가
+        if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { return "희귀" } // ✨ golem, cloud, unicorn 추가
         return "일반"
     }
     
     // ✨ [추가] 캐릭터 등급 색상 반환 헬퍼
     func getRarityColor(type: String) -> Color {
         if ["whale", "phoenix"].contains(type) { return .orange } // 전설
-        if ["golem"].contains(type) { return .brown } // ✨ [New] 스톤 골렘은 갈색
+        if ["golem"].contains(type) { return .brown }
+        if ["cloud"].contains(type) { return .cyan } // ✨ [New] 구름은 하늘색
+        if ["unicorn"].contains(type) { return Color(red: 1.0, green: 0.95, blue: 0.7) } // ✨ [New] 유니콘은 옅은 노란색
         if ["tree", "robot"].contains(type) { return .blue }   // 희귀
         return .gray // 일반
+    }
+
+    
+    // ✨ [DEBUG] 레벨업 (테스트용: 다음 레벨 조건 충족시키기)
+    func debugLevelUp() {
+        guard let index = characters.firstIndex(where: { $0.type == equippedCharacterType }) else { return }
+        let currentLevelVal = characters[index].level
+        
+        // Max Level Check
+        let type = characters[index].type
+        let maxLevelIndex: Int
+        if ["whale", "phoenix"].contains(type) { maxLevelIndex = 7 }
+        else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { maxLevelIndex = 5 }
+        else { maxLevelIndex = 3 }
+        
+        if currentLevelVal >= maxLevelIndex {
+            print("⚠️ 이미 최대 레벨입니다.")
+            return
+        }
+        
+        if let currentLvEnum = CharacterLevel(rawValue: currentLevelVal) {
+            let nextExp = currentLvEnum.daysRequiredForNextLevel
+            characters[index].exp = nextExp
+            print("⚡️ DEBUG: \(type) Level Up triggered! Exp -> \(nextExp)")
+            
+            updateLevel(for: index)
+            saveCharacters()
+        }
+    }
+    
+    // ✨ [DEBUG] 레벨 초기화 (테스트용)
+    func debugResetLevel() {
+        guard let index = characters.firstIndex(where: { $0.type == equippedCharacterType }) else { return }
+        characters[index].level = 0
+        characters[index].exp = 0
+        saveCharacters()
+        print("🔄 DEBUG: \(characters[index].type) Reset to Level 1 (0)")
     }
 }
