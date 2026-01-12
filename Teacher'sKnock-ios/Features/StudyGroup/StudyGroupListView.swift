@@ -167,8 +167,18 @@ struct StudyGroupListView: View {
         .onAppear {
             if let uid = Auth.auth().currentUser?.uid {
                 studyManager.fetchMyGroups(uid: uid)
-                // ✨ [Modified] 상위(MainTabView)에서 리스닝 중이므로 여기서는 호출 안해도 됨.
-                // 만약 뷰 진입시에만 리프래시하고 싶다면 유지할 수 있으나, 배지를 위해선 상시 리스닝이 좋음.
+                
+                // ✨ [New] 화면 진입 시 타겟 그룹이 있으면 이동 시도 (이미 로딩된 경우)
+                if let targetID = navManager.targetGroupID,
+                   let group = studyManager.myGroups.first(where: { $0.id == targetID }) {
+                     print("🚀 [StudyGroupList] onAppear에서 타겟 그룹 발견, 이동 시도")
+                     navigationPath = NavigationPath()
+                     navigationPath.append(group)
+                     
+                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        navManager.clearTarget()
+                     }
+                }
             }
         }
         .onDisappear {
