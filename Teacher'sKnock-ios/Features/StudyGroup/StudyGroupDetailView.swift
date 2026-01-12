@@ -405,6 +405,13 @@ extension StudyGroupDetailView {
             .fullScreenCover(isPresented: $showCommonTimer) { // 타이머는 몰입을 위해 풀스크린 추천
                 CommonTimerView(studyManager: studyManager, group: liveGroup)
             }
+            // ✨ [New] 타이머 종료 시 멤버 데이터 강제 갱신 (즉시 반영 목적)
+            .onChange(of: showCommonTimer) { isPresented in
+                if !isPresented {
+                    print("🔄 타이머 종료 감지: 멤버 정보 갱신 요청")
+                    studyManager.fetchGroupMembers(groupID: liveGroup.id, memberUIDs: liveGroup.members)
+                }
+            }
             .alert("입장 불가", isPresented: $showConcurrentTimerAlert) {
                 Button("확인") {}
             } message: {

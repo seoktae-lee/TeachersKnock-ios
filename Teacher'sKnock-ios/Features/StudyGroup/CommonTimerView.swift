@@ -377,14 +377,26 @@ struct CommonTimerView: View {
     }
     
     func updateTimer() {
+        // ✨ [New] 종료되었거나 요약 화면이 떠있으면 타이머 로직 중단 (시간 집계 정지)
+        if isFinished || showSummary {
+             lastTick = nil
+             return
+        }
+        
         currentTime = Date()
         guard let state = state else { return }
         
-        if isTimerRunning && isUserJoined { // ✨ [Updated] 실행중이고 + 내가 참여중일때만
-            // ✨ [New] 공부 시간 누적
+        if isTimerRunning && isUserJoined {
+            // ✨ [New] 공부 시간 누적 (종료 시간까지만 인정)
             if let last = lastTick {
-                let interval = currentTime.timeIntervalSince(last)
-                accumulatedTime += interval
+                // 현재 시간이 종료 시간을 넘어가면, '종료 시간'까지만 공부한 것으로 계산
+                let effectiveNow = min(currentTime, state.endTime)
+                
+                // 유효한 시간 차이가 있을 때만 누적 (백그라운드 복귀 등 고려)
+                if effectiveNow > last {
+                     let interval = effectiveNow.timeIntervalSince(last)
+                     accumulatedTime += interval
+                }
             }
              lastTick = currentTime
              
@@ -393,9 +405,8 @@ struct CommonTimerView: View {
                  // End
                  if !isFinished {
                      isFinished = true
-                     isFinished = true
-                     // studyManager.leaveCommonTimer(groupID: group.id) // 여기선 바로 나가지 않고 Summary 띄움
-                     // dismiss()
+                     // ✨ [New] 자동 종료 처리
+                     finishStudySession(isAutoEnd: true)
                  }
              }
         } else {
@@ -404,17 +415,15 @@ struct CommonTimerView: View {
     }
     
     // ✨ [New] 공부 기록 저장 로직
-    func finishStudySession() {
+    func finishStudySession(isAutoEnd: Bool = false) {
         guard let uid = Auth.auth().currentUser?.uid, let state = state else { return }
-        
-        // 1. 공부 상태 OFF
-        FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: false)
         
         // ✨ [New] 현재 참여자 캡쳐 (요약 화면용)
         finalParticipants = state.activeParticipants
         
-        // 2. 기록 저장 (최소 10초 이상 시)
         let duration = Int(accumulatedTime)
+        
+        // 1. & 2. 기록 저장 및 상태 업데이트
         if duration >= 10 {
             let record = StudyRecord(
                 durationSeconds: duration,
@@ -423,27 +432,92 @@ struct CommonTimerView: View {
                 ownerID: uid,
                 studyPurpose: state.purpose,
                 memo: state.goal,
-                goal: nil // 공통 타이머는 개인 목표와 직접 연동되지 않음 (혹은 추후 연동)
+                goal: nil
             )
             
-            // 로컬 & 파이어스토어 저장 (FirestoreSyncManager가 모델 컨텍스트까지 처리해주면 좋겠지만, 분리되어 있다면...)
-            // ModelContext는 View에서 접근 가능하므로 여기서 insert
+            // 로컬 & 파이어스토어 저장
+            // saveRecord 내부에서 updateUserStudyTime(isStudying: false)를 호출하여 시간 누적까지 처리함
             modelContext.insert(record)
             FirestoreSyncManager.shared.saveRecord(record)
             
             // 3. 경험치 지급
             CharacterManager.shared.addExpToEquippedCharacter()
             
-            print("✅ 공유 타이머 기록 저장 완료: \(duration)초")
+            try? modelContext.save()
+        } else {
+            // 시간이 짧아서 기록 저장은 안 하지만, 공부 상태는 꺼야 함
+            FirestoreSyncManager.shared.updateUserStudyTime(uid: uid, isStudying: false)
         }
         
-        // ✨ [New] Show Summary Screen
+        // ✨ [New] 총 누적 시간 및 이탈 횟수 계산
+        calculateSessionStats(state: state, uid: uid, isAutoEnd: isAutoEnd)
+    }
+    
+    // ✨ [New] 통계 계산 함수
+    func calculateSessionStats(state: StudyGroup.CommonTimerState, uid: String, isAutoEnd: Bool) {
+        // SwiftData Fetch Definition
+        // 범위: 시작시간 ~ 종료시간 (약간의 오차 허용을 위해 앞뒤 버퍼를 둘 수도 있지만, 정확히 함)
+        // 주의: record.date는 '저장 시점'임.
+        let start = state.startTime
+        // 종료 시간보다 조금 늦게 저장될 수 있으므로 현재시간(혹은 넉넉히)까지 포함
+        let end = Date().addingTimeInterval(60)
+        let subject = state.subject
+        
+        let descriptor = FetchDescriptor<StudyRecord>(
+            predicate: #Predicate { record in
+                record.ownerID == uid &&
+                record.areaName == subject &&
+                record.date >= start &&
+                record.date <= end
+            }
+        )
+        
+        do {
+            let records = try modelContext.fetch(descriptor)
+            
+            // 1. 총 공부 시간 (이번 공유 타이머 세션 내)
+            let totalSeconds = records.reduce(0) { $0 + $1.durationSeconds }
+            self.accumulatedTime = TimeInterval(totalSeconds) // 요약 화면용 변수 업데이트
+            
+            // 2. 이탈 횟수
+            // 기록의 개수가 곧 (이탈하거나 종료한) 횟수.
+            // 자동 종료(isAutoEnd)인 경우, 마지막 기록은 '정상 종료'이므로 이탈이 아님 -> -1
+            // 수동 종료(버튼 누름)인 경우, 사용자는 나가는 것이므로 이탈로 볼 수 있지만,
+            // 요구사항: "총 몇번을 눌러 공유 타이머에서 이탈을 했는지"
+            // 즉, 수동으로 [종료하기]를 누른 횟수 = 레코드 수.
+            // 하지만 자동 종료된 마지막 순간은 [종료하기]를 누른게 아님.
+            // 따라서 레코드 수 - (자동종료 ? 1 : 0) 이 정확함.
+            // 단, 사용자가 마지막까지 있다가 자동종료되면 레코드 1개 (자동저장). 이탈 0. (1-1=0). 맞음.
+            // 사용자가 중간에 1번 나가고(1개), 다시 들어와서 자동종료(1개). 총 2개. 이탈 1. (2-1=1). 맞음.
+            // 사용자가 중간에 1번 나가고(1개), 다시 들어와서 수동 종료(1개). 총 2개. 이탈 2. (2-0=2). 맞음.
+            
+            var exitCount = records.count
+            if isAutoEnd {
+                exitCount = max(0, exitCount - 1)
+            }
+            
+            // 요약 화면 표시를 위해 State 업데이트 필요 (여기서는 showSummary를 true로 하기 전에 변수를 쓸 곳이 마땅치 않음)
+            // accumulatedTime은 이미 totalSeconds로 덮어썼고,
+            // exitCount는 새로운 State 변수가 필요하거나, summaryView에 직접 전달.
+            // 간단하게 State 하나 추가하거나, SummaryView 호출 시 전달.
+            self.finalExitCount = exitCount
+            
+            print("✅ 세션 통계: 총 \(totalSeconds)초, 이탈 \(exitCount)회 (자동종료: \(isAutoEnd))")
+            
+        } catch {
+            print("❌ 통계 계산 실패: \(error)")
+        }
+        
         showSummary = true
         
-        // (Optional) Leave Room immediately or wait for user to close summary?
-        // User wants to see summary FIRST. So we call leave when closing summary.
-        studyManager.leaveCommonTimer(groupID: group.id)
+        // 자동 종료가 아닐때만 여기서 나가기 처리를 할지?
+        // 아니면 요약 화면 닫을 때 나갈지?
+        // 기획상: 요약 화면 보고 -> 닫기 누르면 나감.
+        // 따라서 여기서는 UI만 띄움.
     }
+    
+    // ✨ [New] State for Exit Count
+    @State private var finalExitCount: Int = 0
     
     // ✨ [New] Summary View Component
     func summaryView(state: StudyGroup.CommonTimerState) -> some View {
@@ -460,8 +534,15 @@ struct CommonTimerView: View {
                     .foregroundColor(.white)
                 
                 VStack(spacing: 15) {
+                    // ✨ [Updated] 보여줄 값: 총 공부 시간 (계산된 값)
                     summaryRow(icon: "clock", title: "총 공부 시간", value: formatDuration(accumulatedTime))
                     summaryRow(icon: "book", title: "과목", value: state.subject)
+                    
+                    // ✨ [New] 이탈 횟수 표시
+                    if finalExitCount > 0 {
+                         summaryRow(icon: "figure.walk", title: "이탈 횟수", value: "\(finalExitCount)회")
+                    }
+                    
                     summaryRow(icon: "target", title: "목적", value: StudyPurpose(rawValue: state.purpose)?.localizedName ?? state.purpose)
                 }
                 .padding()
@@ -488,6 +569,7 @@ struct CommonTimerView: View {
                 
                 Button(action: {
                     dismiss()
+                    studyManager.leaveCommonTimer(groupID: group.id) // 닫기 누르면 퇴장 처리
                 }) {
                     Text("확인")
                         .font(.headline)
@@ -510,9 +592,16 @@ struct CommonTimerView: View {
             Text(title)
                 .foregroundColor(.gray)
             Spacer()
-            Text(value)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
+            // ✨ [Updated] 이탈 횟수 강조
+            if title == "이탈 횟수" {
+                Text(value)
+                    .fontWeight(.bold)
+                    .foregroundColor(.red)
+            } else {
+                Text(value)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
         }
     }
 }
