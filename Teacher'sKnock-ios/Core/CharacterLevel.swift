@@ -98,6 +98,12 @@ enum CharacterLevel: Int, CaseIterable {
             let index = min(self.rawValue, maxIndex)
             return "unicorn_lv\(index + 1)"
         }
+        // ✨ [New] 울프 (Lv.6 Max)
+        if type == "wolf" {
+            let maxIndex = 5 // Lv.6
+            let index = min(self.rawValue, maxIndex)
+            return "wolf_lv\(index + 1)"
+        }
         return nil
     }
     
@@ -108,7 +114,7 @@ enum CharacterLevel: Int, CaseIterable {
         // ✨ 신화 등급(Lv.10) 제거됨 -> 전설(Lv.8)이 최대
         if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
-        } else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { // ✨ golem, cloud, unicorn 추가
+        } else if ["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) { // ✨ golem, cloud, unicorn, wolf 추가
             maxLevelIndex = 5 // Lv.6
         } else {
             maxLevelIndex = 3 // Lv.4 (Normal)
@@ -138,7 +144,7 @@ enum CharacterLevel: Int, CaseIterable {
         // ✨ 신화 등급(Lv.10) 제거됨 -> 전설(Lv.8)이 최대
         if ["whale", "phoenix"].contains(type) {
             maxLevelIndex = 7 // Lv.8
-        } else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { // ✨ golem, cloud, unicorn 추가
+        } else if ["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) { // ✨ golem, cloud, unicorn, wolf 추가
             maxLevelIndex = 5 // Lv.6
         } else {
             maxLevelIndex = 3 // Lv.4 (Normal)

@@ -18,11 +18,13 @@ struct CharacterShopView: View {
     // Mock Data
     @State private var shopItems = [
         // 💸[캐릭터 상점 캐릭터 등록] 희귀 캐릭터: 스톤 골렘
-        ShopItem(type: "golem", name: "스톤 골렘", emoji: "🪨", price: 3000, description: "오랜 시간 다져진 단단한 의지.\n흔들리지 않는 집중력의 상징.", color: .brown, imageName: "stone_golem_lv1"),
+        ShopItem(type: "golem", name: "스톤 골렘", emoji: "🪨", price: 1500, description: "오랜 시간 다져진 단단한 의지.\n흔들리지 않는 집중력의 상징.", color: .brown, imageName: "stone_golem_lv1"),
         // 💸[캐릭터 상점 캐릭터 등록] 희귀 캐릭터: 포근한 구름
-        ShopItem(type: "cloud", name: "클라우드 가디언", emoji: "☁️", price: 3000, description: "자유롭게 떠다니는 구름처럼,\n넓은 세상을 품을 잠재력.", color: .cyan, imageName: "cloud_lv1"),
+        ShopItem(type: "cloud", name: "클라우드 가디언", emoji: "☁️", price: 1500, description: "자유롭게 떠다니는 구름처럼,\n넓은 세상을 품을 잠재력.", color: .cyan, imageName: "cloud_lv1"),
         // 💸[캐릭터 상점 캐릭터 등록] 희귀 캐릭터: 유니콘 가디언
-        ShopItem(type: "unicorn", name: "브라이트닝 유니콘", emoji: "🦄", price: 3000, description: "찬란한 빛을 머금은 신수.\n순수한 마음을 지키는 힘.", color: Color(red: 1.0, green: 0.95, blue: 0.7), imageName: "unicorn_lv1")
+        ShopItem(type: "unicorn", name: "브라이트닝 유니콘", emoji: "🦄", price: 1500, description: "찬란한 빛을 머금은 신수.\n순수한 마음을 지키는 힘.", color: Color(red: 1.0, green: 0.85, blue: 0.4), imageName: "unicorn_lv1"),
+        // 💸[캐릭터 상점 캐릭터 등록] 희귀 캐릭터: 크리스탈 울프
+        ShopItem(type: "wolf", name: "크리스탈 울프", emoji: "🐺", price: 1500, description: "차가운 얼음 속에서도 피어나는 열정.\n냉철한 판단력의 상징.", color: Color(red: 0.4, green: 0.7, blue: 1.0), imageName: "wolf_lv1")
     ]
     
     @State private var showingAlert = false

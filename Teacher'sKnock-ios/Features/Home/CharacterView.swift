@@ -346,8 +346,50 @@ struct EvolutionView: View {
                     .ignoresSafeArea()
             }
             
-            VStack(spacing: 40) {
-                // Header Text
+            // ✨ Layer 1: Character (Centered & Independent)
+            ZStack {
+                // Old Character
+                if animationState == .start || animationState == .evolving || animationState == .reveal {
+                    Group {
+                        if let imageName = oldLevel.imageName(for: characterType) {
+                            Image(imageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 200, height: 200) // Fixed size (Reverted to original small size)
+                                .padding(20)
+                        } else {
+                            Text(oldLevel.emoji(for: characterType))
+                                .font(.system(size: 100))
+                        }
+                    }
+                    .modifier(EvolutionOldEffect(theme: theme, state: animationState, rotationY: rotationY, slideOffset: slideOffsetOld, blurRadius: blurRadius))
+                    .opacity(animationState == .reveal && theme != .slide ? 0 : 1)
+                    .animation(theme == .slide ? nil : .easeOut(duration: 0.5), value: animationState)
+                }
+                
+                // New Character
+                if animationState == .reveal || animationState == .celebration {
+                    Group {
+                        // ✨ [수정] 레벨 5-6(300), 레벨 3-4(250), 레벨 1-2(200)
+                        let baseSize: CGFloat = newLevel.rawValue >= 4 ? 300 : (newLevel.rawValue >= 2 ? 250 : 200)
+                        
+                        if let imageName = newLevel.imageName(for: characterType) {
+                            Image(imageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: baseSize, height: baseSize)
+                        } else {
+                            Text(newLevel.emoji(for: characterType))
+                                .font(.system(size: 150))
+                        }
+                    }
+                    .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
+                }
+            }
+            .zIndex(0) // Behind text
+            
+            // ✨ Layer 2: Header (Fixed Top)
+            VStack {
                 Text(headerText)
                     .font(.title)
                     .fontWeight(.bold)
@@ -355,76 +397,11 @@ struct EvolutionView: View {
                     .multilineTextAlignment(.center)
                     .opacity(animationState == .start || animationState == .celebration ? 1 : 0)
                     .animation(.easeInOut, value: animationState)
+                    .padding(.top, 60) // Safe top margin
                 
-                // Character Area
-                ZStack {
-                    // Old Character
-                    // ✨ Visible during start, evolving AND reveal (exiting)
-                    if animationState == .start || animationState == .evolving || animationState == .reveal {
-                        Group {
-                            if let imageName = oldLevel.imageName(for: characterType) {
-                                Image(imageName)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .padding(20)
-                            } else {
-                                Text(oldLevel.emoji(for: characterType))
-                                    .font(.system(size: 100))
-                            }
-                        }
-                        // ✨ Apply Theme-specific effects for Old Character
-                        .modifier(EvolutionOldEffect(theme: theme, state: animationState, rotationY: rotationY, slideOffset: slideOffsetOld, blurRadius: blurRadius))
-                        .opacity(animationState == .reveal && theme != .slide ? 0 : 1) // Default Fade out in reveal unless Slide
-                        .animation(theme == .slide ? nil : .easeOut(duration: 0.5), value: animationState) // Smooth fade out
-                    }
-                    
-                    // New Character
-                    if animationState == .reveal || animationState == .celebration {
-                        Group {
-                            if let imageName = newLevel.imageName(for: characterType) {
-                                Image(imageName)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .padding(10)
-                            } else {
-                                Text(newLevel.emoji(for: characterType))
-                                    .font(.system(size: 150))
-                            }
-                        }
-                        // ✨ Apply Theme-specific effects for New Character
-                        .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
-                    }
-                }
-                .frame(height: 200)
-                
-                // Level Info
-                if animationState == .celebration {
-                    VStack(spacing: 8) {
-                        Text("LV.\(oldLevel.rawValue + 1) -> LV.\(newLevel.rawValue + 1)")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Text(newLevel.title(for: characterType))
-                            .font(.title2) // 크기 축소 (.largeTitle -> .title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20) // 패딩 축소 (24 -> 20)
-                            .padding(.vertical, 10)   // 패딩 축소 (12 -> 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16) // 코너 반지름 축소 (20 -> 16)
-                                    .fill(.ultraThinMaterial)
-                                    .shadow(color: themeColor.opacity(0.5), radius: 10, x: 0, y: 0)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                            )
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                Spacer()
             }
-            .padding()
+            .zIndex(1) // On top of character
             
             // ✨ Front Fog (More density in front)
             if theme == .fog {
@@ -465,6 +442,31 @@ struct EvolutionView: View {
             if animationState == .celebration {
                 VStack {
                     Spacer()
+                    
+                    // ✨ Level Info (Fixed Bottom with Buttons)
+                    VStack(spacing: 8) {
+                        Text("LV.\(oldLevel.rawValue + 1) -> LV.\(newLevel.rawValue + 1)")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white.opacity(0.9))
+                        
+                        Text(newLevel.title(for: characterType))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.ultraThinMaterial)
+                                    .shadow(color: themeColor.opacity(0.5), radius: 10, x: 0, y: 0)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                            )
+                    }
+                    .padding(.bottom, 20) // Space between info and buttons
                     
                     // ✨ Buttons Row
                     HStack(spacing: 16) {

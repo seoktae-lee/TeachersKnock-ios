@@ -23,6 +23,7 @@ struct UserCharacter: Codable, Identifiable {
         case "golem": return "스톤 골렘"
         case "cloud": return "클라우드 가디언" // ✨ [Update] Match shop name
         case "unicorn": return "브라이트닝 유니콘" // ✨ [New]
+        case "wolf": return "크리스탈 울프" // ✨ [New]
         default: return "알 수 없음"
         }
     }
@@ -36,6 +37,7 @@ struct UserCharacter: Codable, Identifiable {
         case "golem": return "🪨"
         case "cloud": return "☁️" // ✨ [New]
         case "unicorn": return "🦄" // ✨ [New]
+        case "wolf": return "🐺" // ✨ [New]
         default: return "❓"
         }
     }
@@ -133,15 +135,25 @@ class CharacterManager: ObservableObject {
             // ✨ [Cleanup] 테스트용 스톤 골렘 데이터 일괄 삭제 (사용자 요청에 의한 초기화)
             // 주의: 이 로직은 앱 실행 시 'golem' 타입 캐릭터를 삭제합니다. 구매 이력 초기화용.
             // 영구 삭제를 원치 않으면 추후 제거 필요. 현재는 "초기화" 요청에 따라 추가됨.
-            let golemCleanupKey = "Cleanup_StoneGolem_Reset_Request"
-            if !UserDefaults.standard.bool(forKey: golemCleanupKey) {
-                if let index = characters.firstIndex(where: { $0.type == "golem" }) {
-                    characters.remove(at: index)
-                    saveCharacters()
-                    print("🧹 테스트용 스톤 골렘 삭제 및 초기화 완료")
+            // ✨ [Cleanup] 테스트용 구매 캐릭터 일괄 초기화 (사용자 요청)
+            // 'golem', 'cloud', 'unicorn', 'wolf' 등 테스트를 위해 구매했던 캐릭터 제거
+            let testPurchaseCleanupKey = "Cleanup_TestPurchases_Reset_v2"
+            if !UserDefaults.standard.bool(forKey: testPurchaseCleanupKey) {
+                // 제거할 타입 목록
+                let typesToRemove = ["golem", "cloud", "unicorn", "wolf"]
+                
+                // 해당 타입의 캐릭터들을 리스트에서 제거
+                characters.removeAll { typesToRemove.contains($0.type) }
+                
+                // 만약 장착 중인 캐릭터가 삭제되었다면 기본 캐릭터(bird)로 변경
+                if typesToRemove.contains(equippedCharacterType) {
+                    equippedCharacterType = "bird"
                 }
-                UserDefaults.standard.set(true, forKey: golemCleanupKey)
-                UserDefaults.standard.set(true, forKey: golemCleanupKey)
+                
+                saveCharacters()
+                print("🧹 테스트용 캐릭터(golem, cloud, unicorn, wolf) 구매 초기화 완료")
+                
+                UserDefaults.standard.set(true, forKey: testPurchaseCleanupKey)
             }
             
             // ✨ [Restoration] 사용자 요청 복구: Lv.2 / 다음 레벨까지 6일 남음
@@ -292,7 +304,7 @@ class CharacterManager: ObservableObject {
             maxLevelIndex = 7
         }
         // 희귀 (Rare): Lv.6 (Index 5)
-        else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { // ✨ golem, cloud, unicorn 추가
+        else if ["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) { // ✨ golem, cloud, unicorn, wolf 추가
             maxLevelIndex = 5
         }
         // 스타팅/일반 (Starter): Lv.4 (Index 3)
@@ -347,7 +359,7 @@ class CharacterManager: ObservableObject {
     // ✨ [추가] 캐릭터 등급 텍스트 반환 헬퍼
     func getRarityTitle(type: String) -> String {
         if ["whale", "phoenix"].contains(type) { return "전설" }
-        if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { return "희귀" } // ✨ golem, cloud, unicorn 추가
+        if ["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) { return "희귀" } // ✨ golem, cloud, unicorn, wolf 추가
         return "일반"
     }
     
@@ -356,7 +368,8 @@ class CharacterManager: ObservableObject {
         if ["whale", "phoenix"].contains(type) { return .orange } // 전설
         if ["golem"].contains(type) { return .brown }
         if ["cloud"].contains(type) { return .cyan } // ✨ [New] 구름은 하늘색
-        if ["unicorn"].contains(type) { return Color(red: 1.0, green: 0.95, blue: 0.7) } // ✨ [New] 유니콘은 옅은 노란색
+        if ["unicorn"].contains(type) { return Color(red: 1.0, green: 0.85, blue: 0.4) } // ✨ [Fix] 유니콘 색상 채도 증가 (진한 노란/금색 계열)
+        if ["wolf"].contains(type) { return Color(red: 0.4, green: 0.7, blue: 1.0) } // ✨ [New] 울프는 아이스 블루
         if ["tree", "robot"].contains(type) { return .blue }   // 희귀
         return .gray // 일반
     }
@@ -371,7 +384,7 @@ class CharacterManager: ObservableObject {
         let type = characters[index].type
         let maxLevelIndex: Int
         if ["whale", "phoenix"].contains(type) { maxLevelIndex = 7 }
-        else if ["tree", "robot", "golem", "cloud", "unicorn"].contains(type) { maxLevelIndex = 5 }
+        else if ["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) { maxLevelIndex = 5 }
         else { maxLevelIndex = 3 }
         
         if currentLevelVal >= maxLevelIndex {
