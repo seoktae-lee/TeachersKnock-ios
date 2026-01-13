@@ -3,7 +3,15 @@ import SwiftData
 import FirebaseAuth
 
 struct GoalListView: View {
-    @Query(sort: \Goal.targetDate) private var goals: [Goal]
+    @Query(sort: \Goal.targetDate) private var rawGoals: [Goal]
+    private var goals: [Goal] {
+        rawGoals.sorted {
+            if $0.isPrimaryGoal != $1.isPrimaryGoal {
+                return $0.isPrimaryGoal
+            }
+            return $0.targetDate < $1.targetDate
+        }
+    }
     @Query private var todayRecords: [StudyRecord]
     @Query private var allRecords: [StudyRecord]
     
@@ -50,7 +58,7 @@ struct GoalListView: View {
         let filterId = userId
         let today = Calendar.current.startOfDay(for: Date())
         
-        _goals = Query(filter: #Predicate<Goal> { $0.ownerID == filterId }, sort: \.targetDate)
+        _rawGoals = Query(filter: #Predicate<Goal> { $0.ownerID == filterId }, sort: \.targetDate)
         _todayRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == filterId && $0.date >= today })
         _allRecords = Query(filter: #Predicate<StudyRecord> { $0.ownerID == filterId })
     }
@@ -365,7 +373,7 @@ struct GoalCardView: View {
     var body: some View {
         let themeColor = GoalColorHelper.color(for: goal.characterColor)
         let dDay = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: goal.targetDate)).day ?? 0
-        let currentLevel = CharacterLevel.getLevel(uniqueDays: uniqueDays)
+
         
         HStack(spacing: 16) {
             ZStack {
@@ -384,13 +392,10 @@ struct GoalCardView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(goal.title).font(.headline).foregroundColor(.primary).lineLimit(1)
                 
-                HStack(spacing: 6) {
-                    if goal.isPrimaryGoal {
-                        Text("대표 목표").font(.caption2).fontWeight(.bold)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.2)).foregroundColor(.orange).cornerRadius(4)
-                    }
-                    Text("\(uniqueDays)일째 도전 중").font(.caption2).foregroundColor(.secondary)
+                if goal.isPrimaryGoal {
+                    Text("대표 목표").font(.caption2).fontWeight(.bold)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2)).foregroundColor(.orange).cornerRadius(4)
                 }
             }
             Spacer()
