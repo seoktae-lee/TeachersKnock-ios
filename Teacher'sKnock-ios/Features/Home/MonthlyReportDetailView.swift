@@ -12,6 +12,7 @@ struct MonthlyReportDetailView: View {
     @State private var records: [StudyRecord] = []
     // ✨ [추가] 감정 일기 데이터
     @State private var notes: [DailyNote] = []
+    @State private var previousRecords: [StudyRecord] = [] // ✨ [추가] 지난달 데이터 (AI 분석용)
     
     @Environment(\.modelContext) private var modelContext
     
@@ -23,6 +24,9 @@ struct MonthlyReportDetailView: View {
         var color: Color { SubjectName.color(for: subject) }
     }
     
+    // ✨ [추가] 차트 탭 상태
+    @State private var currentChartTab = 0
+    
     init(title: String, startDate: Date, endDate: Date, userId: String) {
         self.title = title
         self.startDate = startDate
@@ -33,40 +37,66 @@ struct MonthlyReportDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 30) {
-                // 1. 헤더
-                headerSection
+                // 1. 통합 헤더 (요약 + AI 코치)
+                AIAnalysisView(
+                    totalSeconds: totalSeconds,
+                    mvpSubject: pieData.first.map { ($0.subject, $0.color) }, // Monthly uses 'subject' not 'label'
+                    records: records,
+                    previousRecords: previousRecords,
+                    title: "월간 분석"
+                )
+                .padding(.horizontal)
                 
                 Divider()
                 
-                // 2. 학습 습관 캘린더 (잔디 + 감정)
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("📅 월간 학습 & 감정")
-                        .font(.headline)
-                        .padding(.horizontal)
-                    
-                    // ✨ notes 데이터 전달
-                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: records, notes: notes)
-                        .padding(.horizontal)
-                }
-                
-                Divider()
-                
-                // 3. 과목별 분석
+                // 2. ✨ [이동됨] 과목별 분석 (파이 & 레이더 스와이프)
                 if !pieData.isEmpty {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("📊 과목별 학습 분석")
-                            .font(.headline)
-                            .padding(.horizontal)
-                        
-                        Chart(pieData) { item in
-                            SectorMark(
-                                angle: .value("시간", item.seconds),
-                                innerRadius: .ratio(0.55),
-                                angularInset: 1.5
-                            )
-                            .foregroundStyle(item.color)
+                    VStack(alignment: .leading, spacing: 15) {
+                        HStack {
+                            Text(currentChartTab == 0 ? "과목별 학습 분석" : "과목 밸런스")
+                                .font(.headline)
+                            Spacer()
+                            // 인디케이터
+                            HStack(spacing: 6) {
+                                Circle().fill(currentChartTab == 0 ? Color.blue : Color.gray.opacity(0.3)).frame(width: 6, height: 6)
+                                Circle().fill(currentChartTab == 1 ? Color.blue : Color.gray.opacity(0.3)).frame(width: 6, height: 6)
+                            }
                         }
-                        .frame(height: 220)
+                        .padding(.horizontal)
+                        
+                        TabView(selection: $currentChartTab) {
+                            // 1. 파이 차트
+                            VStack {
+                                Chart(pieData) { item in
+                                    SectorMark(
+                                        angle: .value("시간", item.seconds),
+                                        innerRadius: .ratio(0.55),
+                                        angularInset: 1.5
+                                    )
+                                    .foregroundStyle(item.color)
+                                    .annotation(position: .overlay) {
+                                        let percent = Double(item.seconds) / Double(totalSeconds) * 100
+                                        if percent >= 5 { // 5% 이상만 표시
+                                            Text(String(format: "%.0f%%", percent))
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.3), radius: 1)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.bottom, 20)
+                            .tag(0)
+                            
+                            // 2. 레이더 차트
+                            VStack {
+                                RadarChartView(records: records)
+                            }
+                            .tag(1)
+                        }
+                        .frame(height: 300)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
                         
                         Divider().padding(.horizontal)
                         
@@ -110,10 +140,23 @@ struct MonthlyReportDetailView: View {
                 
                 Divider()
                 
+                // 3. ✨ [이동됨] 학습 습관 캘린더 (잔디 + 감정)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("월간 학습")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    // ✨ notes 데이터 전달
+                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: records, notes: notes)
+                        .padding(.horizontal)
+                }
+                
+                Divider()
+                
                 // 4. ✨ [추가] 이번 달의 한마디 (일기 모아보기)
                 if !notes.isEmpty {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("📝 이번 달의 한마디")
+                        Text("이번 달의 한마디")
                             .font(.headline)
                             .padding(.horizontal)
                         
@@ -187,6 +230,14 @@ struct MonthlyReportDetailView: View {
             self.records = allR.filter { $0.date >= startDate && $0.date < rangeEnd }
             self.notes = allN.filter { $0.date >= startDate && $0.date < rangeEnd }
             
+            // ✨ [추가] 지난달 데이터 로드 (한 달 전)
+            let prevStartDate = Calendar.current.date(byAdding: .month, value: -1, to: startDate)!
+            // 이번달 시작일이 지난달 종료일(exclusive)이라고 가정해도 되지만, 
+            // 정확히는 interval만큼 빼는게 맞으나, 간단히 한달 전으로 계산
+            let prevEndDate = startDate
+            
+            self.previousRecords = allR.filter { $0.date >= prevStartDate && $0.date < prevEndDate }
+            
         } catch {
             print("월간 리포트 로드 실패: \(error)")
         }
@@ -211,27 +262,7 @@ struct MonthlyReportDetailView: View {
         pieData.map { $0.seconds }.max() ?? 1
     }
     
-    private var headerSection: some View {
-        VStack(spacing: 10) {
-            Text("이번 달 총 학습")
-                .font(.subheadline).foregroundColor(.gray)
-            Text(formatTime(totalSeconds))
-                .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.blue)
-            
-            Text("\(formatDate(startDate)) ~ \(formatDate(endDate))")
-                .font(.caption)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .padding(.horizontal)
-    }
+
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()

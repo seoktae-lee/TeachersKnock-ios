@@ -578,7 +578,7 @@ struct ScheduleRow: View {
                     
                     Spacer()
                     
-                    if !item.isPostponed && !item.isCompleted && SubjectName.isStudySubject(item.subject) {
+                    if !item.isPostponed && !item.isCompleted && SubjectName.isStudySubject(item.subject) && Calendar.current.isDateInToday(item.startDate) {
                         Button(action: startStudyAction) {
                             Image(systemName: item.isCommonTimer ? "stopwatch" : "timer")
                                 .font(.title2)

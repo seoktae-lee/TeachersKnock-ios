@@ -12,6 +12,7 @@ struct WeeklyReportDetailView: View {
     // 렉 방지를 위해 @Query 대신 @State 사용
     @State private var records: [StudyRecord] = []
     @State private var schedules: [ScheduleItem] = []
+    @State private var previousRecords: [StudyRecord] = [] // ✨ [추가] 지난주 데이터 (AI 분석용)
     @Environment(\.modelContext) private var modelContext
     
     // 차트용 데이터 구조체
@@ -22,44 +23,95 @@ struct WeeklyReportDetailView: View {
         var color: Color
     }
     
+    // ✨ [추가] 차트 탭 상태
+    @State private var currentChartTab = 0
+    
     private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 25) {
-                // 1. 상단 요약 카드
-                summaryCard
+                // 1. 통합 헤더 (요약 + AI 코치)
+                AIAnalysisView(
+                    totalSeconds: totalSeconds,
+                    mvpSubject: pieData.first.map { ($0.label, $0.color) },
+                    records: records,
+                    previousRecords: previousRecords,
+                    title: "주간 분석"
+                )
+                .padding(.horizontal)
                 
-                // 2. 요일별 그래프
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("📊 요일별 학습 흐름")
-                        .font(.headline)
-                        .padding(.horizontal)
-                    
-                    Chart(dailyChartData) { item in
-                        BarMark(x: .value("요일", item.label), y: .value("시간", item.seconds))
-                            .foregroundStyle(item.color)
-                            .cornerRadius(4)
-                    }
-                    .chartYAxis {
-                        AxisMarks(position: .leading) { value in
-                            AxisGridLine()
-                            AxisTick()
-                            if let s = value.as(Int.self) {
-                                AxisValueLabel("\(s/3600)h")
+                Divider()
+                
+                // 3. ✨ [이동됨] 과목 비중 파이 차트 & 레이더 차트 (스와이프)
+                if !pieData.isEmpty {
+                    VStack(alignment: .leading, spacing: 15) {
+                        HStack {
+                            Text(currentChartTab == 0 ? "과목별 비중" : "과목 밸런스")
+                                .font(.headline)
+                            Spacer()
+                            // 인디케이터 (점)
+                            HStack(spacing: 6) {
+                                Circle().fill(currentChartTab == 0 ? Color.blue : Color.gray.opacity(0.3)).frame(width: 6, height: 6)
+                                Circle().fill(currentChartTab == 1 ? Color.blue : Color.gray.opacity(0.3)).frame(width: 6, height: 6)
                             }
                         }
+                        .padding(.horizontal)
+                        
+                        TabView(selection: $currentChartTab) {
+                            // 1. 파이 차트
+                            VStack {
+                                Chart(pieData) { item in
+                                    SectorMark(
+                                        angle: .value("시간", item.seconds),
+                                        innerRadius: .ratio(0.55),
+                                        angularInset: 1.5
+                                    )
+                                    .foregroundStyle(item.color)
+                                    .annotation(position: .overlay) {
+                                        let percent = Double(item.seconds) / Double(totalSeconds) * 100
+                                        if percent >= 5 { // 5% 이상만 표시
+                                            Text(String(format: "%.0f%%", percent))
+                                                .font(.caption2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+                                                .shadow(color: .black.opacity(0.3), radius: 1)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.bottom, 20)
+                            .tag(0)
+                            
+                            // 2. 레이더 차트
+                            VStack {
+                                RadarChartView(records: records)
+                            }
+                            .tag(1)
+                        }
+                        .frame(height: 300) // 탭뷰 높이 확보
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        
+                        // 하단 범례 (공통)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
+                            ForEach(pieData) { item in
+                                HStack(spacing: 4) {
+                                    Circle().fill(item.color).frame(width: 8, height: 8)
+                                    Text(item.label).font(.caption).lineLimit(1)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
                     }
-                    .frame(height: 200)
-                    .padding(.horizontal)
+                    .padding(.bottom, 10)
                 }
                 
                 Divider()
                 
-                // 3. 일별 상세 기록 리스트
+                // 4. ✨ [이동됨] 일별 상세 기록 리스트
                 VStack(alignment: .leading, spacing: 15) {
                     HStack {
-                        Text("📅 일별 상세 기록")
+                        Text("일별 상세 기록")
                             .font(.headline)
                         Spacer()
                         Text("날짜를 누르면 플래너로 이동")
@@ -86,35 +138,7 @@ struct WeeklyReportDetailView: View {
                 
                 Divider()
                 
-                // 4. 과목 비중 파이 차트
-                if !pieData.isEmpty {
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("🧩 과목별 비중")
-                            .font(.headline)
-                            .padding(.horizontal)
-                        
-                        Chart(pieData) { item in
-                            SectorMark(
-                                angle: .value("시간", item.seconds),
-                                innerRadius: .ratio(0.55),
-                                angularInset: 1.5
-                            )
-                            .foregroundStyle(item.color)
-                        }
-                        .frame(height: 220)
-                        
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 10) {
-                            ForEach(pieData) { item in
-                                HStack(spacing: 4) {
-                                    Circle().fill(item.color).frame(width: 8, height: 8)
-                                    Text(item.label).font(.caption).lineLimit(1)
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .padding(.bottom, 30)
-                }
+                // Deleted Chart Section (Moved Up)
             }
             .padding(.vertical)
         }
@@ -146,6 +170,12 @@ struct WeeklyReportDetailView: View {
             self.schedules = allS.filter { $0.startDate >= startDate && $0.startDate < rangeEnd }
             self.records = allR.filter { $0.date >= startDate && $0.date < rangeEnd }
             
+            // ✨ [추가] 지난주 데이터 로드 (7일 전)
+            let prevStartDate = Calendar.current.date(byAdding: .day, value: -7, to: startDate)!
+            let prevEndDate = startDate // 이번주 시작일 = 지난주 종료일 (exclusive)
+            
+            self.previousRecords = allR.filter { $0.date >= prevStartDate && $0.date < prevEndDate }
+            
         } catch {
             print("리포트 데이터 로드 실패: \(error)")
         }
@@ -166,16 +196,7 @@ struct WeeklyReportDetailView: View {
             .sorted { $0.seconds > $1.seconds }
     }
     
-    private var dailyChartData: [ChartData] {
-        let days = getDaysInWeek()
-        return days.map { date in
-            let dayRecords = getRecords(for: date)
-            let total = dayRecords.reduce(0) { $0 + $1.durationSeconds }
-            let dayLabel = date.formatted(.dateTime.weekday(.abbreviated))
-            let color = total > 0 ? Color.blue : Color.gray.opacity(0.3)
-            return ChartData(label: dayLabel, seconds: total, color: color)
-        }
-    }
+    // deleted dailyChartData
     
     private func getDaysInWeek() -> [Date] {
         var days: [Date] = []
@@ -202,42 +223,7 @@ struct WeeklyReportDetailView: View {
         return records.filter { $0.date >= start && $0.date < end }
     }
     
-    // 요약 카드 뷰
-    private var summaryCard: some View {
-        HStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("총 학습 시간").font(.caption).foregroundColor(.gray)
-                Text(formatTimeShort(totalSeconds))
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.blue)
-            }
-            Divider()
-            VStack(alignment: .leading, spacing: 4) {
-                Text("🔥 이번 주 MVP").font(.caption).foregroundColor(.gray)
-                if let best = pieData.first {
-                    Text(best.label)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(best.color)
-                } else {
-                    Text("-")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.gray)
-                }
-            }
-            Spacer()
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .padding(.horizontal)
-    }
-    
-    private func formatTimeShort(_ s: Int) -> String {
-        let h = s / 3600
-        let m = (s % 3600) / 60
-        return h > 0 ? "\(h)시간 \(m)분" : "\(m)분"
-    }
+
 }
 
 // ✨ [업그레이드 완료] 세련된 일별 리포트 버튼 (DailyPerformanceRow)
@@ -312,6 +298,22 @@ struct DailyPerformanceRow: View {
                     }
                 }
                 .frame(height: 5)
+                
+                // ✨ [추가] 주요 과목 (Top 3)
+                if !records.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(topSubjects, id: \.name) { subject in
+                            Text(subject.name)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(subject.color)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(subject.color.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
             
             // 3. 공부 시간 (우측 정렬)
@@ -345,6 +347,17 @@ struct DailyPerformanceRow: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.gray.opacity(0.05), lineWidth: 1)
         )
+    }
+    
+    // ✨ [추가] 과목 계산 로직 (상위 3개)
+    private var topSubjects: [(name: String, color: Color)] {
+        var dict: [String: Int] = [:]
+        for record in records {
+            dict[record.areaName, default: 0] += record.durationSeconds
+        }
+        return dict.sorted { $0.value > $1.value }
+            .prefix(3)
+            .map { (name: $0.key, color: SubjectName.color(for: $0.key)) }
     }
     
     private func formatTime(_ seconds: Int) -> String {

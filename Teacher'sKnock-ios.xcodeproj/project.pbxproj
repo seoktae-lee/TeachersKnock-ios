@@ -68,6 +68,8 @@
 		546B334E2F004E9900741EE2 /* ScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546B334D2F004E9900741EE2 /* ScheduleManager.swift */; };
 		546F5CD12EE3290C009105C7 /* SubjectManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */; };
 		546F5CD32EE331BF009105C7 /* StudySubject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F5CD22EE331BF009105C7 /* StudySubject.swift */; };
+		547231112F1652AA00EAB162 /* RadarChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547231102F1652AA00EAB162 /* RadarChartView.swift */; };
+		547231122F1652AA00EAB162 /* AIAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5472310F2F1652AA00EAB162 /* AIAnalysisView.swift */; };
 		54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */; };
 		547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */; };
 		548AFA972F0BADC7003EA411 /* AlertManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548AFA962F0BADC7003EA411 /* AlertManager.swift */; };
@@ -208,6 +210,8 @@
 		546B334D2F004E9900741EE2 /* ScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleManager.swift; sourceTree = "<group>"; };
 		546F5CD02EE3290C009105C7 /* SubjectManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectManagementView.swift; sourceTree = "<group>"; };
 		546F5CD22EE331BF009105C7 /* StudySubject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySubject.swift; sourceTree = "<group>"; };
+		5472310F2F1652AA00EAB162 /* AIAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAnalysisView.swift; sourceTree = "<group>"; };
+		547231102F1652AA00EAB162 /* RadarChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartView.swift; sourceTree = "<group>"; };
 		54749F4A2F02CC2E00EC69CF /* GoalColorHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalColorHelper.swift; sourceTree = "<group>"; };
 		547DC4DE2F027FD5000EEE3B /* SubjectColorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubjectColorManager.swift; sourceTree = "<group>"; };
 		548AFA962F0BADC7003EA411 /* AlertManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertManager.swift; sourceTree = "<group>"; };
@@ -438,6 +442,8 @@
 		5459AE582EE19F2B008EE0E4 /* Home */ = {
 			isa = PBXGroup;
 			children = (
+				5472310F2F1652AA00EAB162 /* AIAnalysisView.swift */,
+				547231102F1652AA00EAB162 /* RadarChartView.swift */,
 				5435A21D2F081310002A37D4 /* CharacterShopView.swift */,
 				5435A21B2F081188002A37D4 /* StartingCharacterSelectionView.swift */,
 				5435A2152F0807C3002A37D4 /* CharacterStorageView.swift */,
@@ -679,6 +685,8 @@
 				546B334C2F004ABB00741EE2 /* GoalManager.swift in Sources */,
 				5459AE2F2EE19535008EE0E4 /* AuthManager.swift in Sources */,
 				547DC4DF2F027FD5000EEE3B /* SubjectColorManager.swift in Sources */,
+				547231112F1652AA00EAB162 /* RadarChartView.swift in Sources */,
+				547231122F1652AA00EAB162 /* AIAnalysisView.swift in Sources */,
 				5459AE302EE19535008EE0E4 /* CharacterLevel.swift in Sources */,
 				5459AE312EE19535008EE0E4 /* CharacterView.swift in Sources */,
 				54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */,
