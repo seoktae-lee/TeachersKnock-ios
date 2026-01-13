@@ -385,6 +385,31 @@ struct EvolutionView: View {
                     }
                     .modifier(EvolutionNewEffect(theme: theme, state: animationState, rotationY: rotationY, bounceOffset: bounceOffset, slideOffset: slideOffsetNew, zoomScale: zoomScale, blurRadius: blurRadius))
                 }
+                
+                // ✨ [이동] 레벨 & 칭호 표시 (캐릭터 바로 아래 동적 위치)
+                if animationState == .celebration {
+                    VStack(spacing: 8) {
+                        // 1. 레벨 표시 (깔끔하고 크게)
+                        Text("LV.\(newLevel.rawValue + 1)")
+                            .font(.system(size: 40, weight: .black, design: .rounded)) // 크기 32 -> 40 확대
+                            .foregroundColor(.white)
+                            .shadow(color: themeColor, radius: 15, x: 0, y: 0) // Glow 강화
+                        
+                        // 2. 최종 진화 칭호 (Sophisticated Style: Elegant Font Only)
+                        if newLevel.isMaxLevel(for: characterType) {
+                            Text(newLevel.title(for: characterType))
+                                .font(.system(size: 26, weight: .bold, design: .serif)) // 명조 계열(Serif)로 고급스러움 강조
+                                .italic()
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                                .multilineTextAlignment(.center) // ✨ 텍스트 중앙 정렬 명시
+                                .padding(.top, 4)
+                                .transition(.scale.combined(with: .opacity).animation(.spring(response: 0.5, dampingFraction: 0.6)))
+                        }
+                    }
+                    .offset(y: characterSize / 2 + 50) // ✨ 캐릭터 크기에 따라 동적으로 위치 조정
+                    .transition(.opacity.animation(.easeIn(duration: 0.5)))
+                }
             }
             .zIndex(0) // Behind text
             
@@ -443,58 +468,51 @@ struct EvolutionView: View {
                 VStack {
                     Spacer()
                     
-                    // ✨ Level Info (Fixed Bottom with Buttons)
-                    VStack(spacing: 8) {
-                        Text("LV.\(oldLevel.rawValue + 1) -> LV.\(newLevel.rawValue + 1)")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Text(newLevel.title(for: characterType))
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.ultraThinMaterial)
-                                    .shadow(color: themeColor.opacity(0.5), radius: 10, x: 0, y: 0)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
-                            )
-                    }
-                    .padding(.bottom, 20) // Space between info and buttons
-                    
-                    // ✨ Buttons Row
-                    HStack(spacing: 16) {
+
+                    // ✨ Buttons Row (Restyled for Sophistication)
+                    HStack(spacing: 12) {
                         Button(action: renderAndShare) {
-                            HStack {
+                            HStack(spacing: 6) {
                                 Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 14))
                                 Text("자랑하기")
                             }
-                            .font(.headline)
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding()
+                            .padding(.vertical, 14)
                             .frame(maxWidth: .infinity)
-                            .background(Color.white.opacity(0.2))
-                            .cornerRadius(16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.15))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                            )
                         }
                         
                         Button(action: onCompletion) {
                             Text("완료")
-                                .font(.headline)
+                                .font(.system(size: 15, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding()
+                                .padding(.vertical, 14)
                                 .frame(maxWidth: .infinity)
-                                .background(themeColor)
-                                .cornerRadius(16)
+                                .background(
+                                    Capsule()
+                                        .fill(themeColor)
+                                        .shadow(color: themeColor.opacity(0.4), radius: 8, x: 0, y: 4)
+                                )
                         }
                     }
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 50)
+                    .padding(.horizontal, 30) // 버튼 너비 확보를 위해 여백 조정
+                    .padding(.bottom, 30)
+                    
+                    // ✨ 공식적이고 딱딱한 저작권 경고 문구 (화면 최하단)
+                    Text("© Teacher's Knock. 본 캐릭터 이미지는 저작권법의 보호를 받으며,\n무단 캡처 및 배포 시 불이익을 받을 수 있습니다.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.4))
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 20)
                 }
                 .transition(.opacity)
             }
@@ -519,6 +537,12 @@ struct EvolutionView: View {
         case .reveal, .celebration:
             return "축하합니다!\n진화에 성공했어요!"
         }
+    }
+    
+    // ✨ 캐릭터 크기 계산 (레벨별 차등)
+    private var characterSize: CGFloat {
+        // Lv 1-2(0,1): 200, Lv 3-4(2,3): 250, Lv 5-6(4,5): 300
+        return newLevel.rawValue >= 4 ? 300 : (newLevel.rawValue >= 2 ? 250 : 200)
     }
     
     private func startEvolutionSequence() {
@@ -720,10 +744,14 @@ struct EvolutionShareView: View {
                         .shadow(radius: 20)
                     
                     if let imageName = characterImageName {
+                        // ✨ [수정] 스포일러 방지를 위한 실루엣(그림자) 처리
                         Image(imageName)
                             .resizable()
+                            .renderingMode(.template) // 템플릿 모드로 변경하여 색상 적용 가능하게 함
+                            .foregroundColor(.black.opacity(0.85)) // 진한 검은색 실루엣 적용
                             .scaledToFit()
                             .padding(30)
+                            .blur(radius: 6) // ✨ 윤곽을 흐리게 하여 궁금증 유발 강화
                     } else {
                         Text(characterEmoji)
                             .font(.system(size: 140))

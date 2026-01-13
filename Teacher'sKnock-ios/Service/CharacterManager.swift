@@ -135,9 +135,9 @@ class CharacterManager: ObservableObject {
             // ✨ [Cleanup] 테스트용 스톤 골렘 데이터 일괄 삭제 (사용자 요청에 의한 초기화)
             // 주의: 이 로직은 앱 실행 시 'golem' 타입 캐릭터를 삭제합니다. 구매 이력 초기화용.
             // 영구 삭제를 원치 않으면 추후 제거 필요. 현재는 "초기화" 요청에 따라 추가됨.
-            // ✨ [Cleanup] 테스트용 구매 캐릭터 일괄 초기화 (사용자 요청)
-            // 'golem', 'cloud', 'unicorn', 'wolf' 등 테스트를 위해 구매했던 캐릭터 제거
-            let testPurchaseCleanupKey = "Cleanup_TestPurchases_Reset_v2"
+            // ✨ [Cleanup] 테스트용 구매 캐릭터 일괄 초기화 (사용자 요청 - 최종 복원)
+            // 'golem', 'cloud', 'unicorn', 'wolf' 등 테스트를 위해 구매했던 캐릭터 제거 및 데이터 복원
+            let testPurchaseCleanupKey = "Cleanup_TestPurchases_Final_Restore"
             if !UserDefaults.standard.bool(forKey: testPurchaseCleanupKey) {
                 // 제거할 타입 목록
                 let typesToRemove = ["golem", "cloud", "unicorn", "wolf"]
