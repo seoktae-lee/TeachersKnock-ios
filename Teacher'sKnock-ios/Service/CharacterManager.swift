@@ -99,6 +99,18 @@ class CharacterManager: ObservableObject {
     
     private let baseStorageKey = "UserCharacters_v1"
     private let baseEquippedKey = "EquippedCharacterType_v1"
+    private let dailyTimeKey = "DailyAccumulatedTime_v1"
+    private let dailyRewardKey = "DailyRewardLevel_v1"
+    private let dailyDateKey = "LastDailyResetDate_v1"
+    
+    // ✨ [New] Daily Study Tracking
+    @Published var dailyAccumulatedTime: Int = 0
+    @Published var dailyRewardLevel: Int = 0 // 0: None, 1: 1h(3600s), 2: 4h(14400s)
+    private var lastDailyResetDate: Date?
+    
+    // Thresholds
+    private let threshold1 = 3600  // 1 Hour
+    private let threshold2 = 14400 // 4 Hours
     
     // 현재 로그인된 유저 ID 추적
     private var currentUserID: String?
@@ -156,6 +168,50 @@ class CharacterManager: ObservableObject {
                 UserDefaults.standard.set(true, forKey: testPurchaseCleanupKey)
             }
             
+            // ✨ [Cleanup] 1시간/4시간 테스트로 얻은 경험치 및 일일 데이터 초기화 (사용자 요청)
+            let testTimeLogicCleanupKey = "Cleanup_TimeBasedLogic_Test_Revert"
+            if !UserDefaults.standard.bool(forKey: testTimeLogicCleanupKey) {
+                // 1. 현재 일일 보상 단계 확인 (테스트로 얻은 Exp)
+                let savedReward = UserDefaults.standard.integer(forKey: "\(self.dailyRewardKey)_\(uid)")
+                
+                if savedReward > 0 {
+                    // 2. 장착된 캐릭터에서 해당 경험치 차감
+                    if let index = characters.firstIndex(where: { $0.type == self.equippedCharacterType }) {
+                        self.characters[index].exp = max(0, self.characters[index].exp - savedReward)
+                        // 레벨 재계산 (updateLevel 로직 활용하거나 단순 재설정)
+                        // updateLevel은 상승만 체크하므로, 여기서 직접 재계산 필요할 수 있지만,
+                        // 단순하게 updateLevel 호출해도 레벨 다운은 안될 수 있음. CharacterLevel.getLevel로 재설정.
+                        let exp = self.characters[index].exp
+                        let newLevel = CharacterLevel.getLevel(uniqueDays: exp).rawValue
+                        // 등급 제한 체크 로직 복사 (간소화)
+                        let type = self.characters[index].type
+                        let maxLvl = ["whale", "phoenix"].contains(type) ? 7 : (["tree", "robot", "golem", "cloud", "unicorn", "wolf"].contains(type) ? 5 : 3)
+                        self.characters[index].level = min(newLevel, maxLvl)
+                        
+                        print("🧹 테스트 보상 회수: \(savedReward) Exp 차감 (Current: \(self.characters[index].exp))")
+                    }
+                }
+                
+                // 3. 일일 데이터(시간, 보상단계) 초기화
+                self.dailyAccumulatedTime = 0
+                self.dailyRewardLevel = 0
+                self.lastDailyResetDate = nil // 날짜도 초기화하여 오늘 다시 시작 가능하도록
+                
+                let userDailyTimeKey = "\(dailyTimeKey)_\(uid)"
+                let userDailyRewardKey = "\(dailyRewardKey)_\(uid)"
+                let userDailyDateKey = "\(dailyDateKey)_\(uid)"
+                
+                UserDefaults.standard.set(0, forKey: userDailyTimeKey)
+                UserDefaults.standard.set(0, forKey: userDailyRewardKey)
+                UserDefaults.standard.removeObject(forKey: userDailyDateKey)
+                
+                // 4. 저장
+                self.saveCharacters()
+                print("🧹 일일 학습 시간 및 보상 상태 초기화 완료 (테스트 복구)")
+                
+                UserDefaults.standard.set(true, forKey: testTimeLogicCleanupKey)
+            }
+            
             // ✨ [Restoration] 사용자 요청 복구: Lv.2 / 다음 레벨까지 6일 남음
             // Lv.3 도달 필요 누적일: 15일
             // 목표: 15 - 6 = 9일 (현재 경험치)
@@ -182,6 +238,20 @@ class CharacterManager: ObservableObject {
             self.equippedCharacterType = "bird"
         }
         
+        // ✨ [New] Load Daily Progress
+        let userDailyTimeKey = "\(dailyTimeKey)_\(uid)"
+        let userDailyRewardKey = "\(dailyRewardKey)_\(uid)"
+        let userDailyDateKey = "\(dailyDateKey)_\(uid)"
+        
+        self.dailyAccumulatedTime = UserDefaults.standard.integer(forKey: userDailyTimeKey)
+        self.dailyRewardLevel = UserDefaults.standard.integer(forKey: userDailyRewardKey)
+        if let savedDate = UserDefaults.standard.object(forKey: userDailyDateKey) as? Date {
+            self.lastDailyResetDate = savedDate
+        }
+        
+        // Check for date change immediately
+        checkAndResetDailyProgress()
+        
         // 서버 동기화
         fetchFromFirestore(uid: uid)
     }
@@ -191,6 +261,9 @@ class CharacterManager: ObservableObject {
         self.currentUserID = nil
         self.characters = []
         self.equippedCharacterType = "bird"
+        self.dailyAccumulatedTime = 0
+        self.dailyRewardLevel = 0
+        self.lastDailyResetDate = nil
     }
     
     func saveCharacters() {
@@ -205,12 +278,33 @@ class CharacterManager: ObservableObject {
         }
         UserDefaults.standard.set(equippedCharacterType, forKey: userEquippedKey)
         
+        // ✨ Daily Keys
+        let userDailyTimeKey = "\(dailyTimeKey)_\(uid)"
+        let userDailyRewardKey = "\(dailyRewardKey)_\(uid)"
+        let userDailyDateKey = "\(dailyDateKey)_\(uid)"
+        
+        // ✨ Save Daily Progress
+        UserDefaults.standard.set(dailyAccumulatedTime, forKey: userDailyTimeKey)
+        UserDefaults.standard.set(dailyRewardLevel, forKey: userDailyRewardKey)
+        if let date = lastDailyResetDate {
+            UserDefaults.standard.set(date, forKey: userDailyDateKey)
+        }
+        
         // 2. 서버 저장 (Firestore)
         saveToFirestore(uid: uid)
     }
     
     // ✨ [추가] Firestore에 데이터 저장
     func saveToFirestore(uid: String) {
+        // ⚠️ [Fix] 캐릭터 데이터가 비어있다면 서버 덮어쓰기 방지 (초기 로드 시점 안전장치)
+        // 로컬 데이터가 없어서 [] 상태인데, 이를 서버에 저장해버리면 기존 데이터가 날아감.
+        // 단, 정말로 캐릭터가 하나도 없는 경우(탈퇴 후 재가입 등)도 있을 수 있으나,
+        // 기본적으로 스타팅 캐릭터가 있어야 정상임. 빈 배열은 저장하지 않도록 처리.
+        guard !characters.isEmpty else {
+            print("⚠️ [CharacterManager] 캐릭터 데이터가 비어있어 서버 저장을 건너뜁니다.")
+            return
+        }
+        
         let characterData = characters.map { $0.asDictionary }
         let data: [String: Any] = [
             "characters": characterData,
@@ -265,28 +359,81 @@ class CharacterManager: ObservableObject {
         saveCharacters()
     }
     
-    // ✨ [수정] 공부 기록 완료 시 호출: 경험치(일수) 증가 (하루 1회 제한)
-    func addExpToEquippedCharacter() {
+    // MARK: - Daily Study & Evolution Logic
+    
+    // ✨ [New] Check Date and Reset if needed
+    private func checkAndResetDailyProgress() {
+         let now = Date()
+         let calendar = Calendar.current
+         
+         if let lastDate = lastDailyResetDate {
+             if !calendar.isDate(lastDate, inSameDayAs: now) {
+                 // New Day
+                 print("📅 날짜 변경 감지: 일일 학습 시간 초기화")
+                 resetDailyProgress(date: now)
+             }
+         } else {
+             // First run
+             resetDailyProgress(date: now)
+         }
+    }
+    
+    private func resetDailyProgress(date: Date) {
+        dailyAccumulatedTime = 0
+        dailyRewardLevel = 0
+        lastDailyResetDate = date
+        saveCharacters() // Persist reset
+    }
+    
+    // ✨ [New] Main Entry Point: Add Study Time
+    func addStudyTime(seconds: Int) {
+        // 1. Check Date Reset First
+        checkAndResetDailyProgress()
+        
+        // 2. Accumulate Time
+        dailyAccumulatedTime += seconds
+        print("⏱️ [CharacterManager] Daily Time: \(dailyAccumulatedTime)s (+\(seconds)s)")
+        
+        // 3. Check Rewards
+        checkAndApplyRewards()
+        
+        // 4. Save
+        saveCharacters()
+    }
+    
+    // ✨ [New] Check Thresholds and Give Rewards
+    private func checkAndApplyRewards() {
         guard let index = characters.firstIndex(where: { $0.type == equippedCharacterType }) else { return }
         
-        let today = Calendar.current.startOfDay(for: Date())
+        var expGained = 0
         
-        // 이미 오늘 공부를 기록했다면 패스 (UserCharacter에 lastStudyDate 필드 필요)
-        if let lastDate = characters[index].lastStudyDate {
-            let lastDay = Calendar.current.startOfDay(for: lastDate)
-            if lastDay == today {
-                print("⚠️ 오늘 이미 경험치를 획득했습니다.")
-                return
-            }
+        // Level 1 Reward: 1 Hour (3600s)
+        if dailyAccumulatedTime >= threshold1 && dailyRewardLevel < 1 {
+            dailyRewardLevel = 1
+            expGained += 1
+            print("🎁 [Reward] 1시간 달성! +1 Exp")
         }
         
-        // 경험치 증가
-        characters[index].exp += 1
-        characters[index].lastStudyDate = Date()
-        print("✅ 캐릭터 경험치 +1 (현재: \(characters[index].exp))")
+        // Level 2 Reward: 4 Hours (14400s)
+        if dailyAccumulatedTime >= threshold2 && dailyRewardLevel < 2 {
+            dailyRewardLevel = 2
+            expGained += 1
+            print("🎁 [Reward] 4시간 달성! +1 Exp (Bonus)")
+        }
         
-        updateLevel(for: index)
-        saveCharacters()
+        if expGained > 0 {
+            characters[index].exp += expGained
+            characters[index].lastStudyDate = Date() // 진화 경험치를 얻은 날짜 갱신
+            updateLevel(for: index)
+            
+            print("✅ Total Exp Gained: +\(expGained) (Current Exp: \(characters[index].exp))")
+        }
+    }
+    
+    // ✨ [Deprecated] For compatibility
+    func addExpToEquippedCharacter() {
+        print("⚠️ [Deprecated] addExpToEquippedCharacter called. Using fallback (0s) check.")
+        addStudyTime(seconds: 0)
     }
     
     // 레벨 업데이트 로직 (CharacterLevel의 기준 따름)

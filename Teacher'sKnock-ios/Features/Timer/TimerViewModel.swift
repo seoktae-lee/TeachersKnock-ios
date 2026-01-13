@@ -160,7 +160,7 @@ class TimerViewModel: ObservableObject {
                 FirestoreSyncManager.shared.saveRecord(yesterdayRecord)
                 
                 // 캐릭터 경험치 (어제 분량)
-                CharacterManager.shared.addExpToEquippedCharacter()
+                CharacterManager.shared.addStudyTime(seconds: durationToRecord)
             }
             
             // 2. 타이머 상태 리셋 (오늘 00:00:00 부터 시작하는 것으로 변경)
@@ -366,8 +366,8 @@ class TimerViewModel: ObservableObject {
             context.insert(newRecord)
             FirestoreSyncManager.shared.saveRecord(newRecord)
             
-            // ✨ [추가] 캐릭터 경험치 증가 (오늘 첫 공부일 때만 적용됨)
-            CharacterManager.shared.addExpToEquippedCharacter()
+            // ✨ [추가] 캐릭터 경험치 증가 (시간 누적)
+            CharacterManager.shared.addStudyTime(seconds: finalTime)
             
             resetTimer()
         }
@@ -413,7 +413,7 @@ class TimerViewModel: ObservableObject {
             
             context.insert(newRecord)
             FirestoreSyncManager.shared.saveRecord(newRecord)
-            CharacterManager.shared.addExpToEquippedCharacter()
+            CharacterManager.shared.addStudyTime(seconds: duration)
             
             // 정리
             UserDefaults.standard.removeObject(forKey: Self.kPendingRecordDuration)

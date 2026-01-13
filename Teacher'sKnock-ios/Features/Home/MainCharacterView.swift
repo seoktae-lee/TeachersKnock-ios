@@ -61,25 +61,7 @@ struct MainCharacterView: View {
                 Spacer()
                 
                 // ✨ [DEBUG] 임시 디버그 버튼 (테스트 중) - 주석 처리됨
-                // ✨ [DEBUG] 임시 디버그 버튼 (테스트 중) - 주석 해제됨 (사용자 요청) -> 다시 주석 처리
-//                HStack(spacing: 8) {
-//                    Button(action: { CharacterManager.shared.debugResetLevel() }) {
-//                        Image(systemName: "arrow.counterclockwise")
-//                            .font(.caption2)
-//                            .foregroundColor(.red)
-//                            .padding(6)
-//                            .background(Color.white.opacity(0.8))
-//                            .clipShape(Circle())
-//                    }
-//                    Button(action: { CharacterManager.shared.debugLevelUp() }) {
-//                        Image(systemName: "bolt.fill")
-//                            .font(.caption2)
-//                            .foregroundColor(.yellow)
-//                            .padding(6)
-//                            .background(Color.black.opacity(0.8))
-//                            .clipShape(Circle())
-//                    }
-//                }
+                // ✨ [DEBUG] 임시 디버그 버튼 제거됨
 
                 
                 Button(action: { showStorage = true }) {

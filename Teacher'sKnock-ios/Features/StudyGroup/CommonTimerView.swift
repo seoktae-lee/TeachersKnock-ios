@@ -440,8 +440,8 @@ struct CommonTimerView: View {
             modelContext.insert(record)
             FirestoreSyncManager.shared.saveRecord(record)
             
-            // 3. 경험치 지급
-            CharacterManager.shared.addExpToEquippedCharacter()
+            // 3. 경험치 지급 (시간 누적)
+            CharacterManager.shared.addStudyTime(seconds: duration)
             
             try? modelContext.save()
         } else {
