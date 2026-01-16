@@ -249,9 +249,9 @@
 		54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequestManager.swift; sourceTree = "<group>"; };
 		54A40FF52F0A6C5700A0474F /* FriendRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequest.swift; sourceTree = "<group>"; };
 		54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelManager.swift; sourceTree = "<group>"; };
-		54A999212F1A2CA400483BBD /* NanumSquareRoundB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/NanumSquareRoundB.ttf; sourceTree = "<group>"; };
-		54A999222F1A2CA400483BBD /* NanumSquareRoundEB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/NanumSquareRoundEB.ttf; sourceTree = "<group>"; };
-		54A999232F1A2CA400483BBD /* NanumSquareRoundR.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/NanumSquareRoundR.ttf; sourceTree = "<group>"; };
+		54A999212F1A2CA400483BBD /* NanumSquareRoundB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf"; sourceTree = "<group>"; };
+		54A999222F1A2CA400483BBD /* NanumSquareRoundEB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf"; sourceTree = "<group>"; };
+		54A999232F1A2CA400483BBD /* NanumSquareRoundR.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf"; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
