@@ -22,44 +22,61 @@ struct TeachersKnock_iosApp: App {
     }
     
     static func configureAppearance() {
-        print("🎨 [App] configureAppearance 호출됨 (Refined)")
+        print("🎨 [App] configureAppearance 호출됨 (Custom NanumSquareRound)")
         let appearance = UINavigationBarAppearance()
         appearance.configureWithDefaultBackground()
         
-        // Helper to create rounded font
-        // Helper to create rounded font
-        func roundedFont(style: UIFont.TextStyle, weight: UIFont.Weight) -> UIFont {
-            // 1. 현재 Dynamic Type 설정에 맞는 사이즈 가져오기
-            let descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: style)
-            let size = descriptor.pointSize
-            
-            // 2. 원하는 굵기의 시스템 폰트 생성
-            let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
-            
-            // 3. Rounded Design 적용 (Descriptor 레벨에서 변환)
-            if let roundedDescriptor = systemFont.fontDescriptor.withDesign(.rounded) {
-                print("✅ [App] \(style) Rounded Font 적용 성공 (Weight: \(weight))")
-                return UIFont(descriptor: roundedDescriptor, size: 0)
-            } else {
-                print("❌ [App] \(style) Rounded Design 미지원, 기본 시스템 폰트 반환")
-                return systemFont
+        // ✨ Custom Font Helper
+        func customFont(name: String, size: CGFloat) -> UIFont {
+            guard let font = UIFont(name: name, size: size) else {
+                print("⚠️ [App] 폰트 로드 실패: \(name), 시스템 폰트로 대체")
+                return UIFont.systemFont(ofSize: size, weight: .bold)
             }
+            return font
         }
         
-        // Large Title (큰 제목)
-        appearance.largeTitleTextAttributes = [.font: roundedFont(style: .largeTitle, weight: .bold)]
+        // 폰트 이름 정의 (실제 PostScript 이름과 일치해야 함. 보통 파일명과 유사)
+        // NanumSquareRoundB -> NanumSquareRoundB
+        // NanumSquareRoundR -> NanumSquareRoundR
+        let boldFontName = "NanumSquareRoundB"
+        let regularFontName = "NanumSquareRoundR"
+        let extraBoldFontName = "NanumSquareRoundEB"
+        
+        // Large Title (큰 제목) - 34pt Bold
+        let largeFont = customFont(name: extraBoldFontName, size: 34)
+        appearance.largeTitleTextAttributes = [.font: largeFont]
         
         // Inline Title (작은 제목)
-        appearance.titleTextAttributes = [.font: roundedFont(style: .headline, weight: .semibold)]
+        let standardFont = customFont(name: boldFontName, size: 18) // 가독성을 위해 18pt
+        appearance.titleTextAttributes = [.font: standardFont]
         
         // Back Button
         let backAppearance = UIBarButtonItemAppearance()
-        backAppearance.normal.titleTextAttributes = [.font: roundedFont(style: .body, weight: .medium)]
+        let backFont = customFont(name: regularFontName, size: 17)
+        backAppearance.normal.titleTextAttributes = [.font: backFont]
         appearance.backButtonAppearance = backAppearance
         
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        
+        // ✨ 탭바 아이템 폰트
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithDefaultBackground()
+        let tabBarFont = customFont(name: boldFontName, size: 11)
+        
+        let itemAppearance = UITabBarItemAppearance()
+        itemAppearance.normal.titleTextAttributes = [.font: tabBarFont]
+        itemAppearance.selected.titleTextAttributes = [.font: tabBarFont]
+        
+        tabBarAppearance.stackedLayoutAppearance = itemAppearance
+        tabBarAppearance.inlineLayoutAppearance = itemAppearance
+        tabBarAppearance.compactInlineLayoutAppearance = itemAppearance
+        
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
     }
     
     var body: some Scene {

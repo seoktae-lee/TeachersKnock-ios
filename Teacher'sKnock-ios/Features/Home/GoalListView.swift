@@ -417,12 +417,21 @@ struct GoalCardView: View {
 struct QuickMenuButton: View {
     let title: String; let icon: String; let color: Color
     var body: some View {
-        HStack {
-            Image(systemName: icon).font(.title3).foregroundColor(color)
-            Text(title).font(.subheadline).fontWeight(.bold).foregroundColor(.primary)
-            Spacer()
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundColor(color)
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding().frame(maxWidth: .infinity).background(Color.white).cornerRadius(15).shadow(color: .black.opacity(0.03), radius: 5)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.03), radius: 5)
     }
 }
 
