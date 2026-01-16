@@ -34,9 +34,27 @@ enum OfficeOfEducation: String, CaseIterable, Identifiable, Codable {
     }
     
     // ✨ 교육청 로고 이미지 이름 (Assets에 해당 이름의 이미지가 있어야 함)
-    // 없을 경우 뷰에서 기본 앱 로고를 대신 사용하도록 처리
+    // 영문 파일명으로 변경 (한글 인코딩 이슈 방지)
     var logoImageName: String {
-        return "OfficeLogo_\(self.rawValue)" // 다시 한글 이름 사용 (파일이 한글로 되어있음)
+        switch self {
+        case .seoul: return "OfficeLogo_Seoul"
+        case .gyeonggi: return "OfficeLogo_Gyeonggi"
+        case .busan: return "OfficeLogo_Busan"
+        case .daegu: return "OfficeLogo_Daegu"
+        case .incheon: return "OfficeLogo_Incheon"
+        case .gwangju: return "OfficeLogo_Gwangju"
+        case .daejeon: return "OfficeLogo_Daejeon"
+        case .ulsan: return "OfficeLogo_Ulsan"
+        case .sejong: return "OfficeLogo_Sejong"
+        case .gangwon: return "OfficeLogo_Gangwon"
+        case .chungbuk: return "OfficeLogo_Chungbuk"
+        case .chungnam: return "OfficeLogo_Chungnam"
+        case .jeonbuk: return "OfficeLogo_Jeonbuk"
+        case .jeonnam: return "OfficeLogo_Jeonnam"
+        case .gyeongbuk: return "OfficeLogo_Gyeongbuk"
+        case .gyeongnam: return "OfficeLogo_Gyeongnam"
+        case .jeju: return "OfficeLogo_Jeju"
+        }
     }
     
 }
