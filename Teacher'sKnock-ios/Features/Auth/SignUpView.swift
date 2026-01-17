@@ -254,9 +254,13 @@ struct SignUpView: View {
                     Text("별명 (스터디 그룹 ID로 사용됩니다)").font(.caption).foregroundColor(.gray)
                     
                     HStack {
-                        TextField("예: 합격이", text: $nickname)
+                        TextField("예: 합격이 (5글자 이내)", text: $nickname)
                             .autocapitalization(.none)
-                            .onChange(of: nickname) { _ in
+                            .onChange(of: nickname) { newValue in
+                                // ✨ [추가] 5글자 제한 로직
+                                if newValue.count > 5 {
+                                    nickname = String(newValue.prefix(5))
+                                }
                                 nicknameCheckStatus = .none // 변경 시 상태 초기화
                             }
                         
