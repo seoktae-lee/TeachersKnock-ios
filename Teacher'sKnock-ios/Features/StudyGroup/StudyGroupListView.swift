@@ -82,51 +82,47 @@ struct StudyGroupListView: View {
             Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
             
-            ScrollView {
-                LazyVStack(spacing: 15) {
-                    // ✨ [New] 받은 초대 목록 섹션
-                    if !invitationManager.receivedInvitations.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("받은 초대")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.leading, 5)
-                            
-                            ForEach(invitationManager.receivedInvitations) { invitation in
-                                InvitationRow(invitation: invitation, invitationManager: invitationManager, studyManager: studyManager)
-                            }
-                        }
-                        .padding()
-                    }
-                    
-                    // 내 스터디 그룹 목록
-                    if studyManager.myGroups.isEmpty {
-                         // 초대가 있을 때는 빈 화면 문구를 조금 다르게 보여주거나, 초대만 보여줘도 됨.
-                         // 여기서는 그룹이 없고 초대도 없을 때만 EmptyState를 보여주는게 자연스라울듯 하다만,
-                         // 일단 studyManager.myGroups isEmpty 기준으로 처리하고, 초대가 있으면 위에 뜨게 둠.
-                         // 만약 초대가 있는데 그룹이 없으면? -> 초대 목록 + EmptyView(그룹없음) 뜸. 괜찮음.
-                         if invitationManager.receivedInvitations.isEmpty {
-                             emptyStateView
-                                 .padding(.top, 50)
-                         }
-                    } else {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("내 스터디")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                                .padding(.leading, 5)
-                            
-                            ForEach(studyManager.myGroups) { group in
-                                NavigationLink(value: group) {
-                                    StudyGroupRow(group: group, studyManager: studyManager)
+            if studyManager.myGroups.isEmpty && invitationManager.receivedInvitations.isEmpty {
+                // ✨ [Fix] 친구 목록과 동일한 높이(정중앙)에 위치하도록 ScrollView 밖으로 빼고 ZStack 중앙 정렬
+                emptyStateView
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 15) {
+                        // ✨ [New] 받은 초대 목록 섹션
+                        if !invitationManager.receivedInvitations.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("받은 초대")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                    .padding(.leading, 5)
+                                
+                                ForEach(invitationManager.receivedInvitations) { invitation in
+                                    InvitationRow(invitation: invitation, invitationManager: invitationManager, studyManager: studyManager)
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
+                            .padding()
                         }
-                        .padding()
+                        
+                        // 내 스터디 그룹 목록
+                        if !studyManager.myGroups.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("내 스터디")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                    .padding(.leading, 5)
+                                
+                                ForEach(studyManager.myGroups) { group in
+                                    NavigationLink(value: group) {
+                                        StudyGroupRow(group: group, studyManager: studyManager)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                            .padding()
+                        }
                     }
+                    .padding(.bottom, 100) // FAB 공간 확보
                 }
-                .padding(.bottom, 100) // FAB 공간 확보
             }
             
             // Floating Action Button
