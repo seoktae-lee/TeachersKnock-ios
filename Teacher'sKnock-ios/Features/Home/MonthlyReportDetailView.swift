@@ -170,6 +170,7 @@ struct MonthlyReportDetailView: View {
             predicate: #Predicate<StudyRecord> { $0.ownerID == userId }
         )
         // 2. 일기 가져오기
+        do {
             let allR = try modelContext.fetch(recordDescriptor)
             
             let rangeEnd = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
@@ -207,8 +208,6 @@ struct MonthlyReportDetailView: View {
     private var maxSeconds: Int {
         pieData.map { $0.seconds }.max() ?? 1
     }
-    
-
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -262,9 +261,6 @@ struct StudyHeatmapView: View {
             let day = calendar.startOfDay(for: record.date)
             map[day, default: 0] += record.durationSeconds
         }
-        return map
-    }
-    
         return map
     }
     
