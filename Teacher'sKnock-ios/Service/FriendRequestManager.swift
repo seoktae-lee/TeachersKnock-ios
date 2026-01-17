@@ -70,12 +70,16 @@ class FriendRequestManager: ObservableObject {
         listener = db.collection("friend_requests")
             .whereField("receiverID", isEqualTo: uid)
             .whereField("status", isEqualTo: "pending")
-            .order(by: "createdAt", descending: true)
+            // ✨ [Fix] 복합 색인(Composite Index) 없이도 동작하도록 서버 정렬 제거
+            // .order(by: "createdAt", descending: true)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 guard let documents = snapshot?.documents else { return }
                 
-                self.receivedRequests = documents.compactMap { FriendRequest(document: $0) }
+                // 클라이언트 사이드 정렬 (최신순)
+                self.receivedRequests = documents
+                    .compactMap { FriendRequest(document: $0) }
+                    .sorted { $0.createdAt > $1.createdAt }
             }
     }
     
