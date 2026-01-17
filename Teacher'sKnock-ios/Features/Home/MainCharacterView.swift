@@ -56,6 +56,13 @@ struct MainCharacterView: View {
                             .foregroundColor(.gray)
                     }
                     .padding(.bottom, 3)
+                } else {
+                    HStack(spacing: 4) {
+                        Text("정보 > 설정에서 목표 교육청을 선택해주세요")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.gray.opacity(0.8))
+                    }
+                    .padding(.bottom, 3)
                 }
                 
                 Spacer()
