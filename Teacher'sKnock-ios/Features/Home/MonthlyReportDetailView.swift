@@ -10,8 +10,6 @@ struct MonthlyReportDetailView: View {
     
     // 공부 기록 데이터
     @State private var records: [StudyRecord] = []
-    // ✨ [추가] 감정 일기 데이터
-    @State private var notes: [DailyNote] = []
     @State private var previousRecords: [StudyRecord] = [] // ✨ [추가] 지난달 데이터 (AI 분석용)
     
     @Environment(\.modelContext) private var modelContext
@@ -146,59 +144,14 @@ struct MonthlyReportDetailView: View {
                         .font(.headline)
                         .padding(.horizontal)
                     
-                    // ✨ notes 데이터 전달
-                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: records, notes: notes)
+                    // ✨ notes 데이터 전달 제거
+                    StudyHeatmapView(startDate: startDate, endDate: endDate, records: records)
                         .padding(.horizontal)
                 }
                 
                 Divider()
                 
-                // 4. ✨ [추가] 이번 달의 한마디 (일기 모아보기)
-                if !notes.isEmpty {
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("이번 달의 한마디")
-                            .font(.headline)
-                            .padding(.horizontal)
-                        
-                        VStack(spacing: 12) {
-                            // 날짜순 정렬
-                            ForEach(notes.sorted(by: { $0.date < $1.date })) { note in
-                                HStack(alignment: .top, spacing: 12) {
-                                    // 날짜 & 감정
-                                    VStack(spacing: 4) {
-                                        Text(formatDateShort(note.date))
-                                            .font(.caption2)
-                                            .foregroundColor(.gray)
-                                        Text(note.emotion)
-                                            .font(.title3)
-                                    }
-                                    .frame(width: 40)
-                                    
-                                    // 내용
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        if !note.content.isEmpty {
-                                            Text(note.content)
-                                                .font(.subheadline)
-                                                .foregroundColor(.primary)
-                                                .fixedSize(horizontal: false, vertical: true)
-                                        } else {
-                                            Text("(내용 없음)")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                    }
-                                    .padding(12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.white)
-                                    .cornerRadius(12)
-                                    .shadow(color: .black.opacity(0.02), radius: 2, x: 0, y: 1)
-                                }
-                                .padding(.horizontal)
-                            }
-                        }
-                    }
-                    .padding(.bottom, 50)
-                }
+
             }
             .padding(.vertical)
         }
@@ -217,18 +170,11 @@ struct MonthlyReportDetailView: View {
             predicate: #Predicate<StudyRecord> { $0.ownerID == userId }
         )
         // 2. 일기 가져오기
-        let noteDescriptor = FetchDescriptor<DailyNote>(
-            predicate: #Predicate<DailyNote> { $0.ownerID == userId }
-        )
-        
-        do {
             let allR = try modelContext.fetch(recordDescriptor)
-            let allN = try modelContext.fetch(noteDescriptor)
             
             let rangeEnd = Calendar.current.date(byAdding: .day, value: 1, to: endDate)!
             
             self.records = allR.filter { $0.date >= startDate && $0.date < rangeEnd }
-            self.notes = allN.filter { $0.date >= startDate && $0.date < rangeEnd }
             
             // ✨ [추가] 지난달 데이터 로드 (한 달 전)
             let prevStartDate = Calendar.current.date(byAdding: .month, value: -1, to: startDate)!
@@ -289,13 +235,11 @@ struct MonthlyReportDetailView: View {
     }
 }
 
-// ✨ [수정됨] 잔디 심기 + 감정 이모지 뷰
+// ✨ [수정됨] 잔디 심기
 struct StudyHeatmapView: View {
     let startDate: Date
     let endDate: Date
     let records: [StudyRecord]
-    // ✨ notes 추가
-    let notes: [DailyNote]
     
     let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
     
@@ -321,14 +265,6 @@ struct StudyHeatmapView: View {
         return map
     }
     
-    // ✨ 날짜별 감정 매핑 (빠른 검색용)
-    var noteMap: [Date: String] {
-        var map: [Date: String] = [:]
-        let calendar = Calendar.current
-        for note in notes {
-            let day = calendar.startOfDay(for: note.date)
-            map[day] = note.emotion // 그날의 이모지 저장
-        }
         return map
     }
     
@@ -347,20 +283,11 @@ struct StudyHeatmapView: View {
                 ForEach(days, id: \.self) { date in
                     let dayKey = Calendar.current.startOfDay(for: date)
                     let seconds = studyMap[dayKey] ?? 0
-                    let emotion = noteMap[dayKey] // 그날의 기분
-                    
                     ZStack {
                         // 1. 공부량 배경 (색상)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(getColor(seconds: seconds))
                             .aspectRatio(1, contentMode: .fit)
-                        
-                        // 2. ✨ 감정 이모지 오버레이
-                        if let emoji = emotion {
-                            Text(emoji)
-                                .font(.system(size: 14)) // 칸 크기에 맞춰 조절
-                                .shadow(color: .white.opacity(0.5), radius: 1) // 가독성 확보
-                        }
                     }
                 }
             }

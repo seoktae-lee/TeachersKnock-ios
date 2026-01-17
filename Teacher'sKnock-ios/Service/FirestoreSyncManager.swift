@@ -22,17 +22,7 @@ class FirestoreSyncManager {
         }
     }
     
-    // ✨ [추가] 감정 일기 저장
-    func saveNote(_ note: DailyNote) {
-        let docRef = db.collection("users").document(note.ownerID).collection("notes").document(note.id.uuidString)
-        docRef.setData(note.asDictionary) { error in
-            if let error = error {
-                print("❌ FirestoreSync: 일기 저장 실패 - \(error)")
-            } else {
-                print("✅ FirestoreSync: 일기 저장 완료")
-            }
-        }
-    }
+
     
     // 공부 기록 저장
     func saveRecord(_ record: StudyRecord) {
@@ -105,31 +95,7 @@ class FirestoreSyncManager {
             group.leave()
         }
         
-        // (2) ✨ [추가] 감정 일기 복구
-        group.enter()
-        db.collection("users").document(uid).collection("notes").getDocuments { snapshot, error in
-            if let documents = snapshot?.documents {
-                print("🔄 감정 일기 복구 시작: 총 \(documents.count)개 발견")
-                for doc in documents {
-                    let data = doc.data()
-                    
-                    let idString = data["id"] as? String ?? UUID().uuidString
-                    let id = UUID(uuidString: idString) ?? UUID()
-                    
-                    let emotion = data["emotion"] as? String ?? "😐"
-                    let content = data["content"] as? String ?? ""
-                    
-                    let date: Date
-                    if let dateTs = data["date"] as? Double {
-                        date = Date(timeIntervalSince1970: dateTs)
-                    } else { date = Date() }
-                    
-                    let newNote = DailyNote(id: id, date: date, emotion: emotion, content: content, ownerID: uid)
-                    context.insert(newNote)
-                }
-            }
-            group.leave()
-        }
+
         
         // (3) 공부 기록 복구
         group.enter()

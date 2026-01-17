@@ -102,9 +102,9 @@
 		54A40FF42F0A6C4E00A0474F /* FriendRequestManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */; };
 		54A40FF62F0A6C5700A0474F /* FriendRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF52F0A6C5700A0474F /* FriendRequest.swift */; };
 		54A40FF82F0A99A400A0474F /* AudioLevelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */; };
-		54A999242F1A2CA400483BBD /* NanumSquareRoundR.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999232F1A2CA400483BBD /* NanumSquareRoundR.ttf */; };
-		54A999252F1A2CA400483BBD /* NanumSquareRoundB.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999212F1A2CA400483BBD /* NanumSquareRoundB.ttf */; };
-		54A999262F1A2CA400483BBD /* NanumSquareRoundEB.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999222F1A2CA400483BBD /* NanumSquareRoundEB.ttf */; };
+		54A999242F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999232F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf */; };
+		54A999252F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999212F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf */; };
+		54A999262F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 54A999222F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf */; };
 		54BE67F32F07C37D00E6EC64 /* StudyGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */; };
 		54BE67F52F07C39000E6EC64 /* StudyGroupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */; };
 		54BE67FB2F07C3B700E6EC64 /* StudyGroupCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE67F72F07C3B700E6EC64 /* StudyGroupCreationView.swift */; };
@@ -114,7 +114,6 @@
 		54CB0AF92EE66A8800983074 /* HorizontalTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */; };
 		54CB0AFB2EE66E8D00983074 /* DailySwipeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */; };
 		54CDE1582EFE3B8200A2D8CA /* CustomCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */; };
-		54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DBCD152F010AB200B43C2B /* DailyNote.swift */; };
 		54DBCD1A2F011C2100B43C2B /* StudyTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54DBCD192F011C2100B43C2B /* StudyTimerView.swift */; };
 		54E3CD812F0ECF090006A183 /* GroupSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD802F0ECF090006A183 /* GroupSchedule.swift */; };
 		54E3CD832F0ECF180006A183 /* GroupScheduleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E3CD822F0ECF180006A183 /* GroupScheduleManager.swift */; };
@@ -249,9 +248,9 @@
 		54A40FF32F0A6C4E00A0474F /* FriendRequestManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequestManager.swift; sourceTree = "<group>"; };
 		54A40FF52F0A6C5700A0474F /* FriendRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRequest.swift; sourceTree = "<group>"; };
 		54A40FF72F0A99A400A0474F /* AudioLevelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelManager.swift; sourceTree = "<group>"; };
-		54A999212F1A2CA400483BBD /* NanumSquareRoundB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf"; sourceTree = "<group>"; };
-		54A999222F1A2CA400483BBD /* NanumSquareRoundEB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf"; sourceTree = "<group>"; };
-		54A999232F1A2CA400483BBD /* NanumSquareRoundR.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf"; sourceTree = "<group>"; };
+		54A999212F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf"; sourceTree = "<group>"; };
+		54A999222F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf"; sourceTree = "<group>"; };
+		54A999232F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf"; sourceTree = "<group>"; };
 		54BE67F22F07C37D00E6EC64 /* StudyGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroup.swift; sourceTree = "<group>"; };
 		54BE67F42F07C39000E6EC64 /* StudyGroupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyGroupManager.swift; sourceTree = "<group>"; };
 		54BE67F62F07C3B700E6EC64 /* MemberInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberInviteView.swift; sourceTree = "<group>"; };
@@ -261,7 +260,6 @@
 		54CB0AF82EE66A8800983074 /* HorizontalTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalTimelineView.swift; sourceTree = "<group>"; };
 		54CB0AFA2EE66E8D00983074 /* DailySwipeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySwipeView.swift; sourceTree = "<group>"; };
 		54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCalendarView.swift; sourceTree = "<group>"; };
-		54DBCD152F010AB200B43C2B /* DailyNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyNote.swift; sourceTree = "<group>"; };
 		54DBCD192F011C2100B43C2B /* StudyTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyTimerView.swift; sourceTree = "<group>"; };
 		54E3CD802F0ECF090006A183 /* GroupSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSchedule.swift; sourceTree = "<group>"; };
 		54E3CD822F0ECF180006A183 /* GroupScheduleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupScheduleManager.swift; sourceTree = "<group>"; };
@@ -427,7 +425,6 @@
 				546B334D2F004E9900741EE2 /* ScheduleManager.swift */,
 				54F81CD72EE1CBBB002226B4 /* SchedulePreviewView.swift */,
 				54CDE1572EFE3B8200A2D8CA /* CustomCalendarView.swift */,
-				54DBCD152F010AB200B43C2B /* DailyNote.swift */,
 			);
 			path = Planner;
 			sourceTree = "<group>";
@@ -510,9 +507,9 @@
 				5459AE502EE19D31008EE0E4 /* Teacher'sKnock-ios */,
 				543440902EDB139300E736A0 /* Frameworks */,
 				54A1D3652EDA82FF008BD532 /* Products */,
-				54A999212F1A2CA400483BBD /* NanumSquareRoundB.ttf */,
-				54A999222F1A2CA400483BBD /* NanumSquareRoundEB.ttf */,
-				54A999232F1A2CA400483BBD /* NanumSquareRoundR.ttf */,
+				54A999212F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf */,
+				54A999222F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf */,
+				54A999232F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf */,
 			);
 			sourceTree = "<group>";
 		};
@@ -663,9 +660,9 @@
 			files = (
 				5459AE4B2EE19535008EE0E4 /* Assets.xcassets in Resources */,
 				5459AE4C2EE19535008EE0E4 /* GoogleService-Info.plist in Resources */,
-				54A999242F1A2CA400483BBD /* NanumSquareRoundR.ttf in Resources */,
-				54A999252F1A2CA400483BBD /* NanumSquareRoundB.ttf in Resources */,
-				54A999262F1A2CA400483BBD /* NanumSquareRoundEB.ttf in Resources */,
+				54A999242F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundR.ttf in Resources */,
+				54A999252F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundB.ttf in Resources */,
+				54A999262F1A2CA400483BBD /* Teacher'sKnock-ios/Resources/Fonts/NanumSquareRoundEB.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -701,7 +698,6 @@
 				547231122F1652AA00EAB162 /* AIAnalysisView.swift in Sources */,
 				5459AE302EE19535008EE0E4 /* CharacterLevel.swift in Sources */,
 				5459AE312EE19535008EE0E4 /* CharacterView.swift in Sources */,
-				54DBCD162F010AB200B43C2B /* DailyNote.swift in Sources */,
 				5459AE322EE19535008EE0E4 /* DailyDetailView.swift in Sources */,
 				54749F4B2F02CC2E00EC69CF /* GoalColorHelper.swift in Sources */,
 				5459AE332EE19535008EE0E4 /* DailyTimelineView.swift in Sources */,

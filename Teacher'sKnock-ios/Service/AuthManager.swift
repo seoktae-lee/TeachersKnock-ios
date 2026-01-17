@@ -167,29 +167,83 @@ class AuthManager: ObservableObject {
         
         print("🗑 계정 삭제 프로세스 시작: \(uid) (\(nickname))")
         
-        // 1. 스터디 그룹 멤버 정리 (비동기 대기)
-        // 주의: StudyGroupManager 인스턴스가 필요함. shared 인스턴스가 없다면 새로 생성하거나 주입받아야 함.
-        // 현재 코드 구조상 싱글톤이 없으므로, 여기서 일회성으로 생성하여 처리.
+        // 1. 스터디 그룹 멤버 정리
         let tempStudyManager = StudyGroupManager()
         
         tempStudyManager.cleanupMemberForDeletion(uid: uid, nickname: nickname) {
-            print("🗑 스터디 그룹 정리 완료 -> Firestore 유저 삭제 진행")
+            print("🗑 스터디 그룹 정리 완료 -> 하위 컬렉션 삭제 진행")
             
-            // 2. Firestore 유저 삭제
-            Firestore.firestore().collection("users").document(uid).delete { error in
-                if let error = error {
-                    print("Firestore 삭제 실패: \(error)")
-                    completion(false, error)
-                    return
-                }
+            // 2. 하위 컬렉션 데이터 삭제 (Recursive Delete 대용)
+            // 지워야 할 컬렉션 목록
+            let collections = ["schedules", "study_records", "goals", "alerts", "notes"]
+            
+            self.deleteSubcollections(uid: uid, collections: collections) {
+                print("🗑 하위 데이터 삭제 완료 -> Firestore 유저 삭제 진행")
                 
-                // 3. Auth 계정 삭제
-                user.delete { error in
-                    if error == nil {
-                        print("✅ 계정 삭제 완료")
-                        self.signOut() // 상태 초기화
+                // 3. Firestore 유저 삭제
+                Firestore.firestore().collection("users").document(uid).delete { error in
+                    if let error = error {
+                        print("Firestore 삭제 실패: \(error)")
+                        completion(false, error)
+                        return
                     }
-                    completion(error == nil, error)
+                    
+                    // 4. Auth 계정 삭제
+                    user.delete { error in
+                        if error == nil {
+                            print("✅ 계정 완전 삭제 완료")
+                            self.signOut() // 상태 초기화
+                        } else {
+                            // Auth 삭제 실패 시 (로그인 오래됨 등) - 재로그인 유도 필요할 수 있음
+                            print("Auth 계정 삭제 실패: \(error!)")
+                        }
+                        completion(error == nil, error)
+                    }
+                }
+            }
+        }
+    }
+    
+    // ✨ 하위 컬렉션 삭제 헬퍼 (Batch 삭제)
+    private func deleteSubcollections(uid: String, collections: [String], completion: @escaping () -> Void) {
+        let dispatchGroup = DispatchGroup()
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(uid)
+        
+        for collectionName in collections {
+            dispatchGroup.enter()
+            deleteCollection(ref: userRef.collection(collectionName), batchSize: 100) {
+                print("   - \(collectionName) 삭제 완료")
+                dispatchGroup.leave()
+            }
+        }
+        
+        dispatchGroup.notify(queue: .main) {
+            completion()
+        }
+    }
+    
+    // 컬렉션 내부 문서 삭제 (재귀)
+    private func deleteCollection(ref: CollectionReference, batchSize: Int, completion: @escaping () -> Void) {
+        ref.limit(to: batchSize).getDocuments { snapshot, error in
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                completion()
+                return
+            }
+            
+            let batch = Firestore.firestore().batch()
+            for doc in documents {
+                batch.deleteDocument(doc.reference)
+            }
+            
+            batch.commit { error in
+                if let error = error {
+                    print("Batch delete fail: \(error)")
+                    // 에러가 나도 일단 진행 or 재시도? 여기선 로그 찍고 중단
+                    completion() 
+                } else {
+                    // 남은 문서가 있을 수 있으므로 재귀 호출
+                    self.deleteCollection(ref: ref, batchSize: batchSize, completion: completion)
                 }
             }
         }
