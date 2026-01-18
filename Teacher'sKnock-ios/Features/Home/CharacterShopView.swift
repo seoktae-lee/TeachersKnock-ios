@@ -63,33 +63,56 @@ struct CharacterShopView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기") { dismiss() }
                 }
-
+                // ✨ [New] 구매 복원 버튼 (Apple 필수 요구사항)
+                ToolbarItem(placement: .primaryAction) {
+                    Button("복원") {
+                        isPurchasing = true
+                        PurchaseManager.shared.restorePurchases { success in
+                            isPurchasing = false
+                            if success {
+                                // 복원 성공 시, 모든 캐릭터의 Entitlement를 확인하여 잠금 해제
+                                let types = ["golem", "cloud", "unicorn", "wolf"]
+                                for type in types {
+                                    if PurchaseManager.shared.isPurchased(characterType: type) {
+                                        CharacterManager.shared.unlockStartingCharacter(type: type, name: "")
+                                        print("🔓 [Purchase] 구매 복원으로 '\(type)' 잠금 해제됨")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .alert("상품 구매", isPresented: $showingAlert, presenting: selectedItem) { item in
                 Button("구매하기", role: .none) {
-                    // ✨ [New] 실제 구매 로직 연결
                     isPurchasing = true
+                    // PurchaseManager 내부에서 type -> productID 매핑 처리됨
                     PurchaseManager.shared.purchase(productID: item.type) { success in
                         isPurchasing = false
                         if success {
                             // 구매 성공 시 캐릭터 잠금 해제
                             CharacterManager.shared.unlockStartingCharacter(type: item.type, name: "")
-                            // 성공 알림 (선택 사항)
+                            print("🎉 구매 완료: \(item.name)")
                         } else {
-                            // 실패 알림
+                            print("❌ 구매 실패 또는 취소됨")
                         }
                     }
                 }
                 Button("취소", role: .cancel) {}
             } message: { item in
-                Text("'\(item.name)'을(를) ₩\(item.price)(으)로 구매하시겠습니까?\n(현재는 체험판이라 실제 결제되지 않습니다)")
+                // ✨ [메시지 수정] 실제 결제 안내 (더 이상 체험판 아님)
+                if PurchaseManager.shared.isPurchased(characterType: item.type) {
+                     Text("이미 구매하신 상품입니다.")
+                } else {
+                     Text("'\(item.name)'을(를) 구매하시겠습니까?")
+                }
             }
-            // ✨ [New] 로딩 인디케이터 오버레이
+            // ✨ [New]로딩 인디케이터 오버레이
             .overlay {
                 if isPurchasing {
                     ZStack {
                         Color.black.opacity(0.3).ignoresSafeArea()
-                        ProgressView("구매 처리 중...")
+                        ProgressView("처리 중...")
                             .padding()
                             .background(Color.white)
                             .cornerRadius(12)
