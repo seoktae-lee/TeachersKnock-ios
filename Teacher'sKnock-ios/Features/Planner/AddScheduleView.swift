@@ -403,7 +403,25 @@ struct TimeSection: View {
                 .presentationDetents([.height(300)])
         }
         .sheet(isPresented: $showingEndPicker) {
-            SingleDayTimePicker(selection: $viewModel.endDate, title: "종료 시간 설정")
+            SingleDayTimePicker(selection: Binding(
+                get: { viewModel.endDate },
+                set: { newDate in
+                    // 종료 시간 선택 시, 날짜가 꼬이는 문제(예: 24시간, 72시간 등)를 방지하기 위해
+                    // 시작 날짜와 동일한 날짜로 강제 보정합니다.
+                    // (오버나이트 일정은 ViewModel의 effectiveEndDate 로직이 처리)
+                    let calendar = Calendar.current
+                    let timeComponents = calendar.dateComponents([.hour, .minute], from: newDate)
+                    var dateComponents = calendar.dateComponents([.year, .month, .day], from: viewModel.startDate)
+                    dateComponents.hour = timeComponents.hour
+                    dateComponents.minute = timeComponents.minute
+                    
+                    if let resetDate = calendar.date(from: dateComponents) {
+                        viewModel.endDate = resetDate
+                    } else {
+                        viewModel.endDate = newDate
+                    }
+                }
+            ), title: "종료 시간 설정")
                 .presentationDetents([.height(300)])
         }
     }
