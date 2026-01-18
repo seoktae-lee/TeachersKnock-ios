@@ -156,7 +156,6 @@ class PurchaseManager: NSObject, ObservableObject {
             completion(true, nil)
         }
     }
-    }
     
     // 구매 복원
     func restorePurchases(completion: @escaping PurchaseCompletionHandler) {
