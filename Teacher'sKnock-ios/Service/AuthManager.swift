@@ -149,8 +149,13 @@ class AuthManager: ObservableObject {
     
     @MainActor private func checkAndRestoreData(uid: String, context: ModelContext) {
         do {
-            let descriptor = FetchDescriptor<ScheduleItem>(predicate: #Predicate { $0.ownerID == uid })
-            if try context.fetchCount(descriptor) == 0 {
+            let scheduleDescriptor = FetchDescriptor<ScheduleItem>(predicate: #Predicate { $0.ownerID == uid })
+            let recordDescriptor = FetchDescriptor<StudyRecord>(predicate: #Predicate { $0.ownerID == uid })
+            
+            let scheduleCount = try context.fetchCount(scheduleDescriptor)
+            let recordCount = try context.fetchCount(recordDescriptor)
+            
+            if scheduleCount == 0 && recordCount == 0 {
                 FirestoreSyncManager.shared.restoreData(context: context, uid: uid) {}
             }
         } catch { print("데이터 오류: \(error)") }

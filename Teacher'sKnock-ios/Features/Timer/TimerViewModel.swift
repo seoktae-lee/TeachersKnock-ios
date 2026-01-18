@@ -24,6 +24,9 @@ class TimerViewModel: ObservableObject {
     @Published var audioLevel: Float = 0.0
     @Published var isActuallySpeaking: Bool = false
     
+    // ✨ [Fix] 로컬 저장을 위한 Context 참조
+    var modelContext: ModelContext?
+    
     // MARK: - 내부 변수
     private var startTime: Date?
     private var accumulatedTime: TimeInterval = 0
@@ -127,6 +130,10 @@ class TimerViewModel: ObservableObject {
     // ✨ [New] 자정 감지 및 리셋 로직
     private func checkMidnight() {
         guard let start = startTime else { return }
+        
+        // ✨ [Fix] Context가 준비되지 않았다면 처리 보류 (다음 틱에 재시도)
+        guard let context = modelContext else { return }
+        
         let now = Date()
         
         // 시작 날짜와 현재 날짜가 다르면 (자정이 지난 경우)
@@ -155,6 +162,9 @@ class TimerViewModel: ObservableObject {
                     memo: linkedScheduleTitle,
                     goal: nil // 목표 연결은 복구 시점이라 어려울 수 있음
                 )
+                
+                // ✨ [Fix] 로컬 DB 저장 추가
+                context.insert(yesterdayRecord)
                 
                 // Firestore 저장
                 FirestoreSyncManager.shared.saveRecord(yesterdayRecord)

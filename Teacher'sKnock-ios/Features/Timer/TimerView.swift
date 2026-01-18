@@ -311,6 +311,8 @@ struct TimerView: View {
                 }
             }
             .onAppear {
+                viewModel.modelContext = modelContext
+                
                 if viewModel.selectedSubject.isEmpty {
                     viewModel.selectedSubject = settingsManager.favoriteSubjects.first?.name ?? "교직논술"
                 }
