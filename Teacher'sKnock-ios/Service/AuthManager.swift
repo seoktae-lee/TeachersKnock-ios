@@ -171,14 +171,29 @@ class AuthManager: ObservableObject {
         let tempStudyManager = StudyGroupManager()
         
         tempStudyManager.cleanupMemberForDeletion(uid: uid, nickname: nickname) {
-            print("🗑 스터디 그룹 정리 완료 -> 하위 컬렉션 삭제 진행")
+            print("🗑 스터디 그룹 정리 완료 -> 친구 관계 정리 진행")
             
-            // 2. 하위 컬렉션 데이터 삭제 (Recursive Delete 대용)
-            // 지워야 할 컬렉션 목록
-            let collections = ["schedules", "study_records", "goals", "alerts", "notes"]
-            
-            self.deleteSubcollections(uid: uid, collections: collections) {
-                print("🗑 하위 데이터 삭제 완료 -> Firestore 유저 삭제 진행")
+            // 2. 친구 관계 정리 (내 친구들의 목록에서 나를 삭제)
+            let tempFriendManager = FriendManager()
+            tempFriendManager.cleanupFriendshipsForDeletion(uid: uid) {
+                print("🗑 친구 목록 정리 완료 -> 친구 요청 정리 진행")
+                
+                // 3. 친구 요청 정리
+                let tempRequestManager = FriendRequestManager()
+                tempRequestManager.cleanupRequestsForDeletion(uid: uid) {
+                    print("🗑 친구 요청 정리 완료 -> 스터디 초대 정리 진행")
+                    
+                    // 4. 스터디 초대 정리
+                    let tempInvitationManager = InvitationManager()
+                    tempInvitationManager.cleanupInvitationsForDeletion(uid: uid) {
+                        print("🗑 스터디 초대 정리 완료 -> 하위 컬렉션 삭제 진행")
+                        
+                        // 5. 하위 컬렉션 데이터 삭제 (Recursive Delete 대용)
+                        // 지워야 할 컬렉션 목록
+                        let collections = ["schedules", "study_records", "goals", "alerts", "notes"]
+                        
+                        self.deleteSubcollections(uid: uid, collections: collections) {
+                            print("🗑 하위 데이터 삭제 완료 -> Firestore 유저 삭제 진행")
                 
                 // 3. Firestore 유저 삭제
                 Firestore.firestore().collection("users").document(uid).delete { error in
@@ -198,6 +213,9 @@ class AuthManager: ObservableObject {
                             print("Auth 계정 삭제 실패: \(error!)")
                         }
                         completion(error == nil, error)
+                    }
+                }
+            }
                     }
                 }
             }

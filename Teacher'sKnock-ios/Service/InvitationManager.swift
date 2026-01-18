@@ -132,4 +132,50 @@ class InvitationManager: ObservableObject {
             }
         }
     }
+    // ✨ [New] 회원 탈퇴 시 초대장 정리 (보낸 것, 받은 것 모두 삭제)
+    func cleanupInvitationsForDeletion(uid: String, completion: @escaping () -> Void) {
+        let dispatchGroup = DispatchGroup()
+        let batch = db.batch()
+        var hasOperations = false
+        
+        // 1. 내가 보낸 초대 조회
+        dispatchGroup.enter()
+        db.collection("study_invitations").whereField("inviterID", isEqualTo: uid).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                for doc in documents {
+                    batch.deleteDocument(doc.reference)
+                    hasOperations = true
+                }
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 2. 내가 받은 초대 조회
+        dispatchGroup.enter()
+        db.collection("study_invitations").whereField("receiverID", isEqualTo: uid).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                for doc in documents {
+                    batch.deleteDocument(doc.reference)
+                    hasOperations = true
+                }
+            }
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.notify(queue: .main) {
+            if hasOperations {
+                batch.commit { error in
+                    if let error = error {
+                        print("Error cleaning up invitations: \(error)")
+                    } else {
+                        print("✅ Invitations cleanup complete")
+                    }
+                    completion()
+                }
+            } else {
+                print("✅ No invitations to clean up")
+                completion()
+            }
+        }
+    }
 }

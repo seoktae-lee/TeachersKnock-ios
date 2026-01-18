@@ -137,6 +137,47 @@ class FriendManager: ObservableObject {
             }
         }
     }
+
+    // ✨ [New] 회원 탈퇴 시 친구 목록 정리 (친구들의 friends 배열에서 나를 삭제)
+    func cleanupFriendshipsForDeletion(uid: String, completion: @escaping () -> Void) {
+        db.collection("users").document(uid).getDocument { [weak self] snapshot, error in
+            guard let self = self else {
+                completion()
+                return
+            }
+            
+            if let error = error {
+                print("Error fetching user for cleanup: \(error)")
+                completion()
+                return
+            }
+            
+            guard let data = snapshot?.data(),
+                  let friendUIDs = data["friends"] as? [String], !friendUIDs.isEmpty else {
+                print("✅ No friends to clean up")
+                completion()
+                return
+            }
+            
+            let batch = self.db.batch()
+            
+            for friendUID in friendUIDs {
+                let friendRef = self.db.collection("users").document(friendUID)
+                batch.updateData([
+                    "friends": FieldValue.arrayRemove([uid])
+                ], forDocument: friendRef)
+            }
+            
+            batch.commit { error in
+                if let error = error {
+                    print("Error cleaning up friendships: \(error)")
+                } else {
+                    print("✅ Friendships cleanup complete (Removed from \(friendUIDs.count) friends)")
+                }
+                completion()
+            }
+        }
+    }
 }
 
 // Helper for chunking array

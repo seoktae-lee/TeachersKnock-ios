@@ -162,4 +162,51 @@ class FriendRequestManager: ObservableObject {
             self.receivedRequests.removeAll { $0.id == request.id }
         }
     }
+    
+    // ✨ [New] 회원 탈퇴 시 친구 요청 정리 (보낸 것, 받은 것 모두 삭제)
+    func cleanupRequestsForDeletion(uid: String, completion: @escaping () -> Void) {
+        let dispatchGroup = DispatchGroup()
+        let batch = db.batch()
+        var hasOperations = false
+        
+        // 1. 내가 보낸 요청 조회
+        dispatchGroup.enter()
+        db.collection("friend_requests").whereField("senderID", isEqualTo: uid).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                for doc in documents {
+                    batch.deleteDocument(doc.reference)
+                    hasOperations = true
+                }
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 2. 내가 받은 요청 조회
+        dispatchGroup.enter()
+        db.collection("friend_requests").whereField("receiverID", isEqualTo: uid).getDocuments { snapshot, error in
+            if let documents = snapshot?.documents {
+                for doc in documents {
+                    batch.deleteDocument(doc.reference)
+                    hasOperations = true
+                }
+            }
+            dispatchGroup.leave()
+        }
+        
+        dispatchGroup.notify(queue: .main) {
+            if hasOperations {
+                batch.commit { error in
+                    if let error = error {
+                        print("Error cleaning up friend requests: \(error)")
+                    } else {
+                        print("✅ Friend requests cleanup complete")
+                    }
+                    completion()
+                }
+            } else {
+                print("✅ No friend requests to clean up")
+                completion()
+            }
+        }
+    }
 }
