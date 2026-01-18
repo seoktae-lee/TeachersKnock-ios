@@ -66,13 +66,22 @@ class PurchaseManager: NSObject, ObservableObject {
             return
         }
         
+        print("🛍️ [PurchaseManager] RevenueCat 상품 정보 요청 중...")
         Purchases.shared.getOfferings { [weak self] (offerings, error) in
             if let error = error {
                 print("❌ [PurchaseManager] 상품 로드 실패: \(error.localizedDescription)")
+                print("   상세 에러: \(error)")
             } else {
                 self?.offerings = offerings
-                let offeringKeys = offerings?.all.keys.map { String($0) } ?? []
-                print("✅ [PurchaseManager] 상품 로드 성공 (Available Offerings: \(offeringKeys))")
+                
+                if let current = offerings?.current {
+                    print("✅ [PurchaseManager] Current Offering 로드 성공: \(current.identifier)")
+                    print("   가능한 패키지: \(current.availablePackages.map { $0.storeProduct.productIdentifier })")
+                } else {
+                    print("⚠️ [PurchaseManager] Offerings는 로드되었으나 Current Offering이 비어있습니다.")
+                    print("   RevenueCat 대시보드에서 'Offerings' 설정을 확인하고 'Current'로 지정되었는지 확인하세요.")
+                    print("   전체 Offerings 목록: \(offerings?.all.keys.map { String($0) } ?? [])")
+                }
             }
         }
     }
@@ -101,33 +110,52 @@ class PurchaseManager: NSObject, ObservableObject {
         let actualProductID = getProductID(for: productID) ?? productID
         
         // 2. Offerings에서 해당 패키지 찾기
-        // 먼저 Current Offering에서 찾고, 없으면 전체 Offerings에서 검색
-        guard let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == actualProductID }) ??
-                            offerings?.all.values.flatMap({ $0.availablePackages }).first(where: { $0.storeProduct.productIdentifier == actualProductID })
-        else {
-            let errorMsg = "해당 상품(\(actualProductID))을 찾을 수 없습니다. Offerings 설정을 확인해 주세요."
-            print("❌ [PurchaseManager] \(errorMsg)")
-            completion(false, errorMsg)
-            return
-        }
-        
-        print("💳 [PurchaseManager] 구매 요청 시작: \(package.storeProduct.productIdentifier)")
-        
-        // 3. 실제 구매 요청
-        Purchases.shared.purchase(package: package) { (transaction, customerInfo, error, userCancelled) in
-            if let error = error {
-                let errorMsg = "구매 실패: \(error.localizedDescription)"
-                print("❌ [PurchaseManager] \(errorMsg)")
-                completion(false, errorMsg)
-            } else if userCancelled {
-                print("⚠️ [PurchaseManager] 사용자 취소")
-                completion(false, "구매가 취소되었습니다.")
-            } else {
-                print("✅ [PurchaseManager] 구매 성공!")
-                self.customerInfo = customerInfo
-                completion(true, nil)
+        if let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == actualProductID }) ??
+                            offerings?.all.values.flatMap({ $0.availablePackages }).first(where: { $0.storeProduct.productIdentifier == actualProductID }) {
+            
+            // 2-1. 패키지를 찾은 경우 (Standard Flow)
+            print("💳 [PurchaseManager] Offering 패키지 구매 요청: \(package.storeProduct.productIdentifier)")
+            Purchases.shared.purchase(package: package) { (transaction, customerInfo, error, userCancelled) in
+                self.handlePurchaseResult(completion: completion, error: error, userCancelled: userCancelled, customerInfo: customerInfo)
+            }
+            
+        } else {
+            // 2-2. 패키지를 찾지 못한 경우 -> 직접 제품 로드 시도 (Fallback)
+            print("⚠️ [PurchaseManager] Offerings에서 상품을 찾을 수 없음. 직접 상품 조회를 시도합니다: \(actualProductID)")
+            
+            Purchases.shared.getProducts([actualProductID]) { [weak self] products in
+                guard let self = self else { return }
+                
+                if let product = products.first {
+                    print("✅ [PurchaseManager] 직접 상품 조회 성공. 구매 진행: \(product.productIdentifier)")
+                    
+                    Purchases.shared.purchase(product: product) { (transaction, customerInfo, error, userCancelled) in
+                        self.handlePurchaseResult(completion: completion, error: error, userCancelled: userCancelled, customerInfo: customerInfo)
+                    }
+                } else {
+                    let errorMsg = "해당 상품(\(actualProductID))을 찾을 수 없습니다. Offerings 설정과 App Store 제품 등록 상태를 확인해 주세요."
+                    print("❌ [PurchaseManager] \(errorMsg)")
+                    completion(false, errorMsg)
+                }
             }
         }
+    }
+    
+    // ✨ 공통 결과 처리 핸들러
+    private func handlePurchaseResult(completion: @escaping PurchaseCompletionHandler, error: Error?, userCancelled: Bool, customerInfo: CustomerInfo?) {
+        if let error = error {
+            let errorMsg = "구매 실패: \(error.localizedDescription)"
+            print("❌ [PurchaseManager] \(errorMsg)")
+            completion(false, errorMsg)
+        } else if userCancelled {
+            print("⚠️ [PurchaseManager] 사용자 취소")
+            completion(false, "구매가 취소되었습니다.")
+        } else {
+            print("✅ [PurchaseManager] 구매 성공!")
+            self.customerInfo = customerInfo
+            completion(true, nil)
+        }
+    }
     }
     
     // 구매 복원

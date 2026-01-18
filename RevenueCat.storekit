@@ -1,0 +1,99 @@
+{
+  "identifier" : "E2B3C4D5",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "12345678",
+      "localizations" : [
+        {
+          "description" : "Reliable Golem Character",
+          "displayName" : "Golem",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "든든한 골렘 캐릭터",
+          "displayName" : "골렘",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.teachersknock.character.golem",
+      "referenceName" : "Golem",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "23456789",
+      "localizations" : [
+        {
+          "description" : "Fluffy Cloud Character",
+          "displayName" : "Cloud",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "푹신한 구름 캐릭터",
+          "displayName" : "구름",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.teachersknock.character.cloud",
+      "referenceName" : "Cloud",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "34567890",
+      "localizations" : [
+        {
+          "description" : "Magical Unicorn Character",
+          "displayName" : "Unicorn",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "신비로운 유니콘 캐릭터",
+          "displayName" : "유니콘",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.teachersknock.character.unicorn",
+      "referenceName" : "Unicorn",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "45678901",
+      "localizations" : [
+        {
+          "description" : "Brave Wolf Character",
+          "displayName" : "Wolf",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "용감한 늑대 캐릭터",
+          "displayName" : "늑대",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.teachersknock.character.wolf",
+      "referenceName" : "Wolf",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitError" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
