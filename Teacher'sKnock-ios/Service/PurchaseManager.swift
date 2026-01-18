@@ -87,10 +87,10 @@ class PurchaseManager: NSObject, ObservableObject {
     }
     
     // 구매 실행
-    func purchase(productID: String, completion: @escaping (Bool) -> Void) {
+    func purchase(productID: String, completion: @escaping (Bool, String?) -> Void) {
         if isSimulationMode {
             print("💳 [PurchaseManager] 시뮬레이션 구매 성공 처리")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { completion(true) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { completion(true, nil) }
             return
         }
         
@@ -102,8 +102,9 @@ class PurchaseManager: NSObject, ObservableObject {
         guard let package = offerings?.current?.availablePackages.first(where: { $0.storeProduct.productIdentifier == actualProductID }) ??
                             offerings?.all.values.flatMap({ $0.availablePackages }).first(where: { $0.storeProduct.productIdentifier == actualProductID })
         else {
-            print("❌ [PurchaseManager] 해당 상품(\(actualProductID))을 찾을 수 없음. Offerings 설정을 확인하세요.")
-            completion(false)
+            let errorMsg = "해당 상품(\(actualProductID))을 찾을 수 없습니다. Offerings 설정을 확인해 주세요."
+            print("❌ [PurchaseManager] \(errorMsg)")
+            completion(false, errorMsg)
             return
         }
         
@@ -112,37 +113,43 @@ class PurchaseManager: NSObject, ObservableObject {
         // 3. 실제 구매 요청
         Purchases.shared.purchase(package: package) { (transaction, customerInfo, error, userCancelled) in
             if let error = error {
-                print("❌ [PurchaseManager] 구매 실패: \(error.localizedDescription)")
-                completion(false)
+                let errorMsg = "구매 실패: \(error.localizedDescription)"
+                print("❌ [PurchaseManager] \(errorMsg)")
+                completion(false, errorMsg)
             } else if userCancelled {
                 print("⚠️ [PurchaseManager] 사용자 취소")
-                completion(false)
+                completion(false, "구매가 취소되었습니다.")
             } else {
                 print("✅ [PurchaseManager] 구매 성공!")
                 self.customerInfo = customerInfo
-                completion(true)
+                completion(true, nil)
             }
         }
     }
     
     // 구매 복원
-    func restorePurchases(completion: @escaping (Bool) -> Void) {
+    func restorePurchases(completion: @escaping (Bool, String?) -> Void) {
         if isSimulationMode {
             print("🔄 [PurchaseManager] 시뮬레이션 복원 성공")
-            completion(true)
+            completion(true, nil)
             return
         }
         
         print("🔄 [PurchaseManager] 구매 복원 시작...")
         Purchases.shared.restorePurchases { [weak self] (customerInfo, error) in
             if let error = error {
-                print("❌ [PurchaseManager] 복원 실패: \(error.localizedDescription)")
-                completion(false)
+                let errorMsg = "복원 실패: \(error.localizedDescription)"
+                print("❌ [PurchaseManager] \(errorMsg)")
+                completion(false, errorMsg)
             } else {
                 self?.customerInfo = customerInfo
                 print("✅ [PurchaseManager] 복원 성공")
                 // 복원된 내역 확인 로직은 호출부에서 customerInfo를 보고 처리
-                completion(true)
+                if customerInfo?.entitlements.active.isEmpty == true {
+                     completion(true, "복원할 구매 내역이 없습니다.")
+                } else {
+                     completion(true, nil)
+                }
             }
         }
     }
