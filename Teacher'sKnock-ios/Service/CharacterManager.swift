@@ -213,21 +213,8 @@ class CharacterManager: ObservableObject {
             }
             
             // ✨ [Restoration] 사용자 요청 복구: Lv.2 / 다음 레벨까지 6일 남음
-            // Lv.3 도달 필요 누적일: 15일
-            // 목표: 15 - 6 = 9일 (현재 경험치)
-            let restorationKey = "Restoration_User_Lv2_6DaysLeft"
-            if !UserDefaults.standard.bool(forKey: restorationKey) {
-                // 현재 장착중인 캐릭터(스타팅)를 대상으로 복구
-                // 장착 타입이 'bird', 'plant', 'sea' 중 하나일 가능성이 높음
-                // 안전하게 현재 리스트의 첫번째 혹은 스타팅 캐릭터를 찾아 적용
-                if let index = characters.firstIndex(where: { ["bird", "plant", "sea"].contains($0.type) }) {
-                    characters[index].exp = 9
-                    characters[index].level = 1 // Lv.2는 index 1
-                    saveCharacters()
-                    print("✅ 사용자 요청 복구 완료: \(characters[index].type) -> Exp 9 (Lv.2, -6일)")
-                }
-                UserDefaults.standard.set(true, forKey: restorationKey)
-            }
+            // (배포 버전을 위해 임시 복구 로직 삭제됨 - 모든 유저는 정석대로 Lv.1부터 시작)
+            
         } else {
             self.characters = []
         }
