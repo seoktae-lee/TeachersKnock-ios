@@ -29,6 +29,9 @@ struct CharacterShopView: View {
     
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
+    @State private var isPurchasing = false // ✨ [New] 로딩 상태
+    @State private var showingAlert = false
+    @State private var selectedItem: ShopItem?
     
     let columns = [
         GridItem(.flexible()),
@@ -67,28 +70,30 @@ struct CharacterShopView: View {
                     Button("복원") {
                         isPurchasing = true
                         PurchaseManager.shared.restorePurchases { success, error in
-                            isPurchasing = false
-                            if success {
-                                // 복원 성공 시, 모든 캐릭터의 Entitlement를 확인하여 잠금 해제
-                                let types = ["golem", "cloud", "unicorn", "wolf"]
-                                for type in types {
-                                    if PurchaseManager.shared.isPurchased(characterType: type) {
-                                        CharacterManager.shared.unlockStartingCharacter(type: type, name: "")
-                                        print("🔓 [Purchase] 구매 복원으로 '\(type)' 잠금 해제됨")
+                            DispatchQueue.main.async {
+                                isPurchasing = false
+                                if success {
+                                    // 복원 성공 시, 모든 캐릭터의 Entitlement를 확인하여 잠금 해제
+                                    let types = ["golem", "cloud", "unicorn", "wolf"]
+                                    for type in types {
+                                        if PurchaseManager.shared.isPurchased(characterType: type) {
+                                            CharacterManager.shared.unlockStartingCharacter(type: type, name: "")
+                                            print("🔓 [Purchase] 구매 복원으로 '\(type)' 잠금 해제됨")
+                                        }
                                     }
-                                }
-                                
-                                // 복원 완료 메시지 (에러가 없는 경우에만)
-                                if let msg = error { // 복원된 내역이 없거나 등등의 메시지
-                                     errorMessage = msg
-                                     showingErrorAlert = true
+                                    
+                                    // 복원 완료 메시지
+                                    if let msg = error {
+                                         errorMessage = msg
+                                         showingErrorAlert = true
+                                    } else {
+                                         errorMessage = "구매 내역이 복원되었습니다."
+                                         showingErrorAlert = true
+                                    }
                                 } else {
-                                     errorMessage = "구매 내역이 복원되었습니다."
-                                     showingErrorAlert = true
+                                    errorMessage = error ?? "복원에 실패했습니다."
+                                    showingErrorAlert = true
                                 }
-                            } else {
-                                errorMessage = error ?? "복원에 실패했습니다."
-                                showingErrorAlert = true
                             }
                         }
                     }
@@ -101,26 +106,28 @@ struct CharacterShopView: View {
             }
             .alert("상품 구매", isPresented: $showingAlert, presenting: selectedItem) { item in
                 Button("구매하기", role: .none) {
+                    guard let item = selectedItem else { return }
                     isPurchasing = true
                     // PurchaseManager 내부에서 type -> productID 매핑 처리됨
                     PurchaseManager.shared.purchase(productID: item.type) { success, error in
-                        isPurchasing = false
-                        if success {
-                            // 구매 성공 시 캐릭터 잠금 해제
-                            CharacterManager.shared.unlockStartingCharacter(type: item.type, name: "")
-                            print("🎉 구매 완료: \(item.name)")
-                        } else {
-                            print("❌ 구매 실패 또는 취소됨")
-                            if let error = error {
-                                errorMessage = error
-                                showingErrorAlert = true
+                        DispatchQueue.main.async {
+                            isPurchasing = false
+                            if success {
+                                // 구매 성공 시 캐릭터 잠금 해제
+                                CharacterManager.shared.unlockStartingCharacter(type: item.type, name: "")
+                                print("🎉 구매 완료: \(item.name)")
+                            } else {
+                                print("❌ 구매 실패 또는 취소됨")
+                                if let error = error {
+                                    errorMessage = error
+                                    showingErrorAlert = true
+                                }
                             }
                         }
                     }
                 }
                 Button("취소", role: .cancel) {}
             } message: { item in
-                // ✨ [메시지 수정] 실제 결제 안내 (더 이상 체험판 아님)
                 if PurchaseManager.shared.isPurchased(characterType: item.type) {
                      Text("이미 구매하신 상품입니다.")
                 } else {
@@ -155,9 +162,9 @@ struct ShopItemCard: View {
             VStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(item.color.opacity(0.1))
-                        .frame(width: 80, height: 80)
-                    
+                    .fill(item.color.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
                     // ✨ [수정] 이미지가 있으면 이미지 표시, 없으면 이모지
                     if let imageName = item.imageName {
                         Image(imageName)

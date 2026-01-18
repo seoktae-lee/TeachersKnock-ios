@@ -8,6 +8,9 @@ import SwiftUI
 class PurchaseManager: NSObject, ObservableObject {
     static let shared = PurchaseManager()
     
+    // ✨ Completion Hander Typealias
+    typealias PurchaseCompletionHandler = (Bool, String?) -> Void
+    
     @Published var customerInfo: CustomerInfo?
     @Published var offerings: Offerings?
     
@@ -87,7 +90,7 @@ class PurchaseManager: NSObject, ObservableObject {
     }
     
     // 구매 실행
-    func purchase(productID: String, completion: @escaping (Bool, String?) -> Void) {
+    func purchase(productID: String, completion: @escaping PurchaseCompletionHandler) {
         if isSimulationMode {
             print("💳 [PurchaseManager] 시뮬레이션 구매 성공 처리")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { completion(true, nil) }
@@ -128,7 +131,7 @@ class PurchaseManager: NSObject, ObservableObject {
     }
     
     // 구매 복원
-    func restorePurchases(completion: @escaping (Bool, String?) -> Void) {
+    func restorePurchases(completion: @escaping PurchaseCompletionHandler) {
         if isSimulationMode {
             print("🔄 [PurchaseManager] 시뮬레이션 복원 성공")
             completion(true, nil)
