@@ -37,6 +37,7 @@ struct MainCharacterView: View {
     @ObservedObject var characterManager = CharacterManager.shared
     @EnvironmentObject var settingsManager: SettingsManager // ✨ 추가
     @Binding var showStorage: Bool
+    @Binding var showShop: Bool // ✨ [추가] 상점 바인딩
     
     let primaryGoalTitle: String?
     let dDay: Int
@@ -52,14 +53,14 @@ struct MainCharacterView: View {
                 if let office = settingsManager.targetOffice {
                     HStack(spacing: 4) {
                         Text("\(office.rawValue) 소속 예비 초등교사")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.gray)
                     }
                     .padding(.bottom, 3)
                 } else {
                     HStack(spacing: 4) {
                         Text("정보 > 설정에서 목표 교육청을 선택해주세요")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.gray.opacity(0.8))
                     }
                     .padding(.bottom, 3)
@@ -67,27 +68,19 @@ struct MainCharacterView: View {
                 
                 Spacer()
                 
-                // ✨ [DEBUG] 임시 디버그 버튼 (테스트 중) - 주석 처리됨
-                // ✨ [DEBUG] 임시 디버그 버튼 제거됨
-
-                
-                Button(action: { showStorage = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.grid.2x2.fill")
-                            .font(.caption2)
-                        Text("보관함")
-                            .font(.caption2)
-                            .bold()
+                // ✨ [수정] 보관함 & 상점 버튼 (아이콘 통일)
+                HStack(spacing: 8) {
+                    Button(action: { showStorage = true }) {
+                        headerIconButton(icon: "square.grid.2x2.fill", color: .blue)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.8)) // 배경 살짝 투명하게
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.05), radius: 3)
-                    .foregroundColor(.gray)
+                    
+                    Button(action: { showShop = true }) {
+                        headerIconButton(icon: "cart.fill", color: .purple)
+                    }
                 }
             }
-            .padding(.horizontal, 25) // 카드 내부 패딩과 라인 맞춤
+            // ✨ [수정] "오늘의 과목 밸런스" 등 메인 헤더와 시작점 맞추기 위해 내부 패딩 제거
+            // 기존 .padding(.horizontal, 25) -> 제거함 (부모 뷰의 기본 패딩 따름)
             
             ZStack(alignment: .bottom) {
                 // 배경: 그라데이션
@@ -313,6 +306,16 @@ struct MainCharacterView: View {
             "미미한 하루가 모여 큰 변화로 다가 올 거에요🌟"
         ]
         return cheers.randomElement() ?? "파이팅!"
+    }
+    
+    // ✨ [New] 헤더 아이콘 버튼 스타일 (스터디 탭과 통일)
+    private func headerIconButton(icon: String, color: Color) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 14, weight: .bold)) // 아이콘 크기 조정
+            .foregroundColor(color)
+            .frame(width: 34, height: 34) // 터치 영역 및 배경 크기
+            .background(color.opacity(0.1)) // 연한 배경색
+            .cornerRadius(8) // 둥근 사각형 (Rounded Square)
     }
 }
 

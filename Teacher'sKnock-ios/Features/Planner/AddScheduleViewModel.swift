@@ -232,6 +232,33 @@ class AddScheduleViewModel: ObservableObject {
     
     // 루틴 적용
     func applyRoutine(_ routine: RoutineItem) {
+        // ✨ [수정] 토글(취소) 기능 구현
+        // 이미 해당 루틴이 선택되어 있다면(제목이 같으면) 선택 취소
+        if self.title == routine.title {
+            print("↺ 루틴 선택 취소 (Undo)")
+            
+            // 1. 제목 초기화
+            self.title = ""
+            
+            // 2. 시간 초기화 (기본 1시간)
+            self.endDate = self.startDate.addingTimeInterval(3600)
+            
+            // 3. 카테고리 복구 (마지막 선택했던 과목 or 기본값)
+            if let savedSubject = UserDefaults.standard.string(forKey: "LastSelectedSubject") {
+                self.selectedSubject = savedSubject
+                self.isStudySubject = SubjectName.isStudySubject(savedSubject)
+            } else {
+                self.selectedSubject = "교육학"
+                self.isStudySubject = true
+            }
+            
+            // 4. 목적은 기본값 유지 (특별히 복구할 필요성 낮음)
+            // self.selectedPurpose = .lectureWatching
+            
+            return
+        }
+        
+        // 기존 로직: 루틴 적용
         self.title = routine.title
         self.selectedSubject = routine.category
         self.isStudySubject = routine.isStudy

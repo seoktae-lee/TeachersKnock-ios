@@ -24,7 +24,9 @@ struct GoalListView: View {
     @State private var showingAddGoalSheet = false
     @State private var selectedPhase: Int = 0
     @State private var showGSchool = false
-    @State private var showStorage = false 
+
+    @State private var showStorage = false
+    @State private var showShop = false // ✨ [추가] 상점 표시 상태
 
     private let brandColor = Color(red: 0.35, green: 0.65, blue: 0.95)
     private var currentUserId: String { Auth.auth().currentUser?.uid ?? "" }
@@ -91,6 +93,10 @@ struct GoalListView: View {
             .sheet(isPresented: $showStorage) {
                 CharacterStorageView()
             }
+            // ✨ [추가] 상점 뷰 시트
+            .sheet(isPresented: $showShop) {
+                CharacterShopView()
+            }
             .sheet(isPresented: $showingAddGoalSheet) { AddGoalView() }
             .sheet(isPresented: $showGSchool) {
                 if let url = URL(string: "https://m.g-school.co.kr") {
@@ -132,12 +138,14 @@ struct GoalListView: View {
             
             MainCharacterView(
                 showStorage: $showStorage,
+                showShop: $showShop, // ✨ 추가
                 primaryGoalTitle: primary.title,
                 dDay: dDay
             )
         } else {
             MainCharacterView(
                 showStorage: $showStorage,
+                showShop: $showShop, // ✨ 추가
                 primaryGoalTitle: "새 목표를 등록해주세요",
                 dDay: 0
             )

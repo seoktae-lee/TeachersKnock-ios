@@ -3,7 +3,6 @@ import SwiftUI
 struct CharacterStorageView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var characterManager = CharacterManager.shared
-    @State private var showShop = false
     
     let columns = [
         GridItem(.flexible()),
@@ -53,17 +52,6 @@ struct CharacterStorageView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("닫기") { dismiss() }
                 }
-                
-                // ✨ [추가] 상점 이동 버튼
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showShop = true }) {
-                        Image(systemName: "storefront.fill") // or bag.fill
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-            .sheet(isPresented: $showShop) {
-                CharacterShopView()
             }
         }
     }
