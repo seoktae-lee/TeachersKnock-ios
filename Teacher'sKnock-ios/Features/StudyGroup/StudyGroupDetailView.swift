@@ -148,8 +148,8 @@ struct StudyGroupDetailView: View {
             if u1.isStudying != u2.isStudying {
                 return u1.isStudying && !u2.isStudying // 공부중 우선
             }
-            if u1.todayStudyTime != u2.todayStudyTime {
-                return u1.todayStudyTime > u2.todayStudyTime // 공부시간 내림차순
+            if u1.effectiveTodayStudyTime != u2.effectiveTodayStudyTime {
+                return u1.effectiveTodayStudyTime > u2.effectiveTodayStudyTime // 공부시간 내림차순
             }
             return u1.nickname < u2.nickname
         }
@@ -459,8 +459,8 @@ struct WeeklyRankingView: View {
             return false
         }.reduce(0) { $0 + $1.value }
         
-        // 2. 오늘 저장된 시간
-        var total = historicSum + user.todayStudyTime
+        // 2. 오늘 저장된 시간 (유효성 검사 적용)
+        var total = historicSum + user.effectiveTodayStudyTime
         
         // 3. 공부 중이라면 현재 세션 경과 시간 추가
         if user.isStudying, let startTime = user.currentStudyStartTime {

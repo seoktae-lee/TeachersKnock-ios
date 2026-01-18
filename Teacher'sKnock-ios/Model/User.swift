@@ -61,4 +61,11 @@ struct User: Identifiable, Codable {
         self.currentStudyStartTime = currentStudyStartTime
         self.createdAt = Date()
     }
+    // ✨ [New] 실제 유효한 오늘 공부 시간 (날짜 변경 대응)
+    var effectiveTodayStudyTime: Int {
+        if Calendar.current.isDateInToday(lastStudyDate) {
+            return todayStudyTime
+        }
+        return 0
+    }
 }

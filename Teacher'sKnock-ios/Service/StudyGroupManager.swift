@@ -1,3 +1,4 @@
+// Checked
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth

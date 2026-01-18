@@ -7,7 +7,7 @@ struct ParticipationView: View {
     private let attendanceThreshold = 7200
     
     var attendanceCount: Int {
-        members.filter { $0.todayStudyTime >= attendanceThreshold }.count
+        members.filter { $0.effectiveTodayStudyTime >= attendanceThreshold }.count
     }
     
     var totalCount: Int {
