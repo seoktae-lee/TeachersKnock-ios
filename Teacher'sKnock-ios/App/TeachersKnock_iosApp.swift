@@ -19,14 +19,10 @@ struct TeachersKnock_iosApp: App {
     init() {
         FirebaseApp.configure()
         
-        // ✨ Sentry 초기화 (충돌 감지)
-        SentrySDK.start { options in
-            options.dsn = "https://ad5943542bf74d6c404ddbc5cf50a8a8@o4510734444003328.ingest.us.sentry.io/4510734447214592"
-            options.debug = true // 개발 중에는 디버그 모드 켜기
-            
             // 트랜잭션 추적 (성능 모니터링)
             options.tracesSampleRate = 1.0
         }
+        */
         
         TeachersKnock_iosApp.configureAppearance()
         // ✨ [New] 결제 시스템 초기화
@@ -122,6 +118,15 @@ struct TeachersKnock_iosApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        
+        // ✨ Sentry 초기화 (여기로 이동)
+        SentrySDK.start { options in
+            options.dsn = "https://ad5943542bf74d6c404ddbc5cf50a8a8@o4510734444003328.ingest.us.sentry.io/4510734447214592"
+            options.debug = true
+            options.tracesSampleRate = 1.0
+            options.enableAppHangTracking = true // 앱 멈춤 감지 추가
+        }
+        
         // 앱 실행 시 델리게이트 설정
         UNUserNotificationCenter.current().delegate = self
         
