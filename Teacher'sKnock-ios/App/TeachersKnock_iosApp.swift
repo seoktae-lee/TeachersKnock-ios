@@ -19,11 +19,6 @@ struct TeachersKnock_iosApp: App {
     init() {
         FirebaseApp.configure()
         
-            // 트랜잭션 추적 (성능 모니터링)
-            options.tracesSampleRate = 1.0
-        }
-        */
-        
         TeachersKnock_iosApp.configureAppearance()
         // ✨ [New] 결제 시스템 초기화
         PurchaseManager.shared.configure()
