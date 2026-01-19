@@ -129,6 +129,25 @@ struct SettingsView: View {
                 
                 // ✨ [Temporary] Sentry Crash Test
                 Section(header: Text("Sentry 테스트 (테스트 후 삭제)")) {
+                    // 상태 확인
+                    HStack {
+                        Text("Sentry 상태")
+                        Spacer()
+                        Text(SentrySDK.isEnabled ? "작동 중 (Enabled)" : "비활성화 (Disabled)")
+                            .foregroundColor(SentrySDK.isEnabled ? .green : .red)
+                    }
+                    
+                    // 일반 메시지 전송 테스트 (앱 종료 없이 확인 가능)
+                    Button(action: {
+                        let eventId = SentrySDK.capture(message: "Sentry Test Message - 티처스노크")
+                        errorMessage = "테스트 메시지가 전송되었습니다.\nID: \(eventId)\n\n잠시 후 Sentry 대시보드를 확인하세요."
+                        showingErrorAlert = true
+                    }) {
+                        Label("테스트 메시지 전송 (Send Message)", systemImage: "paperplane.fill")
+                            .foregroundColor(.blue)
+                    }
+
+                    // 강제 종료 테스트
                     Button(action: {
                         SentrySDK.crash()
                     }) {
