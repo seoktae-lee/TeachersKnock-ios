@@ -116,7 +116,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         // ✨ Sentry 초기화 (여기로 이동)
         SentrySDK.start { options in
-            options.dsn = "https://ad5943542bf74d6c404ddbc5cf50a8a8@o4510734444003328.ingest.us.sentry.io/4510734447214592"
+            options.dsn = "https://9446d346b602619348a1848309e2adb5@o4510734444003328.ingest.us.sentry.io/4510734447935488"
             options.debug = true
             options.tracesSampleRate = 1.0
             options.enableAppHangTracking = true // 앱 멈춤 감지 추가
