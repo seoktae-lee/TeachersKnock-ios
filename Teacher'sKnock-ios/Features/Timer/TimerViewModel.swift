@@ -4,6 +4,7 @@ import SwiftData
 import Combine
 import ActivityKit
 import FirebaseAuth
+import Sentry
 
 @MainActor
 class TimerViewModel: ObservableObject {
@@ -152,6 +153,18 @@ class TimerViewModel: ObservableObject {
             let totalYesterdaySeconds = Int(durationUntilMidnight + accumulatedTime)
             let durationToRecord = isSpeakingMode ? Int(accumulatedSpeakingTime) : totalYesterdaySeconds
             
+            if durationToRecord < 0 {
+                // ✨ [Sentry] 심각한 로직 오류: 음수 시간 발생
+                SentrySDK.capture(message: "Negative study time detected in checkMidnight: \(durationToRecord)s") { scope in
+                    scope.setLevel(.error)
+                }
+            } else if durationToRecord > 86400 {
+                // ✨ [Sentry] 비정상적 데이터: 24시간 초과
+                SentrySDK.capture(message: "Abnormal study time detected in checkMidnight: \(durationToRecord)s") { scope in
+                    scope.setLevel(.warning)
+                }
+            }
+
             if durationToRecord >= minimumStudyTime {
                 let yesterdayRecord = StudyRecord(
                     durationSeconds: durationToRecord,
@@ -356,6 +369,19 @@ class TimerViewModel: ObservableObject {
             // ✨ [수정] 말하기 모드라면 보여지는 시간이 아닌 실제 말한 시간을 기록합니다.
             let finalTime = isSpeakingMode ? Int(accumulatedSpeakingTime) : displayTime
             let finalSpeakingTime = Int(accumulatedSpeakingTime) // ✨ [New]
+            
+            if finalTime < 0 {
+                SentrySDK.capture(message: "Negative study time detected in saveRecord: \(finalTime)s") { scope in
+                    scope.setLevel(.error)
+                }
+                resetTimer()
+                return
+            }
+            if finalTime > 86400 {
+                 SentrySDK.capture(message: "Abnormal study time detected in saveRecord: \(finalTime)s") { scope in
+                     scope.setLevel(.warning)
+                 }
+            }
             
             guard finalTime >= minimumStudyTime else {
                 resetTimer()
@@ -635,6 +661,9 @@ class TimerViewModel: ObservableObject {
     }
 }
 
+
+
+
 // ✨ [임시 추가] Xcode 프로젝트에 파일이 추가되지 않아 발생하는 오류를 방지하기 위해 여기에 정의합니다.
 // 추후 Service/ShieldingManager.swift 파일이 프로젝트에 추가되면 이 코드는 삭제해주세요.
 import FamilyControls
@@ -670,6 +699,7 @@ class ShieldingManager: ObservableObject {
             self.isAuthorized = true
         } catch {
             print("Failed to authorize FamilyControls: \(error)")
+            SentrySDK.capture(error: error)
             self.isAuthorized = false
         }
     }
@@ -698,4 +728,3 @@ class ShieldingManager: ObservableObject {
         store.clearAllSettings()
     }
 }
-

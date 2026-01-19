@@ -3,6 +3,7 @@ import FirebaseAuth
 import FirebaseFirestore
 import Combine
 import SwiftData
+import Sentry
 
 class AuthManager: ObservableObject {
     @Published var isLoggedIn: Bool = false
@@ -60,6 +61,8 @@ class AuthManager: ObservableObject {
             StudyNavigationManager.shared.tabSelection = 0
         } catch {
             print("로그아웃 실패: \(error)")
+            // ✨ [Sentry] 로그아웃 실패
+            SentrySDK.capture(error: error)
         }
     }
     
@@ -130,6 +133,7 @@ class AuthManager: ObservableObject {
                         ]) { error in
                             if let error = error {
                                 print("ID 자동 생성 저장 실패: \(error)")
+                                SentrySDK.capture(error: error)
                             } else {
                                 print("✅ 기존 유저 ID 발급 완료: \(newID)")
                                 DispatchQueue.main.async {
@@ -204,6 +208,7 @@ class AuthManager: ObservableObject {
                 Firestore.firestore().collection("users").document(uid).delete { error in
                     if let error = error {
                         print("Firestore 삭제 실패: \(error)")
+                        SentrySDK.capture(error: error)
                         completion(false, error)
                         return
                     }
@@ -216,6 +221,7 @@ class AuthManager: ObservableObject {
                         } else {
                             // Auth 삭제 실패 시 (로그인 오래됨 등) - 재로그인 유도 필요할 수 있음
                             print("Auth 계정 삭제 실패: \(error!)")
+                            SentrySDK.capture(error: error!)
                         }
                         completion(error == nil, error)
                     }

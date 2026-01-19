@@ -3,6 +3,7 @@ import RevenueCat
 import StoreKit
 import Combine
 import SwiftUI
+import Sentry
 
 // ✨ [New] 구매 관리자 (Singleton)
 class PurchaseManager: NSObject, ObservableObject {
@@ -146,6 +147,8 @@ class PurchaseManager: NSObject, ObservableObject {
         if let error = error {
             let errorMsg = "구매 실패: \(error.localizedDescription)"
             print("❌ [PurchaseManager] \(errorMsg)")
+            // ✨ [Sentry] 구매 실패 에러 전송
+            SentrySDK.capture(error: error)
             completion(false, errorMsg)
         } else if userCancelled {
             print("⚠️ [PurchaseManager] 사용자 취소")
@@ -170,6 +173,8 @@ class PurchaseManager: NSObject, ObservableObject {
             if let error = error {
                 let errorMsg = "복원 실패: \(error.localizedDescription)"
                 print("❌ [PurchaseManager] \(errorMsg)")
+                // ✨ [Sentry] 복원 실패 에러 전송
+                SentrySDK.capture(error: error)
                 completion(false, errorMsg)
             } else {
                 self?.customerInfo = customerInfo

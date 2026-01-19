@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseFirestore
 import SwiftData
+import Sentry
 
 class FirestoreSyncManager {
     static let shared = FirestoreSyncManager()
@@ -16,6 +17,7 @@ class FirestoreSyncManager {
         docRef.setData(item.asDictionary) { error in
             if let error = error {
                 print("❌ FirestoreSync: 일정 저장 실패 - \(error.localizedDescription)")
+                SentrySDK.capture(error: error)
             } else {
                 print("✅ FirestoreSync: 일정 저장 완료")
             }
@@ -148,6 +150,7 @@ class FirestoreSyncManager {
             userRef.getDocument { snapshot, error in
                 guard let dataSnapshot = snapshot?.data() else {
                     print("❌ Error getting user document: \(error?.localizedDescription ?? "Unknown error")")
+                    if let error = error { SentrySDK.capture(error: error) }
                     return
                 }
                 
@@ -189,6 +192,7 @@ class FirestoreSyncManager {
                 userRef.updateData(data) { error in
                     if let error = error {
                         print("❌ Error updating study status (end study): \(error)")
+                        SentrySDK.capture(error: error)
                     } else {
                         print("✅ FirestoreSync: Study Status Updated & Time Accumulated (+ \(duration)s, Speaking: +\(speakingDuration ?? 0)s)")
                     }
@@ -206,6 +210,7 @@ class FirestoreSyncManager {
             db.collection("users").document(uid).updateData(data) { error in
                 if let error = error {
                     print("❌ Error updating study status (start study): \(error)")
+                    SentrySDK.capture(error: error)
                 } else {
                     print("✅ FirestoreSync: Study Status Updated (isStudying = \(isStudying))")
                 }

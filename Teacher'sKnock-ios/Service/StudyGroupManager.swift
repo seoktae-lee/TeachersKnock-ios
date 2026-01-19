@@ -3,6 +3,7 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import Combine
+import Sentry
 
 class StudyGroupManager: ObservableObject {
     @Published var myGroups: [StudyGroup] = []
@@ -48,6 +49,7 @@ class StudyGroupManager: ObservableObject {
         ref.setData(newGroup.toDictionary()) { error in
             if let error = error {
                 print("Error creating group: \(error)")
+                SentrySDK.capture(error: error)
                 // 실패 시 롤백
                 if let index = self.myGroups.firstIndex(where: { $0.id == newGroup.id }) {
                     self.myGroups.remove(at: index)
@@ -99,6 +101,9 @@ class StudyGroupManager: ObservableObject {
         }) { (object, error) in
             if let error = error as NSError? {
                 print("멤버 추가 실패: \(error)")
+                if error.code != 400 && error.code != 401 { // 정원 초과/이미 가입은 비즈니스 로직이므로 제외하거나 Waning으로
+                     SentrySDK.capture(error: error)
+                }
                 completion(false, error.userInfo[NSLocalizedDescriptionKey] as? String ?? "오류가 발생했습니다.")
             } else {
                 completion(true, nil)
@@ -113,6 +118,7 @@ class StudyGroupManager: ObservableObject {
             "members": FieldValue.arrayRemove([uid]),
             "updatedAt": FieldValue.serverTimestamp()
         ]) { error in
+            if let error = error { SentrySDK.capture(error: error) }
             completion(error == nil)
         }
     }
@@ -164,6 +170,7 @@ class StudyGroupManager: ObservableObject {
         batch.commit { error in
             if let error = error {
                 print("Error delegating leader: \(error)")
+                SentrySDK.capture(error: error)
                 completion(false)
             } else {
                 completion(true)
@@ -181,6 +188,7 @@ class StudyGroupManager: ObservableObject {
         db.collection("study_groups").document(groupID).delete { error in
             if let error = error {
                 print("Error deleting group: \(error)")
+                SentrySDK.capture(error: error)
                 // 실패 시 복구 (Optional: 실패했다는 알림을 띄우고 다시 fetch하거나 놔둘 수 있음)
                 // 여기선 다시 fetch 하는게 안전함
                 completion(false)
@@ -241,6 +249,7 @@ class StudyGroupManager: ObservableObject {
         batch.commit { error in
             if let error = error {
                 print("Error adding notice & schedule: \(error)")
+                SentrySDK.capture(error: error)
             }
         }
     }
@@ -441,6 +450,7 @@ class StudyGroupManager: ObservableObject {
                 guard let self = self else { return }
                 if let error = error {
                     print("❌ Error fetching group members: \(error)")
+                    SentrySDK.capture(error: error)
                     return
                 }
                 guard let documents = snapshot?.documents else { return }
@@ -598,6 +608,7 @@ class StudyGroupManager: ObservableObject {
         batch.commit { error in
             if let error = error {
                 print("Error adding cheer: \(error)")
+                SentrySDK.capture(error: error)
                 completion(false)
             } else {
                 completion(true)
@@ -718,6 +729,7 @@ class StudyGroupManager: ObservableObject {
         ]) { error in
             if let error = error {
                 print("Error updating common timer: \(error)")
+                SentrySDK.capture(error: error)
                 completion(false)
             } else {
                 completion(true)

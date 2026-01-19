@@ -2,6 +2,7 @@ import Foundation
 import FamilyControls
 import ManagedSettings
 import SwiftUI
+import Sentry
 
 @MainActor
 class ShieldingManager: ObservableObject {
@@ -33,6 +34,7 @@ class ShieldingManager: ObservableObject {
             self.isAuthorized = true
         } catch {
             print("Failed to authorize FamilyControls: \(error)")
+            SentrySDK.capture(error: error)
             self.isAuthorized = false
         }
     }
