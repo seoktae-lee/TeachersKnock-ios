@@ -4,6 +4,8 @@ import FirebaseCore
 import UIKit
 import UserNotifications
 
+import Sentry
+
 @main
 struct TeachersKnock_iosApp: App {
     // ✨ AppDelegate 연결
@@ -16,6 +18,16 @@ struct TeachersKnock_iosApp: App {
     
     init() {
         FirebaseApp.configure()
+        
+        // ✨ Sentry 초기화 (충돌 감지)
+        SentrySDK.start { options in
+            options.dsn = "https://ad5943542bf74d6c404ddbc5cf50a8a8@o4510734444003328.ingest.us.sentry.io/4510734447214592"
+            options.debug = true // 개발 중에는 디버그 모드 켜기
+            
+            // 트랜잭션 추적 (성능 모니터링)
+            options.tracesSampleRate = 1.0
+        }
+        
         TeachersKnock_iosApp.configureAppearance()
         // ✨ [New] 결제 시스템 초기화
         PurchaseManager.shared.configure()

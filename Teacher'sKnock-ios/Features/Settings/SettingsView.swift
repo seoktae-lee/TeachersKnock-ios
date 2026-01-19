@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseAuth
+import Sentry
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -124,6 +125,21 @@ struct SettingsView: View {
                         } message: {
                             Text("정말 탈퇴하시겠습니까?\n\n탈퇴 시 일정, 공부 기록, 목표 등 모든 정보가 즉시 삭제되며 복구할 수 없습니다.")
                         }
+                }
+                
+                // ✨ [Temporary] Sentry Crash Test
+                Section(header: Text("Sentry 테스트 (테스트 후 삭제)")) {
+                    Button(action: {
+                        SentrySDK.crash()
+                    }) {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            Text("앱 강제 종료 (CRASH TEST)")
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                        }
+                    }
                 }
             }
             .navigationTitle("설정")

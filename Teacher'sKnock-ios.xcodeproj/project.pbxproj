@@ -25,6 +25,7 @@
 		5435A21A2F0807E3002A37D4 /* CharacterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5435A2192F0807E3002A37D4 /* CharacterManager.swift */; };
 		5435A21C2F081188002A37D4 /* StartingCharacterSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5435A21B2F081188002A37D4 /* StartingCharacterSelectionView.swift */; };
 		5435A21E2F081310002A37D4 /* CharacterShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5435A21D2F081310002A37D4 /* CharacterShopView.swift */; };
+		5440DF022F1DC60100C4C4EA /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 5440DF012F1DC60100C4C4EA /* Sentry */; };
 		544E3A042EE5E6F800551E30 /* TimeTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544E3A032EE5E6F800551E30 /* TimeTableView.swift */; };
 		544E3A062EE5E84900551E30 /* TimeTableFullScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544E3A052EE5E84900551E30 /* TimeTableFullScreenView.swift */; };
 		544E3A082EE5E95B00551E30 /* DDayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544E3A072EE5E95B00551E30 /* DDayWidget.swift */; };
@@ -296,6 +297,7 @@
 				540ED2D82EDA9E9400CCC7A9 /* FirebaseAuth in Frameworks */,
 				54195E1F2F139CE9009F01D4 /* RevenueCatUI in Frameworks */,
 				543440922EDB139300E736A0 /* FirebaseFirestore in Frameworks */,
+				5440DF022F1DC60100C4C4EA /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -598,6 +600,7 @@
 				543440912EDB139300E736A0 /* FirebaseFirestore */,
 				54195E1C2F139CE9009F01D4 /* RevenueCat */,
 				54195E1E2F139CE9009F01D4 /* RevenueCatUI */,
+				5440DF012F1DC60100C4C4EA /* Sentry */,
 			);
 			productName = "Teacher'sKnock-ios";
 			productReference = 54A1D3642EDA82FF008BD532 /* Teacher'sKnock-ios.app */;
@@ -633,6 +636,7 @@
 			packageReferences = (
 				540ED2D42EDA9E9400CCC7A9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				54195E1B2F139CE9009F01D4 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				5440DF002F1DC39D00C4C4EA /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 54A1D3652EDA82FF008BD532 /* Products */;
@@ -1104,6 +1108,14 @@
 				minimumVersion = 5.54.0;
 			};
 		};
+		5440DF002F1DC39D00C4C4EA /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1131,6 +1143,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 540ED2D42EDA9E9400CCC7A9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		5440DF012F1DC60100C4C4EA /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5440DF002F1DC39D00C4C4EA /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
